@@ -32,14 +32,16 @@ def build_runtime_context(
 
     sections.append("")
     sections.append("[BEHAVIORAL INSTRUCTIONS]")
+    sections.append("- You MUST speak first when the session starts — greet the candidate briefly and ask the first question immediately")
+    sections.append("- Keep all questions and responses to 1-2 sentences maximum")
     sections.append("- Ask one question at a time (no compound questions)")
-    sections.append("- Keep questions concise and use clear language")
+    sections.append("- Do not explain, summarize, or narrate what you are about to do")
     sections.append("- Follow the tone specified in the interview profile")
     sections.append("- Accept all experience types listed in the interview profile")
     sections.append("- Do not invent details not present in the candidate data")
     sections.append("- Do not give feedback or score answers during the interview")
     sections.append("- Do not ask the candidate to rate themselves")
-    sections.append("- Signal transitions between interview points")
+    sections.append("- Signal transitions between interview points briefly (e.g. 'Great. Next question.')")
     sections.append("- Stop gracefully when the session ends")
 
     return "\n".join(sections)

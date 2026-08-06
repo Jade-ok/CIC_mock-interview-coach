@@ -2,19 +2,19 @@
 
 ## Overview
 
-The Interviewer module has two components:
+The Interviewer module has two Lambdas:
 
-1. **Interviewer Lambda** — A stateless Python 3.12 Lambda that builds a runtime context for Nova Sonic. It receives the Analyst output, loads S3 configs, assembles a system instruction string, and returns it.
+1. **Interviewer Lambda** — Builds a runtime context for Nova Sonic from the Analyst output + S3 configs.
+2. **Signing Lambda** — Generates a presigned WebSocket URL for the frontend to connect directly to Nova Sonic.
 
-2. **Voice Agent Server** — A Python WebSocket server deployed on Bedrock AgentCore Runtime that proxies bidirectional audio between the browser and Amazon Nova Sonic. The frontend connects to AgentCore's managed WebSocket endpoint (SigV4-authenticated), and the server relays events to/from Nova Sonic.
+The frontend connects directly to Nova Sonic via the presigned WebSocket URL. There is no proxy server, no AgentCore, no container — just the frontend talking to Nova Sonic with a signed URL.
 
 ### Design Goals
 
-- **Single responsibility per component**: Lambda builds context, server relays audio
-- **Stateless**: No database — frontend holds all state
-- **Managed infrastructure**: AgentCore Runtime handles scaling, auth, and WebSocket lifecycle
-- **No credentials on the frontend**: SigV4 signing via AWS SDK, no raw keys in the browser
-- **Configurable**: Interview format and behavior defined in S3, changeable without redeploy
+- **Simple**: Two Lambdas + direct WebSocket. No containers, no proxy servers.
+- **Secure**: AWS credentials never reach the browser. The signing Lambda returns a time-limited presigned URL.
+- **Stateless**: No database — frontend holds all state.
+- **Configurable**: Interview format and behavior defined in S3, changeable without redeploy.
 
 ## Architecture
 
@@ -22,38 +22,37 @@ The Interviewer module has two components:
 flowchart TD
     Frontend["Frontend (browser)"]
     Interviewer["Interviewer Lambda"]
+    Signing["Signing Lambda"]
     S3["S3 Bucket (configs)"]
-    AgentCore["AgentCore Runtime (managed WebSocket proxy)"]
-    VoiceServer["Voice Agent Server (container)"]
-    NovaSonic["Nova Sonic"]
+    NovaSonic["Nova Sonic (direct WebSocket)"]
     Evaluator["Evaluator Lambda"]
 
     Frontend -->|"1. POST {analyst_output}"| Interviewer
     Interviewer -->|"load configs"| S3
     Interviewer -->|"2. Return {runtime_context}"| Frontend
-    Frontend <-->|"3. SigV4-signed WebSocket"| AgentCore
-    AgentCore <-->|"proxy"| VoiceServer
-    VoiceServer <-->|"4. Bidirectional stream"| NovaSonic
-    Frontend -->|"5. POST {analyst_output + conversation}"| Evaluator
+    Frontend -->|"3. GET presigned URL"| Signing
+    Signing -->|"4. Return {wss://...}"| Frontend
+    Frontend <-->|"5. Direct WebSocket (presigned)"| NovaSonic
+    Frontend -->|"6. POST {analyst_output + conversation}"| Evaluator
 ```
 
-**Steps 1–2**: Interviewer Lambda scope (context building)
-**Steps 3–4**: Voice Agent Server scope (interview conducting)
-**Step 5**: Frontend scope (Evaluator handoff)
+**Steps 1–2**: Interviewer Lambda (context building)
+**Steps 3–4**: Signing Lambda (presign the Nova Sonic WebSocket URL)
+**Step 5**: Frontend connects directly to Nova Sonic (no proxy)
+**Step 6**: Frontend sends results to Evaluator
 
 ## Infrastructure
 
 | Resource | Value |
 |----------|-------|
 | Region | `us-east-1` |
-| Lambda Runtime | Python 3.12 |
-| Voice Server | Python (FastAPI + WebSocket), Docker container on AgentCore Runtime |
+| Runtime | Python 3.12 |
 | Nova Sonic Model | `amazon.nova-2-sonic-v1:0` |
 | S3 Bucket | `cic-mock-interview-configs-002859476624` |
 | Structure Key | `interview_structure.json` |
 | Profile Key | `student_interview_profile.json` |
-| Lambda Invocation | Lambda Function URL (no API Gateway) |
-| Voice WebSocket | AgentCore Runtime managed endpoint (SigV4 auth) |
+| Invocation | Lambda Function URLs (both Lambdas) |
+| Voice Connection | Frontend → Nova Sonic directly via presigned WSS URL |
 
 ## Component 1: Interviewer Lambda
 
@@ -61,44 +60,12 @@ flowchart TD
 
 ```
 interviewer/
-  __init__.py           # Empty, makes it a package
+  __init__.py
   handler.py            # Lambda entry point
   validation.py         # Input validation
   config_loader.py      # S3 fetch for interview configs
   context_builder.py    # Assembles runtime context string
   .env                  # Environment variables (reference only)
-```
-
-### Interfaces
-
-**handler.py** — Lambda entry point:
-```python
-def lambda_handler(event: dict, context) -> dict:
-    # Supports Function URL (event['body']) and direct invocation (event = payload)
-    # Returns: {"statusCode": int, "body": "<JSON string>"}
-```
-
-**validation.py** — Input validation:
-```python
-def validate_input(payload: dict) -> tuple[dict | None, str | None]:
-    # Returns (analyst_output, None) on success
-    # Returns (None, error_message) on failure
-```
-
-**config_loader.py** — S3 config loading:
-```python
-class ConfigLoadError(Exception):
-    pass
-
-def load_interview_structure(bucket: str, key: str) -> dict:
-def load_interview_profile(bucket: str, key: str) -> dict:
-```
-
-**context_builder.py** — Runtime context assembly:
-```python
-def build_runtime_context(analyst_output: dict, interview_structure: dict, interview_profile: dict) -> str:
-    # Returns formatted string with sections:
-    # [CANDIDATE DATA], [INTERVIEW STRUCTURE], [INTERVIEW PROFILE], [BEHAVIORAL INSTRUCTIONS]
 ```
 
 ### Request Flow
@@ -121,124 +88,124 @@ Frontend POST → handler.py
   handler.py → 200 + {"success": true, "runtime_context": "..."}
 ```
 
-## Component 2: Voice Agent Server (AgentCore Runtime)
+### Behavioral Instructions (in runtime_context)
 
-### Architecture Pattern
+- You MUST speak first when the session starts — greet the candidate briefly and ask the first question immediately
+- Keep all questions and responses to 1-2 sentences maximum
+- Ask one question at a time (no compound questions)
+- Do not explain, summarize, or narrate what you are about to do
+- Follow the tone specified in the interview profile
+- Accept all experience types listed in the interview profile
+- Do not invent details not present in the candidate data
+- Do not give feedback or score answers during the interview
+- Do not ask the candidate to rate themselves
+- Signal transitions between interview points briefly
+- Stop gracefully when the session ends
 
-Based on the [bedrock-sonic sample](https://github.com/aws-samples/sample-voice-agent-on-aws/tree/main/samples/bidi-streaming/bedrock-sonic). The server is a thin WebSocket relay:
+## Component 2: Signing Lambda
 
-```
-Browser WebSocket → AgentCore Runtime → Voice Agent Server → Nova Sonic bidirectional stream
-```
+### Purpose
+
+Generates a SigV4-presigned WebSocket URL for Nova Sonic's bidirectional streaming endpoint. The frontend uses this URL to connect directly — no proxy needed.
 
 ### Module Structure
 
 ```
-voice-agent/
-  server.py               # FastAPI/WebSocket server, event relay, large event splitting
-  s2s_session_manager.py  # Manages bidirectional stream to Nova Sonic via Bedrock SDK
-  s2s_events.py           # Event factory for Nova Sonic protocol
-  Dockerfile              # Container image for AgentCore deployment
-  requirements.txt        # Dependencies (fastapi, uvicorn, aws-sdk-bedrock-runtime)
+signing/
+  __init__.py
+  handler.py            # Lambda entry point, generates presigned URL
 ```
 
-### How It Works
+### Interface
 
-1. **Frontend connects** to AgentCore Runtime's WebSocket endpoint (SigV4-signed)
-2. **AgentCore proxies** to the Voice Agent Server container
-3. **Server opens** a bidirectional stream to Nova Sonic (`amazon.nova-2-sonic-v1:0`)
-4. **Frontend sends** Nova Sonic protocol events (sessionStart, audioInput, etc.)
-5. **Server relays** events to Nova Sonic and forwards responses back to the frontend
-6. **Frontend receives** audioOutput (plays it) and textOutput (builds transcript)
+```python
+def lambda_handler(event: dict, context) -> dict:
+    """
+    Generate a presigned WebSocket URL for Nova Sonic.
 
-### Nova Sonic Event Protocol
+    Returns:
+        {
+            "statusCode": 200,
+            "body": "{\"url\": \"wss://bedrock-runtime.us-east-1.amazonaws.com/...?X-Amz-...\"}"
+        }
+    """
+```
 
-**Client → Server → Nova Sonic:**
+### How Presigning Works
 
-| Event | Purpose |
-|-------|---------|
-| `sessionStart` | Initialize session (maxTokens, temperature, turn detection) |
-| `promptStart` | Begin prompt with audio/text output config |
-| `contentStart` (SYSTEM) | Start system instruction |
-| `textInput` | Send runtime_context as system prompt |
-| `contentEnd` | End system instruction |
-| `contentStart` (USER/AUDIO) | Start user audio stream |
-| `audioInput` | Base64-encoded PCM audio chunks (16kHz) |
-| `contentEnd` | End user audio |
-| `promptEnd` | End the prompt |
-| `sessionEnd` | Close the session |
+The signing Lambda creates a SigV4-signed URL for:
+```
+wss://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.nova-2-sonic-v1:0/invoke-with-bidirectional-stream
+```
 
-**Nova Sonic → Server → Client:**
+The URL is valid for ~5 minutes. The frontend opens a WebSocket to this URL directly — no additional auth needed.
 
-| Event | Purpose |
-|-------|---------|
-| `audioOutput` | Base64-encoded PCM audio response (24kHz) |
-| `textOutput` | Transcript of what Nova Sonic said |
-| `contentStart/End` | Content block boundaries with role metadata |
+### Environment Variables
 
-### Key Implementation Details
-
-- **Audio input**: PCM 16-bit, 16kHz, mono, base64-encoded
-- **Audio output**: PCM 16-bit, 24kHz, mono, base64-encoded
-- **Large event splitting**: Audio output events >10KB are split at base64 boundaries before forwarding to the client
-- **Backpressure**: Audio input queued (asyncio.Queue, max 100 chunks) — dropped if queue fills
-- **Credentials**: AgentCore Runtime provides IAM role credentials automatically (no manual credential management)
-- **Session limit**: Nova Sonic connections time out at 8 minutes
-
-### AgentCore Deployment
-
-The server is packaged as a Docker container and deployed using the `bedrock-agentcore-starter-toolkit`:
-
-- Container is built and pushed to ECR
-- AgentCore Runtime manages scaling, WebSocket proxy, and SigV4 authentication
-- Frontend uses AWS SDK to sign the WebSocket connection to AgentCore's endpoint
-- No API Gateway needed — AgentCore IS the managed WebSocket layer
+| Variable | Value |
+|----------|-------|
+| `AWS_REGION` | `us-east-1` |
+| `MODEL_ID` | `amazon.nova-2-sonic-v1:0` |
 
 ## Data Models
 
-### Lambda Input (Request Payload)
+### Interviewer Lambda Input
 
 ```json
-{
-  "analyst_output": { "...per schemas/analyst_output.json..." }
-}
+{ "analyst_output": { "...per schemas/analyst_output.json..." } }
 ```
 
-### Lambda Output (Success)
+### Interviewer Lambda Output (Success)
 
 ```json
 {"statusCode": 200, "body": "{\"success\": true, \"runtime_context\": \"<string>\"}"}
 ```
 
-### Lambda Output (Error)
+### Signing Lambda Output
 
 ```json
-{"statusCode": 200, "body": "{\"success\": false, \"error_message\": \"...\"}"}
-{"statusCode": 400, "body": "{\"success\": false, \"error_message\": \"Request body is not valid JSON\"}"}
-{"statusCode": 500, "body": "{\"success\": false, \"error_message\": \"...\"}"}
+{"statusCode": 200, "body": "{\"url\": \"wss://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.nova-2-sonic-v1:0/invoke-with-bidirectional-stream?X-Amz-Algorithm=...\"}"}
 ```
 
 ### Evaluator Input (assembled by frontend)
 
-Per `schemas/evaluator_input.json`:
-```json
-{
-  "analyst_output": { "...unchanged from Analyst..." },
-  "conversation": [
-    {"point_id": "point_1", "turn_type": "main_question", "question": "...", "answer": "..."},
-    {"point_id": "point_1", "turn_type": "follow_up", "question": "...", "answer": "..."}
-  ],
-  "interview_metadata": {
-    "candidate_level": "student_intern",
-    "target_role": "Software Engineering Intern",
-    "status": "completed",
-    "completion_reason": "all_questions_completed",
-    "main_questions_completed": 3,
-    "follow_ups_completed": 3,
-    "ended_early": false
-  }
-}
-```
+Per `schemas/evaluator_input.json`.
+
+## Nova Sonic Event Protocol
+
+The frontend speaks the Nova Sonic protocol directly over the presigned WebSocket:
+
+**Setup sequence:**
+1. `sessionStart` — inference config + turn detection
+2. `promptStart` — audio/text output formats + voice selection
+3. `contentStart` (SYSTEM) → `textInput` (runtime_context) → `contentEnd` — system instruction
+4. Send silence + `contentEnd` — triggers Nova to speak first
+
+**Each turn:**
+5. `contentStart` (USER/AUDIO) → `audioInput` (repeated) → `contentEnd` — user speaks
+6. Nova responds: `audioOutput` + `textOutput` events
+
+**End session:**
+7. `promptEnd` → `sessionEnd`
+
+## Error Handling
+
+### Interviewer Lambda
+
+| Scenario | Status | Error Message |
+|----------|--------|---------------|
+| Body not valid JSON | 400 | "Request body is not valid JSON" |
+| analyst_output missing | 200 | "analyst_output is required..." |
+| S3 fails | 200 | includes config name |
+| Unhandled exception | 500 | exception description |
+
+### Signing Lambda
+
+| Scenario | Status | Behavior |
+|----------|--------|----------|
+| Success | 200 | Returns presigned URL |
+| Missing credentials | 500 | Error message |
+| Invalid model | 500 | Error message |
 
 ## Environment Variables
 
@@ -251,63 +218,18 @@ Per `schemas/evaluator_input.json`:
 | `INTERVIEW_PROFILE_KEY` | `student_interview_profile.json` |
 | `AWS_REGION` | `us-east-1` |
 
-### Voice Agent Server
+### Signing Lambda
 
 | Variable | Value |
 |----------|-------|
 | `AWS_REGION` | `us-east-1` |
 | `MODEL_ID` | `amazon.nova-2-sonic-v1:0` |
 
-(AgentCore Runtime provides AWS credentials automatically via IAM role)
+## Key Design Decisions
 
-## Error Handling
-
-### Interviewer Lambda
-
-| Scenario | Status | Error Message Contains |
-|----------|--------|----------------------|
-| Body not valid JSON | 400 | `"Request body is not valid JSON"` |
-| analyst_output missing/empty | 200 | `"analyst_output is required"` |
-| S3 structure load fails | 200 | `"interview_structure"` |
-| S3 profile load fails | 200 | `"interview_profile"` |
-| Unhandled exception | 500 | Exception description |
-
-### Voice Agent Server
-
-| Scenario | Behavior |
-|----------|----------|
-| Nova Sonic connection fails | Close client WebSocket with error code |
-| Client disconnects | Close Nova Sonic stream |
-| 8-minute timeout | Nova Sonic closes, server notifies client |
-| Audio queue full (backpressure) | Drop oldest chunks |
-
-## Correctness Properties
-
-1. **Analyst output integrity**: Included in runtime_context byte-for-byte identical to input
-2. **Complete assembly**: runtime_context contains all 4 sections (candidate data, structure, profile, instructions)
-3. **Idempotent**: Same input + same S3 = same output
-4. **No side effects**: Lambda reads S3 and returns response, nothing else
-5. **Transparent relay**: Voice server forwards events without modification (except large event splitting)
-6. **Fail-fast**: Missing analyst_output returns error before S3 loads
-
-## Testing Strategy
-
-### Interviewer Lambda
-
-| File | Tests |
-|------|-------|
-| `validation.py` | Valid/invalid analyst_output cases |
-| `config_loader.py` | Mocked S3 success/failure |
-| `context_builder.py` | Output contains all sections, idempotent |
-| `handler.py` | Both invocation modes, all error paths |
-
-Run: `python3 -m pytest interviewer/tests/ -v`
-
-### Voice Agent Server
-
-- **Unit**: Event factory produces valid Nova Sonic protocol JSON
-- **Integration**: Mock Bedrock stream, verify events relayed correctly
-- **Manual**: Connect browser to AgentCore endpoint, verify audio round-trip
+1. **No proxy/relay server**: The frontend connects to Nova Sonic directly. A presigned URL handles auth. This eliminates the container, AgentCore dependency, and the relay latency.
+2. **Silence trigger for speak-first**: Nova Sonic is speech-to-speech — it waits for user input. To make it speak first, the frontend sends a brief silence burst + contentEnd to trigger the first response.
+3. **Two separate Lambdas**: The Interviewer builds context (needs S3 access), the Signing Lambda creates URLs (needs Bedrock signing). Keeping them separate follows single-responsibility.
 
 ## Deployment
 
@@ -315,27 +237,22 @@ Run: `python3 -m pytest interviewer/tests/ -v`
 
 ```bash
 zip -r interviewer.zip interviewer/
-aws lambda create-function \
+aws lambda update-function-code \
   --function-name mock-interview-interviewer \
-  --runtime python3.12 \
-  --handler interviewer.handler.lambda_handler \
   --zip-file fileb://interviewer.zip \
-  --role <execution-role-arn> \
-  --region us-east-1 \
-  --environment "Variables={S3_BUCKET=cic-mock-interview-configs-002859476624,INTERVIEW_STRUCTURE_KEY=interview_structure.json,INTERVIEW_PROFILE_KEY=student_interview_profile.json,AWS_REGION=us-east-1}"
+  --region us-east-1
 ```
 
-### Voice Agent Server
+### Signing Lambda
 
 ```bash
-# Build container
-docker build -t mock-interview-voice-agent ./voice-agent
-
-# Push to ECR
-aws ecr create-repository --repository-name mock-interview-voice-agent --region us-east-1
-docker tag mock-interview-voice-agent:latest <account>.dkr.ecr.us-east-1.amazonaws.com/mock-interview-voice-agent:latest
-docker push <account>.dkr.ecr.us-east-1.amazonaws.com/mock-interview-voice-agent:latest
-
-# Deploy to AgentCore Runtime using bedrock-agentcore-starter-toolkit
-# (follow AgentCore deployment docs)
+zip -r signing.zip signing/
+aws lambda create-function \
+  --function-name mock-interview-signing \
+  --runtime python3.12 \
+  --handler signing.handler.lambda_handler \
+  --zip-file fileb://signing.zip \
+  --role arn:aws:iam::002859476624:role/mock-interview-lambda-role \
+  --region us-east-1 \
+  --environment "Variables={AWS_REGION=us-east-1,MODEL_ID=amazon.nova-2-sonic-v1:0}"
 ```
