@@ -42,7 +42,7 @@ The schemas for the Analyst output, Evaluator input, interview structure, and in
 1. WHEN the Lambda is invoked, the module SHALL load the interview structure JSON from S3
 2. WHEN the Lambda is invoked, the module SHALL load the interview profile JSON from S3
 3. IF either S3 object is missing or cannot be parsed as valid JSON, THEN the module SHALL return an error indicating which configuration failed to load
-4. THE S3 client SHALL connect to the us-west-2 region
+4. THE S3 client SHALL connect to the us-east-1 region
 5. THE S3 bucket name and object keys SHALL be configurable via environment variables
 
 ### Requirement 3: Runtime Context Assembly
