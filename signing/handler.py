@@ -13,7 +13,7 @@ import hmac
 import urllib.parse
 
 
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+REGION = os.environ.get("SIGNING_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 MODEL_ID = os.environ.get("MODEL_ID", "amazon.nova-2-sonic-v1:0")
 SERVICE = "bedrock"
 ENDPOINT = f"bedrock-runtime.{REGION}.amazonaws.com"
