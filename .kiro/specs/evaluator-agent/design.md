@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines resume analysis and job-role alignment), then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
+The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
 
 All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The system handles variable-length conversations (1-6 question-answer pairs) without penalizing incomplete interviews. Each turn in the conversation (whether main_question or follow_up) is scored independently.
 
@@ -51,7 +51,7 @@ def handler(event, context):
         # 2. Build evaluation prompt
         system, messages, tool_config = prompt_builder.build(
             conversation=payload["conversation"],
-            resume_analysis=payload["resume_analysis"]
+            analyst_output=payload["analyst_output"]
         )
         
         # 3. Call Bedrock Converse API
@@ -85,7 +85,7 @@ def handler(event, context):
 
 **Key behaviors:**
 - Parses JSON body from the Lambda Function URL event format
-- Validates presence of conversation, interview_metadata, and resume_analysis
+- Validates presence of conversation, interview_metadata, and analyst_output
 - Validates conversation length: minimum 1, maximum 6 question-answer pairs
 - Validates each turn contains required fields
 - Returns a validated payload dict or raises ValidationError
@@ -94,7 +94,7 @@ def handler(event, context):
 def parse_and_validate(event: dict) -> dict:
     body = json.loads(event.get("body", "{}"))
     
-    required_fields = ["conversation", "interview_metadata", "resume_analysis"]
+    required_fields = ["conversation", "interview_metadata", "analyst_output"]
     for field in required_fields:
         if not body.get(field):
             raise ValidationError(f"Missing or empty required field: {field}")
@@ -119,8 +119,9 @@ def parse_and_validate(event: dict) -> dict:
 **Responsibility:** Constructs the messages array and tool configuration for the Bedrock Converse API call.
 
 **Key design decisions:**
+- Includes interview_plan to show which topics/skills were planned for assessment
 - System prompt sets co-op student calibration context, scoring dimensions, and tone directive
-- User message contains the full transcript, resume analysis, and job description
+- User message contains the full transcript, analyst output, and job description
 - Tool schema forces structured output for per-question scoring + qualitative feedback
 - LLM is instructed to score only present questions, not penalize for missing ones
 
@@ -149,11 +150,11 @@ Scoring guide (co-op student calibration):
 Provide your scoring judgments only. Do NOT calculate averages or assign labels.
 Use supportive, constructive, student-friendly language in all feedback."""
 
-def build(conversation: list, resume_analysis: dict) -> tuple:
-    # resume_analysis is a structured JSON object containing candidate_profile, target_role,
-    # resume_job_alignment, and selected_experiences
+def build(conversation: list, analyst_output: dict) -> tuple:
+    # analyst_output is a structured JSON object containing candidate_profile, target_role,
+    # resume_job_alignment, interview_plan, and selected_experiences
     messages = [
-        {"role": "user", "content": [{"text": _format_user_message(conversation, resume_analysis)}]}
+        {"role": "user", "content": [{"text": _format_user_message(conversation, analyst_output)}]}
     ]
     tool_config = _build_tool_config()
     system = [{"text": SYSTEM_PROMPT}]
@@ -371,7 +372,7 @@ class EvaluationError(Exception):
     "follow_ups_completed": 3,
     "ended_early": false
   },
-  "resume_analysis": {
+  "analyst_output": {
     "schema_version": "1.0",
     "candidate_profile": {
       "candidate_level": "student_intern",
@@ -389,15 +390,21 @@ class EvaluationError(Exception):
       "partial_matches": [{"resume_evidence": "...", "job_requirement": "...", "match_reason": "..."}],
       "areas_to_explore": [{"topic": "testing", "reason": "Limited detail about testing responsibilities."}]
     },
+    "interview_plan": [
+      {"topic": "team leadership", "priority": 1, "question_type": "behavioral", "target_skill": "teamwork", "source_experience_id": "exp_1"}
+    ],
     "selected_experiences": [
       {
         "experience_id": "exp_1",
         "title": "Configuration Management Tool",
         "experience_type": "internship",
+        "organization": "Acme Corp",
         "summary": "Built a Java tool that analyzed configuration data.",
         "skills_demonstrated": ["Java", "testing", "caching"],
         "job_requirements_supported": ["software development", "problem-solving"],
-        "relevance_score": 0.94
+        "candidate_claims": ["Improved processing speed by 40%"],
+        "relevance_score": 0.94,
+        "relevance_reason": "Direct match to required Java development and testing skills"
       }
     ],
     "analysis_warnings": ["Limited evidence of production AWS experience."]
@@ -479,7 +486,7 @@ class EvaluationError(Exception):
 
 - Lambda timeout must accommodate up to 2 Bedrock API calls (recommend 60s timeout)
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
-- Resume analysis is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, selected_experiences, and analysis_warnings
+- Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)
 - No persistent storage; the Evaluator is fully stateless
 - Maximum expected conversation size: 6 turns (3 main questions + 3 follow-ups, each with point_id linking main to its follow-up)

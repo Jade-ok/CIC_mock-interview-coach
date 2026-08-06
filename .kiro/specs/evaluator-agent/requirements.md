@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Evaluator Agent is the third and final agent in the CIC Mock Interview Coach pipeline. After the Interviewer agent completes a turn-based interview session, the Evaluator receives the full interview conversation along with the analyst's structured assessment which combines resume analysis and job-role alignment. It generates a scored feedback report assessing the student's interview performance across four fixed dimensions, provides an overall readiness label, and delivers actionable feedback with contextual advice.
+The Evaluator Agent is the third and final agent in the CIC Mock Interview Coach pipeline. After the Interviewer agent completes a turn-based interview session, the Evaluator receives the full interview conversation along with the analyst's structured assessment which combines analyst output and job-role alignment. It generates a scored feedback report assessing the student's interview performance across four fixed dimensions, provides an overall readiness label, and delivers actionable feedback with contextual advice.
 
 The Interviewer is designed to ask 3 main questions, each followed by exactly 1 follow-up question, for a maximum of 6 questions total in a complete interview. However, the student may stop the conversation at any time, so the transcript can contain anywhere from 1 to 6 question-answer pairs. The Evaluator must handle any transcript length and score only the questions that were actually answered.
 
@@ -17,7 +17,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 - **Interview_Metadata**: Metadata about the interview session including candidate_level, target_role, completion status, and question counts — passed through to the response for frontend reference
 - **Main_Question**: One of up to 3 primary interview questions asked by the Interviewer
 - **Follow_Up_Question**: A single follow-up question paired with each main question to probe deeper into the student's answer
-- **Resume_Analysis**: The structured JSON output from the Analyst agent containing candidate profile, target role information, resume-job alignment (strong matches, partial matches, areas to explore), selected experiences with relevance scores, and analysis warnings
+- **Analyst_Output**: The structured JSON output from the Analyst agent containing candidate profile, target role information, resume-job alignment (strong matches, partial matches, areas to explore), interview plan, selected experiences with relevance scores and candidate claims, and analysis warnings
 - **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, situation_action_result, link_to_job, quantifiable_outcome)
 - **Readiness_Label**: A categorical assessment of the student's overall interview preparedness
 - **Feedback_Report**: The structured JSON output containing all scores, labels, and feedback
@@ -33,7 +33,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. WHEN the Evaluator receives a request, THE Evaluator SHALL validate that the conversation, interview_metadata, and resume_analysis fields are all present and non-empty
+1. WHEN the Evaluator receives a request, THE Evaluator SHALL validate that the conversation, interview_metadata, and analyst_output fields are all present and non-empty
 2. WHEN the conversation contains fewer than one question-answer pair, THE Evaluator SHALL reject the input with a descriptive error message
 3. WHEN the conversation contains more than 6 question-answer pairs, THE Evaluator SHALL reject the input with a descriptive error message indicating the transcript exceeds the expected interview length
 4. IF any required field is missing or empty, THEN THE Evaluator SHALL return an error response with a 400 status code and a message identifying the missing field
@@ -47,15 +47,16 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. WHEN building the evaluation prompt, THE Prompt_Builder SHALL include the full conversation and resume_analysis as context
-2. WHEN building the evaluation prompt, THE Prompt_Builder SHALL extract target role information, resume-job alignment data, and areas to explore from the structured resume_analysis object when building the prompt
-3. WHEN building the evaluation prompt, THE Prompt_Builder SHALL specify all four Scoring_Dimensions with their definitions
-4. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to score each dimension on a 1-5 integer scale
-5. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to provide the scoring judgment only, without calculating aggregate scores or classification labels
-6. THE Prompt_Builder SHALL set the tone directive to supportive, constructive, and student-friendly language
-7. THE Prompt_Builder SHALL explicitly instruct the LLM that scoring expectations are calibrated for a co-op seeking student, not an experienced professional
-8. THE Prompt_Builder SHALL instruct the LLM that school projects, course work, hackathons, and team assignments count as valid experience when scoring
-9. THE Prompt_Builder SHALL instruct the LLM to score only the question-answer pairs present in the transcript, without penalizing the student for an incomplete interview
+1. WHEN building the evaluation prompt, THE Prompt_Builder SHALL include the full conversation and analyst_output as context
+2. WHEN building the evaluation prompt, THE Prompt_Builder SHALL extract target role information, resume-job alignment data, and areas to explore from the structured analyst_output object when building the prompt
+3. WHEN building the evaluation prompt, THE Prompt_Builder SHALL include the interview_plan from analyst_output to provide context about which topics and skills were intended to be assessed
+4. WHEN building the evaluation prompt, THE Prompt_Builder SHALL specify all four Scoring_Dimensions with their definitions
+5. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to score each dimension on a 1-5 integer scale
+6. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to provide the scoring judgment only, without calculating aggregate scores or classification labels
+7. THE Prompt_Builder SHALL set the tone directive to supportive, constructive, and student-friendly language
+8. THE Prompt_Builder SHALL explicitly instruct the LLM that scoring expectations are calibrated for a co-op seeking student, not an experienced professional
+9. THE Prompt_Builder SHALL instruct the LLM that school projects, course work, hackathons, and team assignments count as valid experience when scoring
+10. THE Prompt_Builder SHALL instruct the LLM to score only the question-answer pairs present in the transcript, without penalizing the student for an incomplete interview
 
 ### Requirement 3: Bedrock API Invocation
 
@@ -118,9 +119,9 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. WHEN the resume_analysis contains selected_experiences relevant to a question that the student did not mention, THE Evaluator SHALL suggest using that specific experience in future interviews
-2. WHEN the resume_analysis.resume_job_alignment.areas_to_explore identifies a competency that was not addressed during the interview, THE Evaluator SHALL flag that competency gap with a specific recommendation
-3. THE Evaluator SHALL reference specific content from the resume_analysis (including target_role, selected_experiences, and resume_job_alignment) when providing contextual advice
+1. WHEN the analyst_output contains selected_experiences relevant to a question that the student did not mention, THE Evaluator SHALL suggest using that specific experience in future interviews
+2. WHEN the analyst_output.resume_job_alignment.areas_to_explore identifies a competency that was not addressed during the interview, THE Evaluator SHALL flag that competency gap with a specific recommendation
+3. THE Evaluator SHALL reference specific content from the analyst_output (including target_role, selected_experiences, resume_job_alignment, and interview_plan) when providing contextual advice
 4. THE Evaluator SHALL frame contextual advice in the context of a co-op student building their career, not an experienced professional
 
 ### Requirement 9: Response Structure
