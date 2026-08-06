@@ -71,6 +71,18 @@
         "chatSessionId": "sess_208f7ef6-3512-44c9-bde8-cffd0af080d0",
         "timestamp": 1786050606006
       }
+    ],
+    "5. Upload Screen 컴포넌트: components/UploadScreen.tsx (FileUploader 드래그앤드롭 + 파일 선택, JDTextarea, SubmitButton), utils/uploadValidator.ts (MIME type + 10MB 크기 체크), PDF/크기 에러 메시지 표시, 제출 시 PDF base64 변환 + JD text 전달, 단위 테스트 + PBT (Property 1, 2)": [
+      {
+        "executionId": "67ce0006-9b0c-4f5b-a2be-2f4d2b64ae90",
+        "chatSessionId": "sess_09f0c6c5-7fef-4449-8031-69e39a042fec",
+        "timestamp": 1786050640263
+      },
+      {
+        "executionId": "67ce0006-9b0c-4f5b-a2be-2f4d2b64ae90",
+        "chatSessionId": "sess_09f0c6c5-7fef-4449-8031-69e39a042fec",
+        "timestamp": 1786051013478
+      }
     ]
   }
 }
