@@ -8,33 +8,57 @@ Shared conventions for the mock interview app. All 5 members follow these so eve
 - No pydantic. Use plain dicts.
 - `boto3` ships with the runtime, don't bundle it. Bundle `pypdf` only (`pdf_parser`).
 
-## Models
+## Models & Services
 
-Each agent uses a different model — this is intentional.
+Each agent uses a different model or service — this is intentional.
 
-| Agent | Model ID |
-|-------|----------|
-| analyst | global.anthropic.claude-fable-5 |
-| interviewer | global.anthropic.claude-opus-4-7 |
-| evaluator | global.anthropic.claude-fable-5 |
-| polly | no Bedrock — uses Amazon Polly only |
-| pdf_parser | no Bedrock — uses pypdf only |
+| Agent | Model / Service |
+|-------|-----------------|
+| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) — no Bedrock text model |
+| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
+| polly | Amazon Polly only — no Bedrock |
+| pdf_parser | pypdf only — no Bedrock |
 
-If a model feels too slow during testing, swap to `global.anthropic.claude-sonnet-4-6` by changing the model ID string in that Lambda only. No other code changes needed.
+If a Bedrock model feels too slow during testing, swap to `global.anthropic.claude-sonnet-4-6` by changing the model ID string in that Lambda only. No other code changes needed.
 
-## Bedrock
+## Bedrock (analyst, evaluator only)
 
-- Region: `us-west-2` for Bedrock, Polly, and all Lambdas.
+- Region: `us-east-1` for Bedrock, Polly, Nova Sonic, and all Lambdas.
 - Use the Converse API with `tool_use` to force JSON output. Never parse plain text.
 - Retry each Bedrock call once (max 2 attempts) on failure or invalid response.
 
+## Nova Sonic (interviewer only)
+
+- The Interviewer Lambda is a context-builder — it does NOT conduct the interview or call any LLM.
+- It loads interview structure + interview profile from S3, combines them with the Analyst output, and returns the runtime context to the frontend.
+- The frontend connects directly to Nova Sonic via WebSocket using the runtime context as the system instruction.
+- Nova Sonic handles all question generation, follow-ups, and speech.
+- After the interview, the frontend sends the Analyst output + Q&A transcript to the Evaluator.
+
 ## Architecture
 
-- Stateless. No database, no S3, no API Gateway. The browser holds all state and sends the full history every turn.
-- LLM does subjective judgment only (rubric booleans). Score calculation, classification, and follow-up decisions are done deterministically in Python.
+- Stateless. No database, no API Gateway. The browser holds all state.
+- S3 is used only for interview configuration files (interview structure, interview profile) — not for session state.
+- LLM does subjective judgment only (analyst: candidate analysis, evaluator: answer scoring). Deterministic logic (score calculation, classification, flow decisions) is done in Python.
+- The interviewer does not score or judge — it only builds context for Nova Sonic.
 
-## AI Lambda Internal Structure (analyst, interviewer, evaluator)
+## Schemas
 
+Inter-agent data contracts and configuration schemas are defined separately from module code:
+
+| Schema | Purpose |
+|--------|---------|
+| Analyst → Interviewer | What the Analyst passes to the Interviewer (candidate data, job info, experiences) |
+| Interviewer → Evaluator | What the frontend sends to the Evaluator after the interview (Analyst output + transcript) |
+| Interview Structure | S3 config defining what the interview covers (points, topics, follow-up guidance, number of questions) |
+| Interview Profile | S3 config defining how the interviewer behaves (tone, style, rules, difficulty level) |
+
+Each module validates presence of its inputs but relies on the producing agent to validate conformance.
+
+## Lambda Internal Structure
+
+**AI Lambdas (analyst, evaluator):**
 ```
 module/
   __init__.py
@@ -46,7 +70,18 @@ module/
   parser.py           # response parsing/validation
 ```
 
-- `pdf_parser`: same shape but no Bedrock (uses pypdf).
+**Interviewer Lambda (context-builder, no LLM):**
+```
+interviewer/
+  __init__.py
+  handler.py          # entry point
+  validation.py       # input validation
+  config_loader.py    # S3 fetch for interview structure + profile
+  context_builder.py  # assembles runtime context for Nova Sonic
+```
+
+**Other Lambdas:**
+- `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
 - `polly`: single `handler.py` only, no Bedrock.
 
 ## Deployment Gotchas

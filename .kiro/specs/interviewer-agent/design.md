@@ -1,61 +1,74 @@
-# Design Document: Interviewer Agent
+# Design Document: Interviewer Module
 
 ## Overview
 
-The Interviewer Agent is a stateless AWS Lambda (Python 3.12) that powers a turn-based mock interview experience. Each invocation receives the full interview state from the browser, processes one turn (score + decide + generate next question), and returns an updated state for the browser to store.
+The Interviewer module is a lightweight session-setup Lambda (Python 3.12) that prepares a runtime context for Amazon Nova Sonic. It receives the complete Analyst output, loads interview configuration from S3, combines everything into a single instruction, and returns it to the frontend. The frontend then connects directly to Nova Sonic via WebSocket to conduct the spoken interview.
 
-The key architectural insight is a separation between LLM-generated content (rubric scores and next question) and deterministic control flow (decision logic, state transitions, termination guarantees). Claude Opus 4 acts only as a structured evaluator via tool_use; all flow decisions are computed in Python.
+This Lambda makes no LLM calls, streams no audio, scores nothing, and has no involvement after returning the runtime context. It is a pure context-builder.
+
+After the interview ends, the frontend sends the original Analyst output plus the Q&A transcript (collected from Nova Sonic session events) directly to the Evaluator Lambda. The Interviewer is not in that path.
 
 ### Design Goals
 
-- **Determinism**: Interview flow is predictable and fully testable without an LLM
-- **Statelessness**: No database or storage — the browser owns session state
-- **Fail-safe**: Invalid inputs are rejected early; malformed LLM output is caught and surfaced as errors
-- **Bounded execution**: Hard limits on follow-ups per point (2), total points (10), and scoring turns (30)
+- **Simplicity**: Single request-response Lambda — no WebSocket, no audio, no long-running process
+- **Context assembly**: Combines candidate-specific data (Analyst) with configurable interview behavior (S3 configs) into one Nova Sonic system instruction
+- **Stateless**: No database, no session tracking — the frontend owns all state
+- **Schema pass-through**: The Analyst output is included in the runtime context unchanged
+- **Configurable**: Interview structure and profile loaded from S3, swappable without code changes
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    Browser["Browser (state owner)"]
-    FnURL["Lambda Function URL"]
-    Handler["handler.py"]
-    Validator["validation.py"]
-    Orchestrator["orchestrator.py"]
-    PromptBuilder["prompt_builder.py"]
-    BedrockClient["bedrock_client.py"]
-    Parser["parser.py"]
-    Claude["Claude Opus 4 (Bedrock)"]
+    Browser["Frontend"]
+    InterviewerLambda["Interviewer Lambda"]
+    S3["S3 (configs)"]
+    NovaSonic["Amazon Nova Sonic (WebSocket)"]
+    EvaluatorLambda["Evaluator Lambda"]
 
-    Browser -->|POST JSON| FnURL
-    FnURL --> Handler
-    Handler --> Validator
-    Validator -->|valid| Orchestrator
-    Validator -->|invalid| Handler
-    Orchestrator -->|first turn / empty answer| Orchestrator
-    Orchestrator -->|scoring turn| PromptBuilder
-    PromptBuilder --> BedrockClient
-    BedrockClient --> Claude
-    Claude -->|tool_use response| Parser
-    Parser -->|rubric + question| Orchestrator
-    Orchestrator -->|decision + state| Handler
-    Handler -->|JSON response| FnURL
-    FnURL --> Browser
+    Browser -->|"1. POST analyst_output"| InterviewerLambda
+    InterviewerLambda -->|load configs| S3
+    S3 -->|"interview structure + profile"| InterviewerLambda
+    InterviewerLambda -->|"2. Return runtime_context"| Browser
+    Browser <-->|"3. WebSocket: audio + transcripts"| NovaSonic
+    Browser -->|"4. POST analyst_output + transcript"| EvaluatorLambda
 ```
 
-### Request Flow
+### End-to-End Flow
 
-1. **Handler** parses `event['body']` JSON, delegates to Validator
-2. **Validator** checks all required fields, types, and ranges — rejects early with error decision
-3. **Orchestrator** determines the turn type:
-   - **First turn** (empty history + empty answer): Generate opening question from `interview_points[0]`, bypass Bedrock
-   - **Empty answer** (non-empty history + empty answer): Re-ask last question, bypass Bedrock
-   - **Scoring turn**: Invoke Claude for rubric scoring, then compute decision
-4. **PromptBuilder** assembles system prompt + messages + tool schema for Claude
-5. **BedrockClient** calls `converse()` with 30s timeout, single attempt, no retry
-6. **Parser** extracts and validates rubric booleans + next_question from tool_use response
-7. **Orchestrator** computes decision via pure function, builds updated state
-8. **Handler** wraps result in Function URL response format
+1. **Frontend → Interviewer Lambda**: Sends the complete Analyst output
+2. **Interviewer Lambda**: Loads interview structure + interview profile from S3, combines them with the Analyst output into a runtime context, returns it
+3. **Frontend → Nova Sonic**: Opens a WebSocket connection, provides the runtime context as the system instruction, streams bidirectional audio for the interview
+4. **Frontend → Evaluator Lambda**: After the interview ends, sends the Analyst output + the Q&A transcript
+
+### What the Interviewer Lambda Does
+
+1. Parse the request (Function URL or direct invocation)
+2. Validate that analyst_output is present and non-empty
+3. Load interview structure JSON from S3
+4. Load interview profile JSON from S3
+5. Assemble the runtime context (analyst_output + interview_structure + interview_profile + behavioral instructions)
+6. Return the runtime context to the frontend
+
+### What the Interviewer Lambda Does NOT Do
+
+- Conduct the interview (frontend + Nova Sonic handle this)
+- Stream or process audio
+- Track interview state or manage turns
+- Score or evaluate answers
+- Call any LLM or Bedrock text model
+- Communicate with the Evaluator
+
+## Module Structure
+
+```
+interviewer/
+  __init__.py
+  handler.py              # Lambda entry point (Function URL + direct invocation)
+  validation.py           # Input validation (analyst_output presence)
+  config_loader.py        # S3 fetch + basic validation of configs
+  context_builder.py      # Assembles runtime context from analyst_output + configs
+```
 
 ## Components and Interfaces
 
@@ -64,8 +77,12 @@ flowchart TD
 ```python
 def lambda_handler(event: dict, context) -> dict:
     """
-    Parse Function URL event, invoke pipeline, return response.
-    
+    Parse Function URL or direct event, invoke pipeline, return response.
+
+    Supports two modes:
+    - Function URL: parse event['body'] as JSON
+    - Direct invocation: event IS the payload
+
     Returns:
         {
             "statusCode": int,       # 200, 400, or 500
@@ -74,457 +91,336 @@ def lambda_handler(event: dict, context) -> dict:
     """
 ```
 
-**Response body schema** (JSON-encoded string):
+**Success response body:**
 ```python
 {
-    "judgment": dict | None,        # {concrete_example, situation_action_result, link_to_job, quantifiable_outcome} or null
-    "decision": str,                # "next_point" | "follow_up" | "complete" | "error"
-    "next_question": str,           # The question for the next turn (empty string on error)
-    "interview_complete": bool,     # True iff decision == "complete"
-    "interview_state": dict | None, # Updated state or null on error
-    "error_message": str | None     # Present only when decision is "error"
+    "success": True,
+    "runtime_context": str   # The assembled system instruction for Nova Sonic
+}
+```
+
+**Error response body:**
+```python
+{
+    "success": False,
+    "error_message": str     # Human-readable description of what went wrong
 }
 ```
 
 ### validation.py — Input Validation
 
 ```python
-def validate_input(body: dict) -> tuple[dict | None, str | None]:
+def validate_input(payload: dict) -> tuple[dict | None, str | None]:
     """
-    Validate the request body.
-    
-    Args:
-        body: Parsed JSON request body
-        
+    Validate the request payload.
+
+    Checks:
+    - analyst_output is present and non-empty
+
     Returns:
-        (validated_input, None) on success
-        (None, error_message) on validation failure
-    
-    Validates:
-        - interview_points: list of 1-10 strings, all non-empty
-        - student_answer: string (or empty/null/missing)
-        - interview_state.conversation_history: list
-        - interview_state.current_point_index: int in [0, len(interview_points))
-        - interview_state.follow_up_count: int in [0, 2]
+        (validated_payload, None) on success
+        (None, error_message) on failure
     """
 ```
 
-### orchestrator.py — Business Logic
-
-```python
-def process_turn(
-    interview_points: list[str],
-    student_answer: str,
-    interview_state: dict
-) -> dict:
-    """
-    Main orchestration: determines turn type, processes, returns result.
-    
-    Returns:
-        {
-            "judgment": dict | None,
-            "decision": str,
-            "next_question": str,
-            "interview_complete": bool,
-            "interview_state": dict
-        }
-    """
-
-def compute_decision(
-    rubric_judgment: list[bool],
-    current_point_index: int,
-    follow_up_count: int,
-    points_length: int
-) -> str:
-    """
-    Pure deterministic decision function.
-    
-    Args:
-        rubric_judgment: Exactly 4 boolean values
-        current_point_index: 0-based index, in [0, points_length)
-        follow_up_count: Number of follow-ups so far for current point, in [0, 2]
-        points_length: Total number of interview points, in [1, 10]
-    
-    Returns:
-        "next_point" | "follow_up" | "complete"
-    
-    Raises:
-        ValueError: If inputs violate constraints
-    """
-
-def update_state(
-    interview_state: dict,
-    decision: str,
-    student_answer: str,
-    judgment: dict | None,
-    next_question: str
-) -> dict:
-    """
-    Produce the next interview state based on decision.
-    
-    - next_point: increment current_point_index, reset follow_up_count, append turn
-    - follow_up: increment follow_up_count, append turn
-    - complete: keep indices, append turn
-    - error: return state unchanged (no turn appended)
-    """
-```
-
-### prompt_builder.py — Prompt Construction
-
-```python
-TOOL_SCHEMA = {
-    "name": "score_answer",
-    "description": "Score the student's answer and provide the next interview question.",
-    "inputSchema": {
-        "json": {
-            "type": "object",
-            "properties": {
-                "concrete_example": {"type": "boolean"},
-                "situation_action_result": {"type": "boolean"},
-                "link_to_job": {"type": "boolean"},
-                "quantifiable_outcome": {"type": "boolean"},
-                "next_question": {"type": "string", "maxLength": 300}
-            },
-            "required": [
-                "concrete_example",
-                "situation_action_result",
-                "link_to_job",
-                "quantifiable_outcome",
-                "next_question"
-            ]
-        }
-    }
-}
-
-def build_messages(
-    conversation_history: list[dict],
-    interview_point: str,
-    student_answer: str
-) -> tuple[list[dict], list[dict]]:
-    """
-    Build the system prompt and message list for Bedrock Converse API.
-    
-    Returns:
-        (system_prompts, messages) — ready for converse() call
-    
-    System prompt instructs Claude to:
-        - Produce exactly one question (no compound questions)
-        - Omit preamble, greetings, and small talk
-        - Score the 4 rubric dimensions honestly
-    """
-```
-
-### bedrock_client.py — Bedrock API Call
+### config_loader.py — S3 Configuration Loading
 
 ```python
 import boto3
-from botocore.config import Config
 
-BEDROCK_CONFIG = Config(
-    region_name="us-west-2",
-    read_timeout=30,
-    retries={"max_attempts": 0}  # No automatic retries
-)
+class ConfigLoadError(Exception):
+    """Raised when an S3 config cannot be loaded or parsed."""
+    pass
 
-MODEL_ID = "global.anthropic.claude-opus-4-7"
-
-def invoke_claude(
-    system_prompts: list[dict],
-    messages: list[dict],
-    tool_config: dict
-) -> dict:
+def load_interview_structure(bucket: str, key: str) -> dict:
     """
-    Call Bedrock Converse API (synchronous, single attempt).
-    
-    Args:
-        system_prompts: System-level prompts
-        messages: Conversation messages
-        tool_config: Tool configuration with schema
-        
-    Returns:
-        Raw converse() response dict
-        
-    Raises:
-        BedrockInvocationError: On service error, timeout, or throttling
+    Fetch interview structure JSON from S3.
+
+    Raises ConfigLoadError if the object is missing or not valid JSON.
+    """
+
+def load_interview_profile(bucket: str, key: str) -> dict:
+    """
+    Fetch interview profile JSON from S3.
+
+    Raises ConfigLoadError if the object is missing or not valid JSON.
     """
 ```
 
-### parser.py — Response Parsing and Validation
+**Environment variables used:**
+
+| Variable | Purpose |
+|---|---|
+| `S3_BUCKET` | S3 bucket containing interview configs |
+| `INTERVIEW_STRUCTURE_KEY` | S3 object key for the interview structure JSON |
+| `INTERVIEW_PROFILE_KEY` | S3 object key for the interview profile JSON |
+
+### context_builder.py — Runtime Context Assembly
 
 ```python
-def parse_response(response: dict) -> dict:
+def build_runtime_context(
+    analyst_output: dict,
+    interview_structure: dict,
+    interview_profile: dict
+) -> str:
     """
-    Extract and validate Claude's tool_use response.
-    
-    Returns on success:
-        {
-            "judgment": {
-                "concrete_example": bool,
-                "situation_action_result": bool,
-                "link_to_job": bool,
-                "quantifiable_outcome": bool
-            },
-            "next_question": str
-        }
-    
-    Returns on failure:
-        {
-            "decision": "error",
-            "judgment": None,
-            "next_question": None,
-            "error_message": str
-        }
-    
-    Validation rules:
-        - Response must contain toolUse block at content[0]
-        - All 4 rubric fields must be present and strictly boolean (no coercion)
-        - next_question must be a non-whitespace string, 1-300 chars
+    Assemble the runtime context that becomes Nova Sonic's system instruction.
+
+    Combines:
+    - analyst_output: Full candidate data from the Analyst (included as-is)
+    - interview_structure: What the interview covers (points, topics, follow-up guidance)
+    - interview_profile: How the interviewer behaves (tone, style, rules)
+    - Behavioral instructions for Nova Sonic
+
+    Returns a formatted string suitable for use as Nova Sonic's system instruction.
     """
 ```
 
-## Data Models
+**Behavioral instructions included in the context:**
 
-### Request Body (from browser)
+- Ask one question at a time (no compound questions)
+- Keep questions concise and use clear language
+- Follow the tone specified by the interview profile
+- Accept the experience types listed in the interview profile
+- Do not invent details not present in the candidate data
+- Do not give feedback or score answers during the interview
+- Stop gracefully when the session ends
 
-```python
-{
-    "interview_points": list[str],   # 1-10 topic strings from Analyst
-    "student_answer": str | None,    # Student's latest response (empty on first turn)
-    "interview_state": {
-        "conversation_history": list[TurnEntry],
-        "current_point_index": int,  # 0-based, [0, len(interview_points))
-        "follow_up_count": int       # [0, 2]
-    }
-}
+## Request Flow Detail
+
+```
+Frontend POST → handler.py
+                  │
+                  ├─ event has 'body'? → parse JSON from event['body']
+                  │   └─ parse fails? → return 400
+                  ├─ no 'body'? → use event as payload directly
+                  │
+                  ▼
+              validation.py
+                  │
+                  ├─ analyst_output missing/empty? → return 200 with error
+                  │
+                  ▼
+              config_loader.py
+                  │
+                  ├─ load interview_structure from S3
+                  │   └─ fails? → return 200 with error (which config failed)
+                  ├─ load interview_profile from S3
+                  │   └─ fails? → return 200 with error (which config failed)
+                  │
+                  ▼
+              context_builder.py
+                  │
+                  ├─ combine analyst_output + structure + profile + instructions
+                  │
+                  ▼
+              handler.py → return 200 with runtime_context
 ```
 
-### TurnEntry
+## External Schema References
 
-```python
-{
-    "student_answer": str,           # May be empty for the opening turn
-    "judgment": dict | None,         # Rubric scores or null (first turn, empty answer)
-    "question": str                  # The question that was asked
-}
-```
+This module consumes and produces data conforming to schemas defined elsewhere:
 
-### Response Body (to browser)
+| Schema | Direction | Purpose |
+|---|---|---|
+| Analyst → Interviewer | Input | Candidate data from the Analyst (the `analyst_output` field in the request) |
+| Interview Structure | Input (S3) | Defines what the interview covers (points, focus, follow-up topics, number of questions) |
+| Interview Profile | Input (S3) | Defines how the interviewer behaves (tone, style, expectations, rules) |
+| Interviewer → Evaluator | Not used here | The frontend assembles and sends this directly to the Evaluator |
 
-```python
-{
-    "judgment": {                     # null when no scoring occurred
-        "concrete_example": bool,
-        "situation_action_result": bool,
-        "link_to_job": bool,
-        "quantifiable_outcome": bool
-    } | None,
-    "decision": str,                 # "next_point" | "follow_up" | "complete" | "error"
-    "next_question": str,            # Empty string on error
-    "interview_complete": bool,      # True iff decision == "complete"
-    "interview_state": {             # null on error
-        "conversation_history": list[TurnEntry],
-        "current_point_index": int,
-        "follow_up_count": int
-    } | None,
-    "error_message": str | None      # Present only on error
-}
-```
-
-### Decision Truth Table
-
-| rubric_pass (≥3 true) | follow_up_count < 2 | at_last_point | decision |
-|---|---|---|---|
-| true | — | false | next_point |
-| true | — | true | complete |
-| false | true | — | follow_up |
-| false | false | false | next_point |
-| false | false | true | complete |
-
-Where:
-- `rubric_pass` = `sum(rubric_judgment) >= 3`
-- `at_last_point` = `current_point_index == points_length - 1`
-
-### Termination Bound Proof
-
-- Max points: 10
-- Max follow-ups per point: 2 (initial + 2 follow-ups = 3 scoring turns per point max)
-- Max scoring turns: 10 × 3 = 30
-- Each scoring turn either advances to next_point or increments follow_up_count
-- follow_up_count is capped at 2 → forced advance after 3rd turn on a point
-- Guaranteed termination: finite points × finite follow-ups per point
-
-## Correctness Properties
-
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
-
-### Property 1: Decision Function Correctness
-
-*For all* valid inputs (`rubric_judgment` of exactly 4 booleans, `current_point_index` in `[0, points_length)`, `follow_up_count` in `[0, 2]`, `points_length` in `[1, 10]`), the `compute_decision` function SHALL return:
-- `"next_point"` when `sum(rubric_judgment) >= 3` and `current_point_index < points_length - 1`
-- `"complete"` when `sum(rubric_judgment) >= 3` and `current_point_index == points_length - 1`
-- `"follow_up"` when `sum(rubric_judgment) < 3` and `follow_up_count < 2`
-- `"next_point"` when `sum(rubric_judgment) < 3` and `follow_up_count >= 2` and `current_point_index < points_length - 1`
-- `"complete"` when `sum(rubric_judgment) < 3` and `follow_up_count >= 2` and `current_point_index == points_length - 1`
-
-And the return value SHALL always be one of exactly three strings: `"next_point"`, `"follow_up"`, or `"complete"`.
-
-**Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6**
-
-### Property 2: Decision Function Input Validation
-
-*For all* inputs where `rubric_judgment` does not contain exactly 4 boolean values, OR `current_point_index` is negative or `>= points_length`, the `compute_decision` function SHALL raise a `ValueError`.
-
-**Validates: Requirements 3.7, 3.8**
-
-### Property 3: State Transition Correctness
-
-*For all* valid interview states and decisions produced by `compute_decision`, the `update_state` function SHALL:
-- When decision is `"next_point"`: increment `current_point_index` by 1, reset `follow_up_count` to 0, and append exactly one turn entry to `conversation_history`
-- When decision is `"follow_up"`: increment `follow_up_count` by 1, keep `current_point_index` unchanged, and append exactly one turn entry to `conversation_history`
-- When decision is `"complete"`: keep both indices unchanged and append exactly one turn entry to `conversation_history`
-
-Each appended turn entry SHALL contain the `student_answer`, `judgment`, and `question` fields from that turn.
-
-**Validates: Requirements 4.1, 4.2, 4.3, 4.5**
-
-### Property 4: Empty Answer State Preservation
-
-*For all* interview states where `conversation_history` is non-empty, if `student_answer` is empty (empty string, whitespace-only, or null), the orchestrator SHALL return the state unchanged (same `current_point_index`, same `follow_up_count`, same `conversation_history` length) and SHALL return the `next_question` from the last entry in `conversation_history`.
-
-**Validates: Requirements 4.6, 7.1, 7.2, 7.3, 8.4**
-
-### Property 5: Parser Round-Trip
-
-*For all* valid rubric judgments (4 booleans) and valid `next_question` strings (1–300 chars, at least 1 non-whitespace), constructing a well-formed Bedrock tool_use response and then parsing it SHALL produce a deeply-equal rubric judgment object and identical `next_question` string.
-
-**Validates: Requirements 2.3, 11.1, 11.4**
-
-### Property 6: Parser Rejection of Invalid Responses
-
-*For all* Bedrock responses that either (a) lack a `toolUse` block, (b) have any rubric field missing or non-boolean, or (c) have `next_question` that is empty/whitespace-only or exceeds 300 characters, the parser SHALL return `decision="error"`, `judgment=None`, and `next_question=None`.
-
-**Validates: Requirements 2.4, 11.3, 1.2**
-
-### Property 7: Validator Rejects Invalid Inputs
-
-*For all* request bodies where any of the following hold: `current_point_index` is out of bounds, `follow_up_count` is outside `[0, 2]`, any required field is missing, or any item in `interview_points` is not a string — the validator SHALL return an error decision with a descriptive message identifying the issue.
-
-**Validates: Requirements 5.1, 5.2, 5.5, 5.7**
-
-### Property 8: Session Termination Bound
-
-*For all* valid interview configurations (1–10 points, starting at index 0 with follow_up_count 0), simulating a worst-case session where every rubric scores below threshold (fewer than 3 true) SHALL terminate within at most `3 × len(interview_points)` scoring turns (maximum 30), and the final decision SHALL be `"complete"`.
-
-**Validates: Requirements 8.1, 8.3**
-
-### Property 9: First Turn Question Length
-
-*For all* interview_points lists (1–10 items, each string), when `conversation_history` is empty and `student_answer` is empty, the returned `next_question` SHALL be at most 300 characters in length.
-
-**Validates: Requirements 6.3**
-
-### Property 10: interview_complete Derivation
-
-*For all* Lambda responses, the `interview_complete` field SHALL equal `True` if and only if `decision == "complete"`.
-
-**Validates: Requirements 9.4**
-
-### Property 11: Response Format Consistency
-
-*For all* inputs to the Lambda handler (valid or invalid), the response SHALL be a dict with `statusCode` (integer in {200, 400, 500}) and `body` (a valid JSON string that, when parsed, contains the keys `judgment`, `decision`, `next_question`, `interview_complete`, and `interview_state`).
-
-**Validates: Requirements 9.6**
+The module validates presence of inputs but does not validate schema conformance — that responsibility belongs to the producing agent (Analyst validates its own output, configs are validated at upload time).
 
 ## Error Handling
-
-### Error Categories
 
 | Category | Source | HTTP Status | Behavior |
 |---|---|---|---|
 | Malformed request | Handler | 400 | `event['body']` missing/null/not-JSON |
-| Validation failure | Validator | 200 | Invalid field values → `decision: "error"` in body |
-| Bedrock failure | BedrockClient | 200 | Service error/timeout/throttle → `decision: "error"` |
-| Parse failure | Parser | 200 | Malformed tool_use response → `decision: "error"` |
-| Unhandled exception | Handler | 500 | Catch-all for unexpected errors |
+| Missing analyst_output | Validator | 200 | Returns `{success: false, error_message: ...}` |
+| S3 config load failure | ConfigLoader | 200 | Returns error identifying which config failed |
+| Unhandled exception | Handler | 500 | Catch-all with error message |
 
-### Design Decisions
+**Key principles:**
 
-1. **Validation errors return 200 with error decision** (not 4xx) because the request format is valid JSON — the error is in the semantic content. The frontend checks the `decision` field rather than HTTP status for business logic errors.
+- Validation errors return 200 with `success: false` because the HTTP request itself is well-formed — the error is semantic
+- The handler never sets CORS headers (handled by Function URL config)
+- No retries on S3 failures — the frontend can retry the request
 
-2. **No retries on Bedrock failures**: Single-attempt design simplifies reasoning about state. The frontend can retry the entire turn if needed since the Lambda is stateless.
+## Configuration
 
-3. **Parser errors are non-fatal to the session**: A malformed Claude response returns `decision: "error"` with state unchanged. The frontend can retry the same turn since no state mutation occurred.
+**Environment variables:**
 
-4. **Error responses preserve the input state**: When `decision` is `"error"`, the returned `interview_state` is `None` (not the input state) to signal that the frontend should use its locally stored state for the next request.
+| Variable | Purpose |
+|---|---|
+| `S3_BUCKET` | S3 bucket containing interview configs |
+| `INTERVIEW_STRUCTURE_KEY` | S3 key for the interview structure JSON |
+| `INTERVIEW_PROFILE_KEY` | S3 key for the interview profile JSON |
+| `AWS_REGION` | Set to `us-west-2` |
 
-### Error Response Shape
+## What the Frontend Handles (Not This Module)
 
-All error paths produce the same response structure:
+For clarity, here is what the frontend owns after receiving the runtime context:
+
+- Opening the WebSocket connection to Nova Sonic
+- Providing the runtime context as Nova Sonic's system instruction
+- Streaming audio bidirectionally (microphone → Nova Sonic, Nova Sonic → speaker)
+- Tracking interview state (current point, stage, follow-up count)
+- Collecting transcripts from Nova Sonic session events
+- Handling early stop (closing the session gracefully)
+- Sending the Analyst output + transcript to the Evaluator Lambda when the interview ends
+
+## Data Models
+
+### Request Payload
+
 ```python
+# Input from frontend (or direct invocation)
 {
-    "judgment": None,
-    "decision": "error",
-    "next_question": "",
-    "interview_complete": False,
-    "interview_state": None,
-    "error_message": "Human-readable description of what went wrong"
+    "analyst_output": {
+        # Complete Analyst output — included as-is in the runtime context.
+        # Contains: candidate profile, job details, selected experiences,
+        # skills alignment, interview context.
+        # Schema defined by the Analyst module; this module does not validate shape.
+        ...
+    }
 }
 ```
 
+### Interview Structure (S3 config)
+
+```python
+{
+    "schema_version": str,             # e.g. "1.0"
+    "structure_id": str,               # e.g. "resume_deep_dive_v1"
+    "display_name": str,               # Human-readable name
+    "main_question_count": int,        # Number of main questions
+    "max_follow_ups_per_point": int,   # Max follow-ups allowed per point
+    "allow_early_stop": bool,          # Whether the session can end early
+    "interview_points": [              # Ordered list of interview points
+        {
+            "point_id": str,
+            "focus": str,              # e.g. "ownership", "problem_solving"
+            "topic": str,
+            "objective": str,
+            "experience_selection": {
+                "preferred_types": list[str],   # Optional
+                "selection_strategy": str
+            },
+            "listen_for": list[str],
+            "follow_up_topics": list[str]
+        }
+    ]
+}
+```
+
+### Interview Profile (S3 config)
+
+```python
+{
+    "schema_version": str,             # e.g. "1.0"
+    "profile_id": str,                 # e.g. "student_v1"
+    "display_name": str,
+    "candidate_level": str,            # e.g. "student_intern"
+    "tone": str,                       # e.g. "supportive_professional"
+    "question_style": {
+        "ask_one_question_at_a_time": bool,
+        "use_clear_language": bool,
+        "keep_questions_concise": bool,
+        "avoid_unnecessary_jargon": bool,
+        "acknowledge_student_experience": bool
+    },
+    "follow_up_behavior": {
+        "max_follow_ups_per_point": int,
+        "follow_up_depth": int,
+        "challenge_frequency": str,
+        "request_evidence_gently": bool,
+        "can_introduce_constraint": bool,
+        "follow_up_must_reference_answer": bool
+    },
+    "acceptable_experience_types": list[str],
+    "evaluation_expectations": {
+        "reward": list[str],
+        "do_not_expect": list[str],
+        "do_not_heavily_penalize": list[str]
+    },
+    "interviewer_rules": {
+        "do_not_invent_resume_details": bool,
+        "do_not_accuse_candidate_of_exaggeration": bool,
+        "remain_professional": bool,
+        "do_not_give_feedback_during_interview": bool,
+        "do_not_ask_multiple_questions_at_once": bool
+    }
+}
+```
+
+### Success Response
+
+```python
+{
+    "statusCode": 200,
+    "body": "{\"success\": true, \"runtime_context\": \"<assembled system instruction string>\"}"
+}
+```
+
+### Error Response
+
+```python
+# Validation / config error
+{
+    "statusCode": 200,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+
+# Malformed request (body not valid JSON)
+{
+    "statusCode": 400,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+
+# Unhandled exception
+{
+    "statusCode": 500,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+```
+
+## Correctness Properties
+
+1. **Analyst output integrity**: The Analyst output included in the runtime context must be byte-for-byte identical to what was received — no fields added, removed, or transformed.
+2. **Complete context assembly**: The returned runtime_context must contain all three components (analyst_output, interview_structure, interview_profile) plus behavioral instructions. Missing any component is a bug.
+3. **Config isolation**: Loading one S3 config must not affect the other. A failure in interview_structure loading must not corrupt or skip interview_profile loading — each failure is reported independently.
+4. **Idempotency**: Given the same analyst_output and the same S3 config contents, the Lambda must return the same runtime_context every time.
+5. **No side effects**: The Lambda must not write to S3, call any LLM, invoke other Lambdas, or produce any observable effect beyond returning the response.
+6. **Fail-fast on missing input**: If analyst_output is absent or empty, the module must return an error immediately without attempting S3 loads.
+7. **Mode detection correctness**: The handler must correctly distinguish Function URL invocations (event has `body` key) from direct invocations (event is the payload) and never double-parse or skip parsing.
+8. **Error responses are well-formed**: Every error path must return a response with `success: false` and a non-empty `error_message`. No path may return a bare exception or empty body.
+
 ## Testing Strategy
 
-### Property-Based Tests (Hypothesis)
+### Unit Tests
 
-The project will use [Hypothesis](https://hypothesis.readthedocs.io/) for property-based testing in Python. Each property from the Correctness Properties section maps to one Hypothesis test with a minimum of 100 iterations.
+| Component | What to test |
+|---|---|
+| `validation.py` | Accept valid payload with analyst_output; reject missing/empty analyst_output; reject non-dict payloads |
+| `config_loader.py` | Parse valid JSON from mocked S3 response; raise `ConfigLoadError` on missing key; raise `ConfigLoadError` on invalid JSON |
+| `context_builder.py` | Output contains analyst_output, interview_structure, interview_profile, and behavioral instructions; output is a non-empty string; idempotent across calls with same input |
+| `handler.py` | Function URL mode: parse event['body'] correctly; Direct mode: use event as payload; Return 400 for malformed body; Return 500 for unhandled exceptions; Correct statusCode and body structure for all paths |
 
-**Tag format**: `# Feature: interviewer-agent, Property {N}: {title}`
+### Integration Tests
 
-| Property | Module Under Test | Generator Strategy |
-|---|---|---|
-| 1: Decision Function Correctness | `orchestrator.compute_decision` | `st.lists(st.booleans(), min_size=4, max_size=4)`, `st.integers(0, 9)`, `st.integers(0, 2)`, `st.integers(1, 10)` with filtering |
-| 2: Decision Function Input Validation | `orchestrator.compute_decision` | Invalid rubric lists (wrong length, non-bool items), out-of-range indices |
-| 3: State Transition Correctness | `orchestrator.update_state` | Valid states + valid decisions, random conversation histories |
-| 4: Empty Answer State Preservation | `orchestrator.process_turn` | Non-empty histories + empty/whitespace answers |
-| 5: Parser Round-Trip | `parser.parse_response` | Random 4-boolean rubric + random valid question strings |
-| 6: Parser Rejection | `parser.parse_response` | Malformed response dicts (missing keys, wrong types, bad lengths) |
-| 7: Validator Rejection | `validation.validate_input` | Bodies with one or more invalid fields |
-| 8: Session Termination Bound | `orchestrator.compute_decision` (simulated loop) | Random rubric sequences across full sessions |
-| 9: First Turn Question Length | `orchestrator.process_turn` | Random interview_points lists (1-10 string items) |
-| 10: interview_complete Derivation | `handler.lambda_handler` | All four decision outcomes |
-| 11: Response Format Consistency | `handler.lambda_handler` | Mix of valid and invalid inputs |
+- **Happy path**: Invoke the handler with a valid analyst_output and mocked S3 (moto or stubbed boto3). Verify 200 response with `success: true` and a runtime_context containing all three sections.
+- **S3 failure**: Mock S3 to raise `NoSuchKey`. Verify the response indicates which config failed.
+- **Function URL parsing**: Pass a wrapped event (`{"body": "<json>"}`) and verify the payload is unwrapped correctly.
 
-### Unit Tests (pytest)
+### Test Environment
 
-Example-based tests for scenarios that don't benefit from randomization:
+- Use `pytest` as the test runner
+- Mock `boto3` S3 calls with `unittest.mock.patch` or `moto`
+- No real AWS credentials required for unit/integration tests
+- Tests run with `python3 -m pytest interviewer/tests/`
 
-- **First turn behavior**: Verify exact response shape (judgment=null, decision=follow_up, etc.)
-- **Prompt builder content**: Verify system prompt contains required instructions
-- **Tool schema structure**: Verify all 5 fields with correct types
-- **Bedrock client config**: Verify model ID, region, timeout, retry settings
-- **Handler 400 response**: Missing/null/malformed event body
-- **Handler 500 response**: Simulated unhandled exception
+## Future Extensibility
 
-### Integration Tests (mocked Bedrock)
-
-- Full happy-path flow: valid input → Bedrock mock returns tool_use → correct response
-- Bedrock timeout simulation
-- Bedrock throttling simulation
-- Multi-turn session simulation (3-4 turns progressing through points)
-
-### Test File Organization
-
-```
-interviewer/
-  tests/
-    __init__.py
-    conftest.py              # Shared fixtures, Hypothesis strategies
-    test_decision_props.py   # Properties 1, 2, 8
-    test_state_props.py      # Properties 3, 4
-    test_parser_props.py     # Properties 5, 6
-    test_validator_props.py  # Property 7
-    test_handler_props.py    # Properties 9, 10, 11
-    test_prompt_builder.py   # Unit tests (examples)
-    test_bedrock_client.py   # Unit tests (mocked)
-    test_integration.py      # Multi-turn integration tests
-```
-
+- New interview profiles (standard-v1, challenging-v1) added to S3 without code changes
+- New interview structures (system-design, behavioral-extended) added as new S3 configs
+- The request could include a `profile_id` or `structure_id` field to select which configs to load, allowing the frontend to offer interview type selection
+- Schemas are versioned independently — the module can check `schema_version` on loaded configs if needed
