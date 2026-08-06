@@ -1,0 +1,17 @@
+.question-breakdown {
+  padding: var(--section-gap) 0;
+  border-top: 1px solid var(--bg-control);
+}
+
+.question-breakdown__title {
+  font-size: var(--font-section-title);
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.question-breakdown__intro {
+  font-size: var(--font-body);
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}

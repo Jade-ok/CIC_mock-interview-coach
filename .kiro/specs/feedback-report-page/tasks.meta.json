@@ -1,0 +1,702 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "Create `frontend/src/types/evaluator.ts` with EvaluatorOutput, PerQuestionScore, OverallScores, and InterviewMetadata interfaces": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052055873
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052076693
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052330631
+      }
+    ],
+    "Create `frontend/src/utils/dimensionLabels.ts` with dimension key → human-readable label/description mapping": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052055950
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052331413
+      }
+    ],
+    "Create `frontend/src/utils/readinessSubheadings.ts` with readiness label → supportive subheading mapping": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052055993
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052332305
+      }
+    ],
+    "Add CSS custom properties for the feedback page to the global theme (or a dedicated CSS module)": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056032
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052333155
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/ScoreBar.tsx` — 5-segment bar visualization": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056072
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052341598
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052441284
+      }
+    ],
+    "Implement filled/unfilled logic: segments filled up to the score value, unfilled for the rest": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056115
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052442074
+      }
+    ],
+    "Support `size` prop ('sm' | 'md') for different contexts": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056150
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052442891
+      }
+    ],
+    "Add `aria-label` with numeric score for accessibility": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056191
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052443582
+      }
+    ],
+    "Write unit tests: renders correct filled/unfilled count for scores 1-5, handles float scores for averages": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056226
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052444475
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/HeroSection.tsx`": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056289
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052461696
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052631825
+      }
+    ],
+    "Display readiness_label as large heading": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056336
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052632541
+      }
+    ],
+    "Display supportive subheading mapped from readiness label": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056375
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052633275
+      }
+    ],
+    "Display \"INTERVIEW FEEDBACK · {target_role}\" context line": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056409
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052634190
+      }
+    ],
+    "Display total score (e.g. \"3.0 / 5 overall\") and question count (e.g. \"4 of 6 questions answered\")": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056450
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052635075
+      }
+    ],
+    "Write unit tests: correct label, subheading, score formatting, question count display": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056485
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052643916
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/DimensionCard.tsx` — single dimension display": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056524
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052652840
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052833057
+      }
+    ],
+    "Display human-readable label, description, numeric score, and ScoreBar": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056566
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052834084
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/DimensionScoresGrid.tsx` — 2x2 grid layout of 4 DimensionCards": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056603
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052835283
+      }
+    ],
+    "Implement responsive layout: 2x2 grid on desktop, single column on mobile": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056643
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052836345
+      }
+    ],
+    "Write unit tests: all 4 dimensions render with correct labels and scores": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056684
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052837596
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/FeedbackColumns.tsx`": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056724
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052847320
+      }
+    ],
+    "Render \"What you did well\" section with all strengths items as paragraphs": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056766
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052848459
+      }
+    ],
+    "Render \"What to work on next\" section with all improvements items as bulleted list": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056841
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052849325
+      }
+    ],
+    "Style direct quotes with distinct quotation styling (italic or quote marks)": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056884
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052850578
+      }
+    ],
+    "Implement responsive layout: side-by-side on desktop, stacked on mobile": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056924
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052851568
+      }
+    ],
+    "Write unit tests: renders all strengths and improvements, correct section headings": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056965
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052858926
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/ContextualAdvice.tsx`": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052056999
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052859825
+      }
+    ],
+    "Display \"For your next interview\" heading with subheading": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057034
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052860724
+      }
+    ],
+    "Render each advice item as a numbered entry": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057074
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052861784
+      }
+    ],
+    "Write unit tests: renders all advice items with correct numbering": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057110
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052862643
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/QuestionCard.tsx` — single question display": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057160
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052869826
+      }
+    ],
+    "Display turn type badge (\"Main question\" or \"Follow-up\") with distinct styling": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057199
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052871004
+      }
+    ],
+    "Display question text (bold) and answer summary": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057235
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052871992
+      }
+    ],
+    "Display 4 ScoreBar components (one per dimension) with dimension labels": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057274
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052873079
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/QuestionBreakdown.tsx` — section container": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057315
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052874108
+      }
+    ],
+    "Display intro line about question count and early-exit messaging": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057357
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052881992
+      }
+    ],
+    "Render QuestionCards in conversation order": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057432
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052883010
+      }
+    ],
+    "Write unit tests: correct turn badge, question/answer text, score bars rendered, handles 1-6 questions": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057467
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052884501
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/FooterCTA.tsx`": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057509
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052885310
+      }
+    ],
+    "Display motivational message \"Every practice round makes the real one easier.\"": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057558
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052886504
+      }
+    ],
+    "Render \"Practice again\" as primary button (filled style)": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057600
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052894185
+      }
+    ],
+    "Render \"View full transcript\" as secondary button (outlined style)": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057649
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052895077
+      }
+    ],
+    "Use accent color (`#FF5C5C`) background for footer band": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057690
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052896222
+      }
+    ],
+    "Wire onPracticeAgain and onViewTranscript callbacks": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057731
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052897192
+      }
+    ],
+    "Write unit tests: buttons trigger callbacks, motivational text present": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057774
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052898134
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/FeedbackReport.tsx` — page-level container": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057811
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052907059
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053049110
+      }
+    ],
+    "Compose all section components in correct order: Header → Hero → Dimensions → Columns → Advice → Questions → Footer": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057850
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053050130
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/FeedbackReport.module.css` — page-level styles": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057891
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053051051
+      }
+    ],
+    "Create `frontend/src/components/FeedbackReport/index.ts` — barrel export": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052057933
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053051922
+      }
+    ],
+    "Pass data from EvaluatorOutput prop to each sub-component": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058016
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053053043
+      }
+    ],
+    "Write integration test: full render with mock EvaluatorOutput data, all sections present": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058057
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053061810
+      }
+    ],
+    "Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback')": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058100
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053062826
+      }
+    ],
+    "Map AGENT3_SUCCESS payload to EvaluatorOutput type": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058142
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053063622
+      }
+    ],
+    "Wire onPracticeAgain to dispatch RESET action": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058177
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053064460
+      }
+    ],
+    "Wire onViewTranscript to open transcript view (or placeholder)": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058226
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053065318
+      }
+    ],
+    "Verify the full flow: mock evaluator response → FeedbackReport renders correctly": [
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786052058261
+      },
+      {
+        "executionId": "5714084a-3e6e-4c74-a727-bd8ce45c9482",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786053074077
+      }
+    ]
+  }
+}

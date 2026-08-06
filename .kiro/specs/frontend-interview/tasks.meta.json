@@ -1,0 +1,119 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "Vite + React + TypeScript 프로젝트 초기화 (`frontend/` 디렉토리)": [
+      {
+        "executionId": "de24663a-38b8-45c8-a51a-301e45bc06e3",
+        "chatSessionId": "sess_59c07b51-423c-4e5f-ad84-16d009d9398b",
+        "timestamp": 1786046911557
+      }
+    ],
+    "의존성 설치: react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket": [
+      {
+        "executionId": "2fbd9609-257b-437e-8683-cd64ae2dc7e7",
+        "chatSessionId": "sess_5895ee89-575b-4cf9-8df5-8b8ac2aa53de",
+        "timestamp": 1786046995430
+      }
+    ],
+    "Vite 설정 (dev server, build output)": [
+      {
+        "executionId": "d57167a5-1aee-4007-8706-ca45121a84c6",
+        "chatSessionId": "sess_0713760b-84fd-4a79-b644-877038944df3",
+        "timestamp": 1786047155897
+      }
+    ],
+    "전역 타입 정의 파일 생성 (`types/index.ts`): SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등 design.md의 모든 인터페이스": [
+      {
+        "executionId": "9820f587-52bc-4781-a908-72ba7d73c6c8",
+        "chatSessionId": "sess_01ee9690-f8b1-4604-b4c9-45df01244e1c",
+        "timestamp": 1786047172054
+      }
+    ],
+    "1. 프로젝트 초기 세팅: Vite + React + TypeScript 프로젝트 초기화 (frontend/ 디렉토리), 의존성 설치 (react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket), tsconfig.json 설정, Vite 설정, 디렉토리 구조 생성 (components, hooks, services, reducers, types, utils, worklets), 전역 타입 정의 파일 생성 (SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등)": [
+      {
+        "executionId": "2fab2536-efa9-48c9-8ac6-ac0fb383d065",
+        "chatSessionId": "sess_4ea4a48e-c1ed-47b0-bbdd-a38f1435551a",
+        "timestamp": 1786048176142
+      },
+      {
+        "executionId": "2fab2536-efa9-48c9-8ac6-ac0fb383d065",
+        "chatSessionId": "sess_4ea4a48e-c1ed-47b0-bbdd-a38f1435551a",
+        "timestamp": 1786048510588
+      }
+    ],
+    "2. SessionManager (Reducer + Context): reducers/sessionReducer.ts 구현 (SUBMIT_UPLOAD, AGENT1_SUCCESS/FAILED, WS_CONNECTED, SESSION_START_ACKED, WS_DISCONNECTED, WS_RECONNECT_SUCCESS/FAILED, WS_SESSION_INVALID, INTERVIEW_READY, AI_SPEAKING, USER_TURN, BARGE_IN, APPEND_TRANSCRIPT, TOGGLE_PRACTICE_MODE, TEXT_INPUT_START/CLEAR, END_INTERVIEW, AGENT3_LOADING/SUCCESS/FAILED, TIMEOUT, TICK, RESET), SessionContext + SessionProvider 구현, maybeStartSession() 조율 로직 (AGENT1_SUCCESS와 WS_CONNECTED 양쪽에서 호출), 단위 테스트 + PBT (Property 8, 13)": [
+      {
+        "executionId": "6346756e-e9e7-4be3-afe0-305c1484656e",
+        "chatSessionId": "sess_a21c34eb-57c3-47b4-bf50-fe498a1d8dd1",
+        "timestamp": 1786048594206
+      },
+      {
+        "executionId": "6346756e-e9e7-4be3-afe0-305c1484656e",
+        "chatSessionId": "sess_a21c34eb-57c3-47b4-bf50-fe498a1d8dd1",
+        "timestamp": 1786048839459
+      }
+    ],
+    "3. WebSocketClient 서비스: services/webSocketClient.ts 구현 (connect, disconnect, getState, sendSessionStart → Promise with ack 대기, sendAudioChunk, sendTextInput), 재연결 로직 (exponential backoff 1s/2s, 최대 2회), session_start_ack 수신 처리, session_invalid 수신 처리, mock-socket 기반 WS 서버 stub, 단위 테스트 + PBT (Property 7)": [
+      {
+        "executionId": "9e5aa029-df75-4f97-a73c-c139c3db9abf",
+        "chatSessionId": "sess_8b4033ee-169e-4cdf-bd65-29046b0210c7",
+        "timestamp": 1786048971097
+      }
+    ],
+    "4. AudioManager 서비스: services/audioManager.ts 구현 (initialize, startCapture, pauseCapture, resumeCapture, enqueueAudio, stopPlayback, waitForPlaybackEnd, isPlaying, destroy), worklets/captureProcessor.ts (AudioWorkletProcessor, 16kHz 16-bit mono 512 frame), 에코 캔슬레이션 설정, 출력 재생 (24kHz PCM AudioBufferSourceNode 체인), 단위 테스트 + PBT (Property 5, 6)": [
+      {
+        "executionId": "9b34ac0e-55e9-46ad-be19-a223bb5854eb",
+        "chatSessionId": "sess_208f7ef6-3512-44c9-bde8-cffd0af080d0",
+        "timestamp": 1786050208534
+      },
+      {
+        "executionId": "9b34ac0e-55e9-46ad-be19-a223bb5854eb",
+        "chatSessionId": "sess_208f7ef6-3512-44c9-bde8-cffd0af080d0",
+        "timestamp": 1786050606006
+      }
+    ],
+    "5. Upload Screen 컴포넌트: components/UploadScreen.tsx (FileUploader 드래그앤드롭 + 파일 선택, JDTextarea, SubmitButton), utils/uploadValidator.ts (MIME type + 10MB 크기 체크), PDF/크기 에러 메시지 표시, 제출 시 PDF base64 변환 + JD text 전달, 단위 테스트 + PBT (Property 1, 2)": [
+      {
+        "executionId": "67ce0006-9b0c-4f5b-a2be-2f4d2b64ae90",
+        "chatSessionId": "sess_09f0c6c5-7fef-4449-8031-69e39a042fec",
+        "timestamp": 1786050640263
+      },
+      {
+        "executionId": "67ce0006-9b0c-4f5b-a2be-2f4d2b64ae90",
+        "chatSessionId": "sess_09f0c6c5-7fef-4449-8031-69e39a042fec",
+        "timestamp": 1786051013478
+      }
+    ],
+    "6. Waiting Room 컴포넌트: components/WaitingRoom.tsx (로딩 아이콘 + 대기 문구, 30초 타임아웃, 에러 표시 + 재시도/돌아가기 버튼), Agent 1 HTTP POST mock/stub, 병렬 요청 + maybeStartSession 조율 (agent1Ready, wsConnectionState 추적), 부분 재시도 (실패 항목만 재요청, 성공 캐시 유지), WS 재시도 시 캐시된 novaSonicContext로 session_start 재전송, 단위 테스트 + PBT (Property 3, 4)": [
+      {
+        "executionId": "1a95ebf1-3ce8-4814-9343-7b6d37a8543e",
+        "chatSessionId": "sess_81e47eff-6290-414f-9b83-a1f1fa223b84",
+        "timestamp": 1786051045794
+      },
+      {
+        "executionId": "1a95ebf1-3ce8-4814-9343-7b6d37a8543e",
+        "chatSessionId": "sess_81e47eff-6290-414f-9b83-a1f1fa223b84",
+        "timestamp": 1786051429635
+      }
+    ],
+    "7. Interview Screen 레이아웃 및 기본 UI: components/InterviewScreen.tsx (다크 테마 Zoom 스타일, ParticipantTiles AITile/UserTile 웨이브폼, ControlBar EndButton/PracticeModeToggle, Timer TICK 기반, TextInput fallback), Turn 상태 시각 표시 (ai_speaking/user_turn), beforeunload 등록/해제, 종료 버튼 항상 활성, 단위 테스트 + PBT (Property 15, 16)": [
+      {
+        "executionId": "1783cafc-7be3-425d-9d2d-7b9760c60fa6",
+        "chatSessionId": "sess_1eedab97-ba30-444b-92be-1ae1c6bc2635",
+        "timestamp": 1786051524632
+      },
+      {
+        "executionId": "1783cafc-7be3-425d-9d2d-7b9760c60fa6",
+        "chatSessionId": "sess_1eedab97-ba30-444b-92be-1ae1c6bc2635",
+        "timestamp": 1786051903117
+      }
+    ],
+    "11. 인터뷰 종료 흐름: EndConfirmModal (확인/취소), 수동 종료 (확인 → stopPlayback + session_end + disconnect + Feedback 전환), 자동 종료 (end_interview tool_use → waitForPlaybackEnd + session_end + disconnect + Feedback 전환), transcript Agent 3 HTTP POST (mock/stub), Agent 3 실패 → 에러 + 재시도, components/FeedbackScreen.tsx (로딩/에러/결과 분기), 통합 테스트 + PBT (Property 14)": [
+      {
+        "executionId": "2ca37ca2-7812-480e-bfb4-046e50cae4e3",
+        "chatSessionId": "sess_c52b5be7-812c-49b8-b5d8-bed7d4c481ff",
+        "timestamp": 1786052371816
+      }
+    ]
+  }
+}
