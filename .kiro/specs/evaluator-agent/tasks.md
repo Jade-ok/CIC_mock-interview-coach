@@ -16,7 +16,7 @@
 ## Task 2: Implement Input Validation
 
 - [ ] Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event
-- [ ] Validate presence of required fields: conversation, interview_metadata, resume_analysis, job_description
+- [ ] Validate presence of required fields: conversation, interview_metadata, resume_analysis
 - [ ] Validate conversation length (1-6 pairs)
 - [ ] Validate each turn contains point_id, turn_type, question, answer
 - [ ] Raise `ValidationError` with descriptive messages on failure
@@ -25,9 +25,9 @@
 ## Task 3: Implement Prompt Builder
 
 - [ ] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
-- [ ] Implement `_format_user_message(conversation, resume_analysis, job_description)` to format the user message
+- [ ] Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object
 - [ ] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
-- [ ] Implement `build(conversation, resume_analysis, job_description)` returning (system, messages, tool_config) tuple
+- [ ] Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple
 - [ ] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
 - [ ] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 

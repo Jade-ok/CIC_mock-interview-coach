@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, resume analysis, and job description, then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
+The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines resume analysis and job-role alignment), then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
 
 All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The system handles variable-length conversations (1-6 question-answer pairs) without penalizing incomplete interviews. Each turn in the conversation (whether main_question or follow_up) is scored independently.
 
@@ -51,8 +51,7 @@ def handler(event, context):
         # 2. Build evaluation prompt
         system, messages, tool_config = prompt_builder.build(
             conversation=payload["conversation"],
-            resume_analysis=payload["resume_analysis"],
-            job_description=payload["job_description"]
+            resume_analysis=payload["resume_analysis"]
         )
         
         # 3. Call Bedrock Converse API
@@ -86,7 +85,7 @@ def handler(event, context):
 
 **Key behaviors:**
 - Parses JSON body from the Lambda Function URL event format
-- Validates presence of conversation, interview_metadata, resume_analysis, and job_description
+- Validates presence of conversation, interview_metadata, and resume_analysis
 - Validates conversation length: minimum 1, maximum 6 question-answer pairs
 - Validates each turn contains required fields
 - Returns a validated payload dict or raises ValidationError
@@ -95,7 +94,7 @@ def handler(event, context):
 def parse_and_validate(event: dict) -> dict:
     body = json.loads(event.get("body", "{}"))
     
-    required_fields = ["conversation", "interview_metadata", "resume_analysis", "job_description"]
+    required_fields = ["conversation", "interview_metadata", "resume_analysis"]
     for field in required_fields:
         if not body.get(field):
             raise ValidationError(f"Missing or empty required field: {field}")
@@ -150,9 +149,11 @@ Scoring guide (co-op student calibration):
 Provide your scoring judgments only. Do NOT calculate averages or assign labels.
 Use supportive, constructive, student-friendly language in all feedback."""
 
-def build(conversation: list, resume_analysis: str, job_description: str) -> tuple:
+def build(conversation: list, resume_analysis: dict) -> tuple:
+    # resume_analysis is a structured JSON object containing candidate_profile, target_role,
+    # resume_job_alignment, and selected_experiences
     messages = [
-        {"role": "user", "content": [{"text": _format_user_message(conversation, resume_analysis, job_description)}]}
+        {"role": "user", "content": [{"text": _format_user_message(conversation, resume_analysis)}]}
     ]
     tool_config = _build_tool_config()
     system = [{"text": SYSTEM_PROMPT}]
@@ -370,8 +371,37 @@ class EvaluationError(Exception):
     "follow_ups_completed": 3,
     "ended_early": false
   },
-  "resume_analysis": "Topics: 1) Team collaboration (SE course project)...",
-  "job_description": "We are looking for a co-op student who..."
+  "resume_analysis": {
+    "schema_version": "1.0",
+    "candidate_profile": {
+      "candidate_level": "student_intern",
+      "education_summary": "Computer science student with relevant coursework.",
+      "relevant_skills": ["Java", "Python", "React"],
+      "experience_types_available": ["internship", "hackathon", "academic_project"]
+    },
+    "target_role": {
+      "title": "Software Engineering Intern",
+      "required_skills": ["programming", "problem-solving", "testing"],
+      "evaluation_priorities": ["technical understanding", "learning ability", "teamwork"]
+    },
+    "resume_job_alignment": {
+      "strong_matches": [{"resume_evidence": "...", "job_requirement": "...", "match_reason": "..."}],
+      "partial_matches": [{"resume_evidence": "...", "job_requirement": "...", "match_reason": "..."}],
+      "areas_to_explore": [{"topic": "testing", "reason": "Limited detail about testing responsibilities."}]
+    },
+    "selected_experiences": [
+      {
+        "experience_id": "exp_1",
+        "title": "Configuration Management Tool",
+        "experience_type": "internship",
+        "summary": "Built a Java tool that analyzed configuration data.",
+        "skills_demonstrated": ["Java", "testing", "caching"],
+        "job_requirements_supported": ["software development", "problem-solving"],
+        "relevance_score": 0.94
+      }
+    ],
+    "analysis_warnings": ["Limited evidence of production AWS experience."]
+  }
 }
 ```
 
@@ -449,7 +479,7 @@ class EvaluationError(Exception):
 
 - Lambda timeout must accommodate up to 2 Bedrock API calls (recommend 60s timeout)
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
-- Resume analysis is a plain text string from the Analyst agent
+- Resume analysis is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)
 - No persistent storage; the Evaluator is fully stateless
 - Maximum expected conversation size: 6 turns (3 main questions + 3 follow-ups, each with point_id linking main to its follow-up)
