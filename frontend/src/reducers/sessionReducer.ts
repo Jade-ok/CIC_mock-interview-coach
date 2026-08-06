@@ -195,7 +195,7 @@ export function sessionReducer(
         inputMode: 'text_only',
         error: {
           code: 'MIC_DENIED',
-          message: '마이크 권한이 거부되었습니다. 텍스트 전용 모드로 전환합니다.',
+          message: 'Microphone permission denied. Switching to text-only mode.',
           retryable: false,
         },
       };

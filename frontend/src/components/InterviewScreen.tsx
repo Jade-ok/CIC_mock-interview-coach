@@ -55,7 +55,7 @@ function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean
           <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
       </div>
-      <span className="participant-tile__label">You{textOnly ? ' (텍스트 모드)' : ''}</span>
+      <span className="participant-tile__label">You{textOnly ? ' (Text Mode)' : ''}</span>
     </div>
   );
 }
@@ -108,7 +108,7 @@ function EndButton({ onEnd }: { onEnd: () => void }) {
       onClick={onEnd}
       type="button"
       disabled={false}
-      aria-label="종료"
+      aria-label="End"
       data-testid="end-button"
     >
       End 🔴
@@ -215,7 +215,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       });
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Agent 3 요청에 실패했습니다.';
+      const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
   }, [dispatch, state.transcript, state.competencyGuides]);

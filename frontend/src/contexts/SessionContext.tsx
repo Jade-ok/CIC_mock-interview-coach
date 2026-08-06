@@ -18,27 +18,29 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sessionReducer, initialState);
   const wsRef = useRef<WebSocketClient | null>(null);
+  // Keep a ref to the latest state so coordinatedDispatch always sees fresh data
+  const stateRef = useRef<SessionState>(state);
+  stateRef.current = state;
 
   const setWebSocketClient = useCallback((ws: WebSocketClient | null) => {
     wsRef.current = ws;
   }, []);
 
-  // Wrap dispatch to intercept AGENT1_SUCCESS and WS_CONNECTED for coordination
+  // Wrap dispatch to intercept AGENT1_SUCCESS and WS_CONNECTED for coordination.
+  // Uses stateRef to avoid stale closure issues.
   const coordinatedDispatch: React.Dispatch<SessionAction> = useCallback(
     (action: SessionAction) => {
       dispatch(action);
 
-      // After dispatching, compute the new state to check maybeStartSession conditions.
-      // We need to compute what the new state would be after this action.
       if (action.type === 'AGENT1_SUCCESS' || action.type === 'WS_CONNECTED') {
-        // Compute the state after applying this action
-        const nextState = sessionReducer(state, action);
+        // Compute the state after applying this action against the latest known state
+        const nextState = sessionReducer(stateRef.current, action);
         if (wsRef.current) {
           maybeStartSession(nextState, wsRef.current, dispatch);
         }
       }
     },
-    [state]
+    [] // stable — reads from refs
   );
 
   return (

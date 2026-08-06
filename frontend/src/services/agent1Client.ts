@@ -19,8 +19,8 @@ export interface Agent1Request {
  * Replace with real HTTP POST when backend is available.
  */
 export async function callAgent1(request: Agent1Request): Promise<Agent1Response> {
-  // Stub: simulate network delay (1-3 seconds)
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  // Stub: simulate network delay (~1 second)
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   return {
     nova_sonic_context: `Interview context for ${request.pdf.name}. JD length: ${request.jdText.length} chars.`,
@@ -28,21 +28,21 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
       {
         id: 'cg-1',
         title: 'Technical Problem Solving',
-        keywords: ['algorithm', 'data structure', 'optimization', '알고리즘', '자료구조'],
+        keywords: ['algorithm', 'data structure', 'optimization', 'complexity'],
         description: 'Ability to solve complex technical problems efficiently',
         highlighted: false,
       },
       {
         id: 'cg-2',
         title: 'System Design',
-        keywords: ['architecture', 'scalability', 'design pattern', '설계', '확장성'],
+        keywords: ['architecture', 'scalability', 'design pattern', 'distributed'],
         description: 'Understanding of large-scale system design principles',
         highlighted: false,
       },
       {
         id: 'cg-3',
         title: 'Communication',
-        keywords: ['explain', 'clarify', 'collaborate', '설명', '협업'],
+        keywords: ['explain', 'clarify', 'collaborate', 'trade-off'],
         description: 'Clear communication of technical concepts',
         highlighted: false,
       },

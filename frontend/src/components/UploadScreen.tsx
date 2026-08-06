@@ -78,7 +78,7 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
       <div className="upload-screen__content">
         {/* FileUploader */}
         <div className="upload-screen__section">
-          <label className="upload-screen__label">이력서 (PDF)</label>
+          <label className="upload-screen__label">Resume (PDF)</label>
           <div
             className={`upload-screen__dropzone ${isDragOver ? 'upload-screen__dropzone--dragover' : ''}`}
             onDragOver={handleDragOver}
@@ -87,7 +87,7 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
             onClick={handleDropZoneClick}
             role="button"
             tabIndex={0}
-            aria-label="PDF 파일을 드래그앤드롭하거나 클릭하여 선택하세요"
+            aria-label="Drag and drop a PDF file or click to select"
           >
             <input
               ref={fileInputRef}
@@ -102,7 +102,7 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
               <p className="upload-screen__filename">{file.name}</p>
             ) : (
               <p className="upload-screen__placeholder">
-                PDF 파일을 드래그앤드롭하거나 클릭하여 선택하세요
+                Drag and drop a PDF file or click to select
               </p>
             )}
           </div>
@@ -116,14 +116,14 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
         {/* JDTextarea */}
         <div className="upload-screen__section">
           <label className="upload-screen__label" htmlFor="jd-textarea">
-            채용공고 (JD)
+            Job Description (JD)
           </label>
           <textarea
             id="jd-textarea"
             className="upload-screen__textarea"
             value={jdText}
             onChange={(e) => setJdText(e.target.value)}
-            placeholder="채용공고 내용을 붙여넣으세요"
+            placeholder="Paste the job description here"
             rows={8}
           />
         </div>
@@ -135,7 +135,7 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
           disabled={isSubmitDisabled}
           type="button"
         >
-          제출
+          Submit
         </button>
       </div>
 

@@ -24,10 +24,10 @@ export function EndConfirmModal({ open, onConfirm, onCancel }: EndConfirmModalPr
     >
       <div className="end-confirm-modal">
         <h2 id="end-confirm-title" className="end-confirm-modal__title">
-          인터뷰를 종료하시겠습니까?
+          End the interview?
         </h2>
         <p className="end-confirm-modal__desc">
-          종료하면 현재까지의 대화를 바탕으로 피드백이 생성됩니다.
+          Feedback will be generated based on the conversation so far.
         </p>
         <div className="end-confirm-modal__actions">
           <button
@@ -36,7 +36,7 @@ export function EndConfirmModal({ open, onConfirm, onCancel }: EndConfirmModalPr
             type="button"
             data-testid="end-confirm-cancel"
           >
-            취소
+            Cancel
           </button>
           <button
             className="end-confirm-modal__btn end-confirm-modal__btn--confirm"
@@ -44,7 +44,7 @@ export function EndConfirmModal({ open, onConfirm, onCancel }: EndConfirmModalPr
             type="button"
             data-testid="end-confirm-ok"
           >
-            종료
+            End
           </button>
         </div>
       </div>

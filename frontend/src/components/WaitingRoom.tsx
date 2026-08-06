@@ -2,14 +2,19 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { callAgent1 } from '@/services/agent1Client';
 import { WebSocketClient } from '@/services/webSocketClient';
+import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 const TIMEOUT_MS = 30000;
 const WS_URL = 'ws://localhost:8080';
 
+// Use mock in dev mode so the demo transitions without a real backend
+const createWsClient = () =>
+  import.meta.env.DEV ? new MockWebSocketClient() : new WebSocketClient();
+
 export function WaitingRoom() {
   const { state, dispatch, setWebSocketClient } = useSession();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wsClientRef = useRef<WebSocketClient | null>(null);
+  const wsClientRef = useRef<WebSocketClient | MockWebSocketClient | null>(null);
   const agent1CalledRef = useRef(false);
   const wsCalledRef = useRef(false);
 
@@ -73,7 +78,7 @@ export function WaitingRoom() {
       agent1CalledRef.current = false;
       dispatch({
         type: 'AGENT1_FAILED',
-        payload: { message: err instanceof Error ? err.message : 'Agent 1 요청에 실패했습니다.' },
+        payload: { message: err instanceof Error ? err.message : 'Agent 1 request failed.' },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,9 +86,9 @@ export function WaitingRoom() {
 
   const startWebSocket = useCallback(async () => {
     wsCalledRef.current = true;
-    const wsClient = new WebSocketClient();
+    const wsClient = createWsClient();
     wsClientRef.current = wsClient;
-    setWebSocketClient(wsClient);
+    setWebSocketClient(wsClient as any);
 
     try {
       await wsClient.connect({ url: WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
@@ -92,7 +97,7 @@ export function WaitingRoom() {
       wsCalledRef.current = false;
       dispatch({
         type: 'AGENT1_FAILED',
-        payload: { message: err instanceof Error ? err.message : 'WebSocket 연결에 실패했습니다.' },
+        payload: { message: err instanceof Error ? err.message : 'WebSocket connection failed.' },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,15 +136,15 @@ export function WaitingRoom() {
       <div className="waiting-room__container">
         {!hasError ? (
           <>
-            <div className="waiting-room__spinner" aria-label="로딩 중">
+            <div className="waiting-room__spinner" aria-label="Loading">
               <div className="waiting-room__spinner-circle" />
             </div>
             <p className="waiting-room__message">
-              호스트가 들여보내주길 기다리는 중입니다
+              Waiting for the host to let you in
             </p>
             <div className="waiting-room__status">
-              <StatusItem label="Agent 분석" ready={state.agent1Ready} />
-              <StatusItem label="서버 연결" ready={state.wsReady} />
+              <StatusItem label="Agent Analysis" ready={state.agent1Ready} />
+              <StatusItem label="Server Connection" ready={state.wsReady} />
             </div>
           </>
         ) : (
@@ -157,7 +162,7 @@ export function WaitingRoom() {
                   onClick={handleRetry}
                   type="button"
                 >
-                  재시도
+                  Retry
                 </button>
               )}
               <button
@@ -165,7 +170,7 @@ export function WaitingRoom() {
                 onClick={handleBack}
                 type="button"
               >
-                돌아가기
+                Go Back
               </button>
             </div>
           </>

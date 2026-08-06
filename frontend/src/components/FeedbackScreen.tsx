@@ -28,7 +28,7 @@ export function FeedbackScreen({
         <div className="feedback-screen__loading" data-testid="feedback-loading">
           <div className="feedback-screen__spinner" aria-hidden="true" />
           <p className="feedback-screen__loading-text">
-            피드백을 생성하고 있습니다...
+            Generating your feedback...
           </p>
         </div>
       )}
@@ -44,7 +44,7 @@ export function FeedbackScreen({
                 type="button"
                 data-testid="feedback-retry-btn"
               >
-                재시도
+                Retry
               </button>
             )}
             <button
@@ -53,7 +53,7 @@ export function FeedbackScreen({
               type="button"
               data-testid="feedback-new-session-btn"
             >
-              새 세션 시작
+              New Session
             </button>
           </div>
         </div>
@@ -61,7 +61,7 @@ export function FeedbackScreen({
 
       {!loading && !error && feedbackResult != null && (
         <div className="feedback-screen__result" data-testid="feedback-result">
-          <h2 className="feedback-screen__title">인터뷰 피드백</h2>
+          <h2 className="feedback-screen__title">Interview Feedback</h2>
           <pre className="feedback-screen__data">
             {String(JSON.stringify(feedbackResult, null, 2))}
           </pre>
