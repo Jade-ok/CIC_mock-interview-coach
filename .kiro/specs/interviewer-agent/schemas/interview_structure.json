@@ -4,7 +4,7 @@
   "display_name": "General Interview Structure",
   "description": "A standard behavioral interview format with 3 main questions and up to 3 follow-ups per question.",
   "main_question_count": 3,
-  "max_follow_ups_per_point": 3,
+  "max_follow_ups_per_point": 1,
   "allow_early_stop": true,
   "interview_points": [
     {
