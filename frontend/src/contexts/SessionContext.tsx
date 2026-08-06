@@ -18,29 +18,34 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sessionReducer, initialState);
   const wsRef = useRef<WebSocketClient | null>(null);
-  // Keep a ref to the latest state so coordinatedDispatch always sees fresh data
-  const stateRef = useRef<SessionState>(state);
-  stateRef.current = state;
+
+  // Eagerly-updated state ref so async coordination always reads the latest state,
+  // even between React re-renders.
+  const latestStateRef = useRef<SessionState>(initialState);
 
   const setWebSocketClient = useCallback((ws: WebSocketClient | null) => {
     wsRef.current = ws;
   }, []);
 
-  // Wrap dispatch to intercept AGENT1_SUCCESS and WS_CONNECTED for coordination.
-  // Uses stateRef to avoid stale closure issues.
+  // Wrap dispatch: apply the reducer eagerly to the ref, then call React dispatch.
+  // This ensures maybeStartSession always sees the accumulated state.
   const coordinatedDispatch: React.Dispatch<SessionAction> = useCallback(
     (action: SessionAction) => {
+      // Eagerly compute next state
+      const nextState = sessionReducer(latestStateRef.current, action);
+      latestStateRef.current = nextState;
+
+      // Actually dispatch to React (triggers re-render)
       dispatch(action);
 
+      // Coordination: check if we should send session_start
       if (action.type === 'AGENT1_SUCCESS' || action.type === 'WS_CONNECTED') {
-        // Compute the state after applying this action against the latest known state
-        const nextState = sessionReducer(stateRef.current, action);
         if (wsRef.current) {
           maybeStartSession(nextState, wsRef.current, dispatch);
         }
       }
     },
-    [] // stable — reads from refs
+    [] // stable — reads from refs only
   );
 
   return (
