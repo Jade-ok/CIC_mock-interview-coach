@@ -32,7 +32,7 @@ export class InfraStack extends cdk.Stack {
       functionName: 'mock-interview-analyst',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../analyst'),
-      handler: 'analyst.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
     });
@@ -56,7 +56,7 @@ export class InfraStack extends cdk.Stack {
       functionName: 'mock-interview-evaluator',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../evaluator'),
-      handler: 'evaluator.handler.lambda_handler',
+      handler: 'lambda_handler.handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
     });
@@ -80,7 +80,7 @@ export class InfraStack extends cdk.Stack {
       functionName: 'mock-interview-interviewer',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../interviewer'),
-      handler: 'interviewer.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {
@@ -111,7 +111,7 @@ export class InfraStack extends cdk.Stack {
           ],
         },
       }),
-      handler: 'pdf_parser.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
     });
@@ -128,7 +128,7 @@ export class InfraStack extends cdk.Stack {
       functionName: 'mock-interview-polly',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../polly'),
-      handler: 'polly.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
     });
