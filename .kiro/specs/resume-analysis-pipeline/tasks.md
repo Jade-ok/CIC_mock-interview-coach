@@ -15,8 +15,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Push to `main` so teammates (interviewer, evaluator, frontend) can access the schema immediately
     - _Requirements: 6.1, 6.2_
 
-- [ ] 2. Implement pdf_parser — validation and invocation mode detection
-  - [ ] 2.1 Create pdf_parser/validation.py
+- [x] 2. Implement pdf_parser — validation and invocation mode detection
+  - [x] 2.1 Create pdf_parser/validation.py
     - Implement `detect_invocation_mode(event)` — if `event` has `body` key with string value, parse JSON from it; otherwise return event as-is
     - Implement `validate_request(payload)` — check at least one document present, base64 size ≤ 4 MB, format flag is `"pdf"` or `"text"` for job_posting, required fields present
     - Return `(is_valid, error_message_or_none)` tuple
@@ -53,8 +53,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
       - Function URL mode: `{"body": "{\"resume\": {\"content\": \"<short base64 PDF>\", \"format\": \"pdf\"}}"}`
     - Include a comment/note at top explaining usage: `aws lambda invoke --function-name pdf_parser --payload file://pdf_parser/test_event.json out.json`
 
-- [ ] 5. Implement analyst — validation and invocation mode detection
-  - [ ] 5.1 Create analyst/validation.py
+- [x] 5. Implement analyst — validation and invocation mode detection
+  - [x] 5.1 Create analyst/validation.py
     - Implement `detect_invocation_mode(event)` — same dual-mode pattern as pdf_parser
     - Implement `validate_request(payload)` — check `resume_text` and `job_posting_text` are present and non-empty strings
     - Return `(is_valid, error_message_or_none)` with specific field names in error

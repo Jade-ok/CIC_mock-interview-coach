@@ -122,6 +122,114 @@
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786046571048
       }
+    ],
+    "2.1 Create pdf_parser/validation.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050307496
+      }
+    ],
+    "2. Implement pdf_parser — validation and invocation mode detection": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050307563
+      }
+    ],
+    "5.1 Create analyst/validation.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050308289
+      }
+    ],
+    "5. Implement analyst — validation and invocation mode detection": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050308319
+      }
+    ],
+    "3.1 Create pdf_parser/parser.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313193
+      },
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050322713
+      }
+    ],
+    "4.1 Create pdf_parser/orchestrator.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313229
+      }
+    ],
+    "4.2 Create pdf_parser/handler.py entry point": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313268
+      }
+    ],
+    "4.3 Add pdf_parser/test_event.json sample payloads": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313298
+      }
+    ],
+    "6.1 Create analyst/prompt_builder.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313328
+      },
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050323460
+      }
+    ],
+    "7.1 Create analyst/bedrock_client.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313362
+      }
+    ],
+    "8.1 Create analyst/parser.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313395
+      }
+    ],
+    "9.1 Create analyst/orchestrator.py": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313433
+      }
+    ],
+    "9.2 Create analyst/handler.py entry point": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313467
+      }
+    ],
+    "9.3 Add analyst/test_event.json sample payload": [
+      {
+        "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050313499
+      }
     ]
   }
 }
