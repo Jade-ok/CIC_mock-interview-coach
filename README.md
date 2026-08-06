@@ -1,67 +1,93 @@
-# Mock Interview App
+# Mock Interview Coach
 
-AI 기반 모의 면접 애플리케이션. 이력서를 분석하고, 면접 질문을 생성하며, 답변을 평가합니다.
+AI-powered mock interview application. Analyzes resumes, generates interview questions, and evaluates answers for co-op seeking students.
 
 ## Architecture
 
-브라우저가 상태를 관리하고, 각 Lambda는 stateless로 동작합니다. (DB, S3, API Gateway 없음)
+The browser manages all state. Each Lambda is stateless. No database, no S3 session state, no API Gateway.
 
 ```
-frontend/        → 브라우저 UI (상태 보관)
-analyst/         → 이력서 분석 (Claude Fable 5)
-interviewer/     → 면접 질문 생성 (Claude Opus 4)
-evaluator/       → 답변 평가 (Claude Fable 5)
-polly/           → TTS 음성 합성 (Amazon Polly)
-pdf_parser/      → PDF 텍스트 추출 (pypdf)
+frontend/        → Browser UI (holds state)
+analyst/         → Resume analysis (Claude Fable 5)
+interviewer/     → Interview context builder (Nova Sonic via frontend WebSocket)
+evaluator/       → Answer evaluation (Claude Fable 5)
+polly/           → TTS synthesis (Amazon Polly)
+pdf_parser/      → PDF text extraction (pypdf)
 ```
 
 ## Tech Stack
 
 - **Runtime**: Python 3.12 (AWS Lambda)
-- **LLM**: Amazon Bedrock Converse API (`tool_use` 방식)
+- **LLM**: Amazon Bedrock Converse API (`tool_use` pattern)
+- **Speech**: Amazon Nova Sonic (WebSocket, frontend-direct)
 - **TTS**: Amazon Polly
 - **PDF**: pypdf
 - **Region**: us-east-1
 
 ## Lambda Module Structure
 
-AI Lambda (analyst, interviewer, evaluator)는 동일한 구조를 따릅니다:
+AI Lambdas (analyst, evaluator) follow this structure:
 
 ```
 module/
   __init__.py
   handler.py          # Lambda entry point
-  orchestrator.py     # 비즈니스 로직
-  validation.py       # 입력 검증
-  prompt_builder.py   # 프롬프트 구성
-  bedrock_client.py   # Bedrock API 호출
-  parser.py           # 응답 파싱/검증
+  orchestrator.py     # Business logic wiring
+  validation.py       # Input validation
+  prompt_builder.py   # Prompt construction
+  bedrock_client.py   # Bedrock Converse API call
+  parser.py           # Response parsing/validation
+```
+
+The Interviewer Lambda is a context-builder (no LLM call):
+
+```
+interviewer/
+  __init__.py
+  handler.py          # Lambda entry point
+  validation.py       # Input validation
+  config_loader.py    # S3 fetch for interview structure + profile
+  context_builder.py  # Assembles runtime context for Nova Sonic
 ```
 
 ## Models
 
-| Agent | Model ID |
-|-------|----------|
-| analyst | global.anthropic.claude-fable-5 |
-| interviewer | global.anthropic.claude-opus-4-7 |
-| evaluator | global.anthropic.claude-fable-5 |
-| polly | Amazon Polly (Bedrock 미사용) |
-| pdf_parser | pypdf (Bedrock 미사용) |
+| Agent | Model / Service |
+|-------|-----------------|
+| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) |
+| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
+| polly | Amazon Polly only |
+| pdf_parser | pypdf only |
+
+## Schemas
+
+Inter-agent data contracts are defined in `schemas/`:
+
+| File | Purpose |
+|------|---------|
+| `analyst_output.json` | Analyst → Interviewer & Evaluator |
+| `evaluator_input.json` | What the Evaluator receives (Analyst output + transcript) |
+| `evaluator_output.json` | What the Evaluator returns (scores + feedback) |
 
 ## Deployment
 
 ```bash
-# Lambda zip 패키징 예시
+# Lambda zip packaging
 zip -r analyst.zip analyst/
 
-# pdf_parser는 pypdf 번들 필요
+# pdf_parser requires pypdf bundled
 pip3 install pypdf -t pdf_parser/
 zip -r pdf_parser.zip pdf_parser/
+
+# Evaluator uses SAM
+cd evaluator && sam build && sam deploy --guided
 ```
 
-### 주의사항
+## Important Notes
 
-- Function URL 호출 시 `event['body']`에서 JSON 파싱
-- CORS는 Function URL 설정에서 관리 (코드 아님)
-- 권한: `lambda:InvokeFunctionUrl` + `lambda:InvokeFunction` 둘 다 필요
-- PDF 업로드 제한: 클라이언트 4MB / Lambda 6MiB
+- Function URL calls: parse JSON from `event['body']`
+- CORS is configured on the Function URL settings, not in Python code
+- Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
+- PDF upload limit: 4 MB client-side / 6 MiB Lambda payload
+- Trailing whitespace after URLs in `.env` causes 403 errors
