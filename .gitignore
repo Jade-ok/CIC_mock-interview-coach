@@ -11,3 +11,6 @@ dist/
 # env — but see note below
 .env
 frontend/.env
+
+# personal resume (PII)
+samples/resume-coop-jenachang-july31.pdf
