@@ -161,9 +161,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 is_audio_input = False
 
             if is_audio_input:
-                await session_manager.send_audio_chunk(message)
+                await session_manager.send_event(message)
             else:
                 await session_manager.send_event(message)
+                logger.info("Sent non-audio event to Nova Sonic")
 
                 # Check if client sent sessionEnd
                 try:
