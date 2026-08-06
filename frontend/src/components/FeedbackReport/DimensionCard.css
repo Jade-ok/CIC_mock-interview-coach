@@ -1,0 +1,31 @@
+.dimension-card {
+  background: var(--bg-tile);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+}
+
+.dimension-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.dimension-card__label {
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.dimension-card__score {
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.dimension-card__description {
+  font-size: var(--font-small);
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
