@@ -24,7 +24,7 @@ If a Bedrock model feels too slow during testing, swap to `global.anthropic.clau
 
 ## Bedrock (analyst, evaluator only)
 
-- Region: `us-west-2` for Bedrock, Polly, Nova Sonic, and all Lambdas.
+- Region: `us-east-1` for Bedrock, Polly, Nova Sonic, and all Lambdas.
 - Use the Converse API with `tool_use` to force JSON output. Never parse plain text.
 - Retry each Bedrock call once (max 2 attempts) on failure or invalid response.
 
