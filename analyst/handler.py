@@ -2,10 +2,10 @@
 
 import json
 
-from .validation import detect_invocation_mode, validate_request
-from .orchestrator import analyze
-from .bedrock_client import BedrockCallFailed
-from .parser import SchemaValidationError
+from validation import detect_invocation_mode, validate_request
+from orchestrator import analyze
+from bedrock_client import BedrockCallFailed
+from parser import SchemaValidationError
 
 
 def lambda_handler(event: dict, context) -> dict:

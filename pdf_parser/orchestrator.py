@@ -1,6 +1,6 @@
 """Document processing orchestrator for the pdf_parser Lambda."""
 
-from .parser import EmptyDocumentError, extract_text_from_pdf
+from parser import EmptyDocumentError, extract_text_from_pdf
 
 
 def process_documents(payload: dict) -> dict:
