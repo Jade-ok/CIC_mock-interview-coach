@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "structure_id": "resume_deep_dive_v1",
+  "display_name": "Resume Deep-Dive Interview",
+  "main_question_count": 3,
+  "max_follow_ups_per_point": 1,
+  "allow_early_stop": true,
+  "interview_points": [
+    {
+      "point_id": "point_1",
+      "focus": "ownership",
+      "topic": "Project overview and personal contribution",
+      "objective": "Understand the experience, its purpose, and the candidate's individual contribution.",
+      "experience_selection": {
+        "preferred_types": [
+          "internship",
+          "personal_project",
+          "academic_project",
+          "hackathon"
+        ],
+        "selection_strategy": "highest_relevance"
+      },
+      "listen_for": [
+        "clear project context",
+        "specific personal contribution",
+        "distinction between individual and team work",
+        "result or learning"
+      ],
+      "follow_up_topics": [
+        "specific responsibilities",
+        "features implemented",
+        "team role",
+        "project outcome"
+      ]
+    },
+    {
+      "point_id": "point_2",
+      "focus": "problem_solving",
+      "topic": "Technical problem-solving and decision-making",
+      "objective": "Understand how the candidate approached a challenge and justified their decisions.",
+      "experience_selection": {
+        "selection_strategy": "reuse_previous_or_next_highest"
+      },
+      "listen_for": [
+        "clear challenge",
+        "reasoning behind the approach",
+        "alternatives considered",
+        "testing or validation",
+        "lesson learned"
+      ],
+      "follow_up_topics": [
+        "why the approach was selected",
+        "tradeoffs",
+        "testing",
+        "what the candidate would change"
+      ]
+    },
+    {
+      "point_id": "point_3",
+      "focus": "growth_and_alignment",
+      "topic": "Learning, collaboration, and role alignment",
+      "objective": "Understand what the candidate learned and how the experience relates to the target role.",
+      "experience_selection": {
+        "preferred_types": [
+          "hackathon",
+          "student_club",
+          "academic_project",
+          "internship",
+          "volunteering"
+        ],
+        "selection_strategy": "best_for_collaboration_or_growth"
+      },
+      "listen_for": [
+        "specific collaboration example",
+        "something learned",
+        "reflection",
+        "connection to the role"
+      ],
+      "follow_up_topics": [
+        "team coordination",
+        "rapid learning",
+        "transferable skills",
+        "job relevance"
+      ]
+    }
+  ]
+}
