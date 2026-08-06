@@ -1,0 +1,471 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "Create the `evaluator/` directory structure with all module files": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046808857
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046820941
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046975795
+      }
+    ],
+    "Create `evaluator/__init__.py`": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046808893
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046976506
+      }
+    ],
+    "Create `evaluator/lambda_handler.py` with handler stub": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046808951
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046977271
+      }
+    ],
+    "Create `evaluator/validator.py` with empty function stubs": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809007
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046978139
+      }
+    ],
+    "Create `evaluator/prompt_builder.py` with empty function stubs": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809046
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046978967
+      }
+    ],
+    "Create `evaluator/bedrock_client.py` with empty function stubs": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809080
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046983296
+      }
+    ],
+    "Create `evaluator/scorer.py` with empty function stubs": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809122
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046983958
+      }
+    ],
+    "Create `evaluator/response_assembler.py` with empty function stubs": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809165
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046984789
+      }
+    ],
+    "Create `evaluator/exceptions.py` with ValidationError and EvaluationError classes": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809207
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046985629
+      }
+    ],
+    "Create `evaluator/schemas.py` with tool schema definition placeholder": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809248
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046986459
+      }
+    ],
+    "Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809289
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046995560
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047095019
+      }
+    ],
+    "Validate presence of required fields: conversation, interview_metadata, resume_analysis": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809345
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047095884
+      }
+    ],
+    "Validate conversation length (1-6 pairs)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809393
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047096629
+      }
+    ],
+    "Validate each turn contains point_id, turn_type, question, answer": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809431
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047097288
+      }
+    ],
+    "Raise `ValidationError` with descriptive messages on failure": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809473
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047098162
+      }
+    ],
+    "Write unit tests for validator with valid input, missing fields, empty conversation, >6 turns, and missing turn fields": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809515
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047102177
+      }
+    ],
+    "Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809556
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047110932
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047260891
+      }
+    ],
+    "Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809597
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047261965
+      }
+    ],
+    "Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809639
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047263099
+      }
+    ],
+    "Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809680
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047263968
+      }
+    ],
+    "Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809714
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047265080
+      }
+    ],
+    "Write unit tests verifying prompt structure, system prompt content, and tool schema completeness": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809756
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047269274
+      }
+    ],
+    "Initialize boto3 bedrock-runtime client for us-west-2 with retry disabled (handled manually)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809799
+      },
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786047273914
+      }
+    ],
+    "Implement `invoke(system, messages, tool_config)` with retry logic (max 2 attempts)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809864
+      }
+    ],
+    "Implement `_extract_tool_input(response)` to pull tool_use input from Converse API response": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809897
+      }
+    ],
+    "Raise `EvaluationError` on total failure or missing tool_use block": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809939
+      }
+    ],
+    "Write unit tests with mocked boto3 client: success case, retry on first failure, both attempts fail": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046809981
+      }
+    ],
+    "Define `DIMENSIONS` list and `READINESS_THRESHOLDS` list (1-5 scale)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810022
+      }
+    ],
+    "Implement `extract_and_clamp(llm_response)` — clamp each dimension score to 1-5 integer": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810066
+      }
+    ],
+    "Implement `aggregate(per_question_scores)` — compute dimension averages and total, round to 1 decimal": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810100
+      }
+    ],
+    "Implement `classify(total_score)` — deterministic readiness label from thresholds": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810139
+      }
+    ],
+    "Write unit tests: clamping edge cases (0→1, 6→5), variable-length averaging (1, 3, 6 questions), all threshold boundaries": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810182
+      }
+    ],
+    "Implement `build(per_question_scores, overall_scores, readiness_label, llm_response, interview_metadata)`": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810223
+      }
+    ],
+    "Ensure output matches the defined response schema (per_question_scores, overall_scores, question_count, readiness_label, strengths, improvements, contextual_advice, interview_metadata)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810259
+      }
+    ],
+    "Write unit tests verifying correct field mapping and interview_metadata pass-through": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810297
+      }
+    ],
+    "Import all modules and wire together the orchestration flow": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810370
+      }
+    ],
+    "Implement `handler(event, context)` following the validation → prompt → API → score → response sequence": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810414
+      }
+    ],
+    "Handle `ValidationError` → 400 response with error JSON": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810456
+      }
+    ],
+    "Handle `EvaluationError` → 500 response with error JSON": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810494
+      }
+    ],
+    "Handle unexpected exceptions → 500 response with generic error": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810534
+      }
+    ],
+    "Write integration test with mocked Bedrock client testing full happy path": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810568
+      }
+    ],
+    "Write integration tests for error paths (invalid input, API failure)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810607
+      }
+    ],
+    "Create a sample test payload matching the actual Interviewer output format": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810648
+      }
+    ],
+    "Run full integration test locally with mocked Bedrock response": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810710
+      }
+    ],
+    "Verify response JSON matches the defined output schema": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810758
+      }
+    ],
+    "Add requirements.txt or pyproject.toml with boto3 dependency": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810798
+      }
+    ],
+    "Create SAM/CloudFormation template or deployment config for Lambda (60s timeout, Python 3.12 runtime)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810840
+      }
+    ],
+    "Document environment variables needed (if any) and IAM permissions (bedrock:InvokeModel)": [
+      {
+        "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
+        "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
+        "timestamp": 1786046810875
+      }
+    ]
+  }
+}
