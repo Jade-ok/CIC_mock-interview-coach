@@ -21,7 +21,7 @@ pdf_parser/      → PDF 텍스트 추출 (pypdf)
 - **LLM**: Amazon Bedrock Converse API (`tool_use` 방식)
 - **TTS**: Amazon Polly
 - **PDF**: pypdf
-- **Region**: us-west-2
+- **Region**: us-east-1
 
 ## Lambda Module Structure
 

@@ -1,101 +1,178 @@
-# Requirements Document
+# Requirements: Interviewer Module
 
 ## Introduction
 
-The Interviewer module is a lightweight session-setup Lambda (Python 3.12) that prepares everything needed for a voice interview powered by Amazon Nova Sonic. It receives the complete Analyst output (candidate information, job details, selected experiences, and interview context), loads interview configuration from S3, builds a runtime context, and returns it to the frontend. The frontend then connects directly to Nova Sonic via WebSocket to conduct the spoken interview.
+The Interviewer module has two components:
 
-The Interviewer Lambda does not conduct the interview, stream audio, score answers, or make any LLM calls. It is a pure context-builder: Analyst output in, runtime context out.
+1. **Interviewer Lambda** — A stateless Python 3.12 Lambda that builds a runtime context for Nova Sonic. It receives the Analyst output, loads two S3 config files, combines them into a system instruction string, and returns it to the frontend.
 
-After the interview completes, the frontend sends the original Analyst output plus the Q&A transcript directly to the Evaluator Lambda. The Interviewer is not involved post-interview.
+2. **Voice Agent Server** — A Python WebSocket server deployed on Bedrock AgentCore Runtime. It acts as a managed relay between the browser and Nova Sonic, proxying bidirectional audio and events. The frontend connects to AgentCore's SigV4-authenticated WebSocket endpoint.
 
-The schemas for the Analyst output, Evaluator input, interview structure, and interview profile are defined and versioned separately. This document references them by role but does not define their shape.
+Neither component conducts the interview directly — Nova Sonic does. The Lambda builds the instruction, the server relays the audio, and Nova Sonic generates questions and understands answers.
+
+## Scope Boundaries
+
+**Interviewer Lambda does:**
+- Accept Analyst output from the frontend
+- Load interview configs from S3
+- Assemble and return a runtime context string
+
+**Voice Agent Server does:**
+- Accept WebSocket connections from the frontend (via AgentCore Runtime)
+- Open a bidirectional stream to Nova Sonic
+- Relay all events between the frontend and Nova Sonic
+- Handle large event splitting and backpressure
+
+**Neither component does:**
+- Score or evaluate answers
+- Call any text LLM (Bedrock Converse API)
+- Track session state (frontend owns this)
+- Communicate with the Evaluator
 
 ## Glossary
 
-- **Interviewer_Lambda**: The AWS Lambda function (Python 3.12) that builds the runtime context for Nova Sonic
-- **Analyst_Output**: The complete output from the Analyst agent containing candidate profile, job details, selected experiences, skills alignment, and all context needed for the interview. Its schema is defined separately.
-- **Interview_Structure**: A JSON configuration stored in S3 defining what the interview covers (number of main questions, interview points, focus areas, follow-up topics). Its schema is defined separately.
-- **Interview_Profile**: A JSON configuration stored in S3 defining how the interviewer behaves for a given candidate level (tone, question style, follow-up rules, acceptable experience types). Currently only student-v1 exists. Its schema is defined separately.
-- **Runtime_Context**: The combined instruction returned to the frontend, built from the Analyst output, interview structure, and interview profile. The frontend provides this to Nova Sonic as its system instruction.
-- **Nova_Sonic**: Amazon Nova Sonic — a speech-to-speech model that generates interview questions and understands spoken candidate answers. The frontend connects to it directly via WebSocket.
-- **Transcript**: The ordered list of questions asked and answers given during the interview, collected by the frontend from Nova Sonic session events.
+| Term | Definition |
+|------|------------|
+| **Analyst Output** | Structured JSON from the Analyst Lambda. Schema: `schemas/analyst_output.json` |
+| **Interview Structure** | S3 JSON config defining what the interview covers. File: `interview_structure.json` |
+| **Interview Profile** | S3 JSON config defining how the interviewer behaves. File: `student_interview_profile.json` |
+| **Runtime Context** | Combined string returned to the frontend. Becomes Nova Sonic's system instruction. |
+| **Voice Agent Server** | Python WebSocket server on AgentCore Runtime that relays events between browser and Nova Sonic |
+| **AgentCore Runtime** | AWS managed service that handles WebSocket proxy, scaling, and SigV4 auth for AI agents |
+| **Nova Sonic** | Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`) — speech-to-speech model |
 
-## Requirements
+## Infrastructure Context
 
-### Requirement 1: Receive Analyst Output
+| Resource | Value |
+|----------|-------|
+| Region | `us-east-1` |
+| S3 Bucket | `cic-mock-interview-configs-002859476624` |
+| Structure Key | `interview_structure.json` |
+| Profile Key | `student_interview_profile.json` |
+| Lambda Runtime | Python 3.12 |
+| Lambda Invocation | Function URL (no API Gateway) |
+| Voice Server | Python (FastAPI), Docker container on AgentCore Runtime |
+| Nova Sonic Model | `amazon.nova-2-sonic-v1:0` |
+| Voice WebSocket | AgentCore Runtime managed endpoint (SigV4 auth) |
 
-**User Story:** As a system, I want the Interviewer Lambda to accept the full Analyst output, so that the runtime context includes all candidate-specific information for Nova Sonic.
+## Requirements: Interviewer Lambda
 
-#### Acceptance Criteria
+### Requirement 1: Accept Analyst Output
 
-1. THE module SHALL accept the complete Analyst output as input (conforming to the Analyst → Interviewer schema)
-2. THE module SHALL NOT modify, filter, or transform the Analyst output — it is included in the runtime context as-is
-3. IF the Analyst output is missing or empty, THEN the module SHALL return an error indicating that Analyst data is required
-4. THE module SHALL include the full Analyst output in the runtime context so Nova Sonic can personalize questions based on the candidate's background
-
-### Requirement 2: S3 Configuration Loading
-
-**User Story:** As a system, I want to load interview structure and interview profile from S3, so that interview format and behavior are configurable without code changes.
-
-#### Acceptance Criteria
-
-1. WHEN the Lambda is invoked, the module SHALL load the interview structure JSON from S3
-2. WHEN the Lambda is invoked, the module SHALL load the interview profile JSON from S3
-3. IF either S3 object is missing or cannot be parsed as valid JSON, THEN the module SHALL return an error indicating which configuration failed to load
-4. THE S3 client SHALL connect to the us-west-2 region
-5. THE S3 bucket name and object keys SHALL be configurable via environment variables
-
-### Requirement 3: Runtime Context Assembly
-
-**User Story:** As a system, I want to combine the Analyst output with S3 configurations into a single runtime context, so that the frontend can provide it to Nova Sonic as a complete system instruction.
+**User Story:** As the frontend, I send the Analyst output to the Interviewer Lambda so that the runtime context includes all candidate-specific information for Nova Sonic.
 
 #### Acceptance Criteria
 
-1. THE module SHALL assemble a runtime context combining the Analyst output, interview structure, and interview profile
-2. THE runtime context SHALL include all candidate-specific information from the Analyst output so Nova Sonic can ask personalized questions
-3. THE runtime context SHALL include the interview structure so Nova Sonic knows what topics to cover, how many questions to ask, and what follow-up guidance to use
-4. THE runtime context SHALL include the interview profile so Nova Sonic knows how to behave (tone, style, rules, acceptable experience types)
-5. THE runtime context SHALL include behavioral instructions for Nova Sonic:
-   - Ask one question at a time (no compound questions)
+1. THE module SHALL accept a JSON payload containing an `analyst_output` field
+2. THE `analyst_output` field SHALL conform to the schema defined in `schemas/analyst_output.json`
+3. THE module SHALL NOT modify, filter, or transform the analyst_output — it is included in the runtime context as-is
+4. IF `analyst_output` is missing, empty, or not a dict, THEN the module SHALL return an error immediately without attempting S3 loads
+5. THE module SHALL validate presence only — it does not validate schema conformance of the analyst_output
+
+### Requirement 2: Load S3 Configuration
+
+**User Story:** As a system, I want interview structure and profile loaded from S3 so that interview format and behavior can be changed without redeploying.
+
+#### Acceptance Criteria
+
+1. WHEN invoked, the module SHALL load the interview structure JSON from S3 using env vars
+2. WHEN invoked, the module SHALL load the interview profile JSON from S3 using env vars
+3. IF either S3 object is missing, inaccessible, or not valid JSON, THEN return an error identifying which config failed
+4. THE S3 client SHALL connect to `us-east-1`
+5. THE S3 bucket and keys SHALL be read from: `S3_BUCKET`, `INTERVIEW_STRUCTURE_KEY`, `INTERVIEW_PROFILE_KEY`
+6. THE module SHALL NOT retry failed S3 loads
+
+### Requirement 3: Assemble Runtime Context
+
+**User Story:** As a system, I want to combine the Analyst output with S3 configs into a runtime context string for Nova Sonic.
+
+#### Acceptance Criteria
+
+1. THE module SHALL produce a runtime context string combining:
+   - The full analyst_output (JSON-serialized, unchanged)
+   - The interview structure
+   - The interview profile
+   - Behavioral instructions for Nova Sonic
+2. THE behavioral instructions SHALL include:
+   - Ask one question at a time
    - Keep questions concise and use clear language
-   - Follow the tone specified by the interview profile
-   - Accept the experience types listed in the interview profile
+   - Follow the tone from the interview profile
+   - Accept all experience types listed in the profile
    - Do not invent details not present in the candidate data
    - Do not give feedback or score answers during the interview
    - Stop gracefully when the session ends
-6. THE runtime context SHALL be returned to the frontend as a structured string or JSON object suitable for use as Nova Sonic's system instruction
+3. THE output SHALL be deterministic (same input → same output)
 
 ### Requirement 4: Lambda Entry Point
 
-**User Story:** As a deployer, I want the Lambda handler to support both direct invocation and Function URL modes, so that it can be called from the frontend.
+#### Acceptance Criteria
+
+1. Support two modes: Function URL (`event['body']` JSON string) and direct invocation (event = payload)
+2. Invalid JSON body → `statusCode: 400`
+3. Success → `statusCode: 200` with runtime_context
+4. Unhandled exception → `statusCode: 500`
+5. No CORS headers in code (configured on Function URL)
+
+### Requirement 5: Response Shape
 
 #### Acceptance Criteria
 
-1. THE handler SHALL support two invocation modes: direct (event = payload) and Function URL (event = {"body": "<JSON string>"})
-2. WHEN invoked via Function URL, the handler SHALL parse the request body from event['body'] as JSON
-3. IF event contains a 'body' key that is not valid JSON, THEN the handler SHALL return statusCode 400 with an error message
-4. WHEN the request is successfully processed, the handler SHALL return statusCode 200 with the runtime context in the response body
-5. IF an unhandled exception occurs, the handler SHALL return statusCode 500 with an error message
-6. THE handler SHALL NOT set CORS headers in the response (CORS is configured on the Function URL)
+1. All responses: `{"statusCode": int, "body": "<JSON string>"}`
+2. Success body: `{"success": true, "runtime_context": "<string>"}`
+3. Error body: `{"success": false, "error_message": "<string>"}`
+4. Validation/config errors → statusCode 200
+5. Malformed body → statusCode 400
+6. Unhandled exceptions → statusCode 500
 
-### Requirement 5: Error Handling
-
-**User Story:** As a developer, I want clear error responses, so that failures can be diagnosed and the frontend can display appropriate messages.
+### Requirement 6: Error Messages
 
 #### Acceptance Criteria
 
-1. IF S3 configuration loading fails, the module SHALL return an error with a message identifying which config file could not be loaded
-2. IF the Analyst output is invalid or missing, the module SHALL return a validation error before attempting S3 loads
-3. ALL error responses SHALL include an error_message field with a human-readable description
-4. ALL error responses SHALL include a success field set to false
-5. ALL success responses SHALL include a success field set to true and the runtime_context field
+1. Missing analyst_output → `"analyst_output is required and must be a non-empty object"`
+2. S3 structure fails → message includes `"interview_structure"`
+3. S3 profile fails → message includes `"interview_profile"`
+4. Invalid JSON body → `"Request body is not valid JSON"`
 
-### Requirement 6: Response Shape
+## Requirements: Voice Agent Server
 
-**User Story:** As a frontend developer, I want a predictable response format, so that I can reliably extract the runtime context or handle errors.
+### Requirement 7: WebSocket Relay
+
+**User Story:** As the frontend, I connect to AgentCore Runtime's WebSocket endpoint and communicate with Nova Sonic through the voice agent server.
 
 #### Acceptance Criteria
 
-1. ON SUCCESS, the response body SHALL contain: success (true), runtime_context (the assembled context for Nova Sonic)
-2. ON ERROR, the response body SHALL contain: success (false), error_message (human-readable description)
-3. THE response SHALL always be wrapped in Function URL format: {"statusCode": int, "body": "<JSON string>"}
+1. THE server SHALL accept WebSocket connections from AgentCore Runtime
+2. THE server SHALL open a bidirectional stream to Nova Sonic (`amazon.nova-2-sonic-v1:0`) for each client connection
+3. THE server SHALL relay all client events to Nova Sonic without modification
+4. THE server SHALL relay all Nova Sonic responses back to the client
+5. THE server SHALL split large events (>10KB) at base64 boundaries before forwarding to the client
+6. THE server SHALL handle audio backpressure by queuing input chunks (max 100, drop oldest if full)
+
+### Requirement 8: Session Lifecycle
+
+#### Acceptance Criteria
+
+1. ON client connect: open bidirectional stream to Nova Sonic
+2. ON client disconnect: close the Nova Sonic stream
+3. ON Nova Sonic stream close (8-min timeout): notify client and close WebSocket
+4. THE server SHALL NOT store any session state beyond the current connection
+5. Credentials SHALL be provided by AgentCore Runtime's IAM role (no manual credential management)
+
+### Requirement 9: Event Protocol Transparency
+
+#### Acceptance Criteria
+
+1. THE server SHALL forward the Nova Sonic event protocol without interpreting or modifying event content
+2. THE server SHALL support all Nova Sonic events: sessionStart, promptStart, contentStart, textInput, audioInput, contentEnd, promptEnd, sessionEnd
+3. THE server SHALL forward all response events: audioOutput, textOutput, contentStart/End with role metadata
+4. THE server is a transparent relay — all intelligence is in Nova Sonic (driven by the runtime_context system instruction)
+
+### Requirement 10: Deployment on AgentCore Runtime
+
+#### Acceptance Criteria
+
+1. THE server SHALL be packaged as a Docker container
+2. THE container SHALL run a FastAPI application with a WebSocket endpoint
+3. THE container SHALL be deployable via the `bedrock-agentcore-starter-toolkit`
+4. AgentCore Runtime SHALL handle: scaling, SigV4 authentication, WebSocket proxy, IAM roles
+5. THE frontend SHALL connect to AgentCore's managed WebSocket endpoint (not directly to the server)
