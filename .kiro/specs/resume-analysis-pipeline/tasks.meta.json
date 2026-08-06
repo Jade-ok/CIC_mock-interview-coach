@@ -1,0 +1,127 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Stage and commit shared artifacts to main branch": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046566112
+      }
+    ],
+    "1. Commit schema, README, and spec docs to main": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046566149
+      }
+    ],
+    "2.1 Create pdf_parser module structure and validation logic": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570728
+      },
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046578269
+      }
+    ],
+    "3.1 Create pdf_parser/parser.py with PDF text extraction": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570756
+      }
+    ],
+    "3.2 Create pdf_parser/orchestrator.py with document processing logic": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570784
+      }
+    ],
+    "3.3 Create pdf_parser/handler.py entry point": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570816
+      }
+    ],
+    "4. Checkpoint — pdf_parser complete": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570838
+      }
+    ],
+    "5.1 Create analyst module structure and validation logic": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570857
+      },
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046579086
+      }
+    ],
+    "5.2 Create analyst/prompt_builder.py with Converse API request construction": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570879
+      }
+    ],
+    "6.1 Create analyst/bedrock_client.py with retry logic": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570900
+      }
+    ],
+    "6.2 Create analyst/parser.py with response parsing and schema validation": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570924
+      }
+    ],
+    "7.1 Create analyst/orchestrator.py wiring all components": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570946
+      }
+    ],
+    "7.2 Create analyst/handler.py entry point": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570968
+      }
+    ],
+    "8. Checkpoint — analyst complete": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046570990
+      }
+    ],
+    "9.1 Write unit tests for pdf_parser handler (end-to-end with real pypdf)": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046571019
+      }
+    ],
+    "10. Final checkpoint — all tests pass": [
+      {
+        "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786046571048
+      }
+    ]
+  }
+}
