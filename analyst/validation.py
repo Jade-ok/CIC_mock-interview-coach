@@ -1,0 +1,52 @@
+"""Input validation for the analyst Lambda."""
+
+import json
+
+
+def detect_invocation_mode(event: dict) -> dict:
+    """Detect whether the Lambda was invoked via Function URL or directly.
+
+    If event has a 'body' key with a string value, treat as Function URL mode
+    and parse the JSON string. Otherwise, return the event as-is (Direct mode).
+
+    Args:
+        event: The raw Lambda event dict.
+
+    Returns:
+        Extracted payload dict.
+
+    Raises:
+        ValueError: If the body cannot be parsed as JSON.
+    """
+    if "body" in event and isinstance(event["body"], str):
+        try:
+            return json.loads(event["body"])
+        except (json.JSONDecodeError, TypeError) as e:
+            raise ValueError("Failed to parse request body as JSON") from e
+    return event
+
+
+def validate_request(payload: dict) -> tuple[bool, str | None]:
+    """Validate that the analyst request payload contains required fields.
+
+    Checks that both resume_text and job_posting_text are present and
+    non-empty strings.
+
+    Args:
+        payload: The request payload dict.
+
+    Returns:
+        Tuple of (is_valid, error_message_or_none).
+    """
+    missing_fields = []
+
+    if not isinstance(payload.get("resume_text"), str) or not payload["resume_text"].strip():
+        missing_fields.append("resume_text")
+
+    if not isinstance(payload.get("job_posting_text"), str) or not payload["job_posting_text"].strip():
+        missing_fields.append("job_posting_text")
+
+    if missing_fields:
+        return (False, f"Missing or empty fields: {', '.join(missing_fields)}")
+
+    return (True, None)
