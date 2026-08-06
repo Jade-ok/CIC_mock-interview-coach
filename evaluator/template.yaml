@@ -29,7 +29,7 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: 'arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-*'
+              Resource: 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-*'
 
 Outputs:
   EvaluatorFunctionUrl:

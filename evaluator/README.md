@@ -22,7 +22,7 @@ See `schemas/evaluator_output.json` for the full output schema.
 ## Environment
 
 - **Runtime**: Python 3.12
-- **Region**: us-west-2
+- **Region**: us-east-1
 - **Model**: global.anthropic.claude-fable-5
 - **Timeout**: 60 seconds
 
@@ -32,7 +32,7 @@ See `schemas/evaluator_output.json` for the full output schema.
 {
   "Effect": "Allow",
   "Action": ["bedrock:InvokeModel"],
-  "Resource": "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-*"
+  "Resource": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-*"
 }
 ```
 

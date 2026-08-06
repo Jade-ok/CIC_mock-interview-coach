@@ -6,7 +6,7 @@ from botocore.config import Config
 from evaluator.exceptions import EvaluationError
 
 MODEL_ID = "global.anthropic.claude-fable-5"
-REGION = "us-west-2"
+REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 
 # Disable botocore's built-in retry — we handle retries manually

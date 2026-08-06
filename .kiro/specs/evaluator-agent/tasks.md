@@ -33,7 +33,7 @@
 
 ## Task 4: Implement Bedrock Client
 
-- [x] Initialize boto3 bedrock-runtime client for us-west-2 with retry disabled (handled manually)
+- [x] Initialize boto3 bedrock-runtime client for us-east-1 with retry disabled (handled manually)
 - [x] Implement `invoke(system, messages, tool_config)` with retry logic (max 2 attempts)
 - [x] Implement `_extract_tool_input(response)` to pull tool_use input from Converse API response
 - [x] Raise `EvaluationError` on total failure or missing tool_use block
