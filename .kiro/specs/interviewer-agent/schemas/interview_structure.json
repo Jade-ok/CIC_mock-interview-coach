@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "structure_id": "general_v1",
   "display_name": "General Interview Structure",
-  "description": "A standard behavioral interview format with 3 main questions and up to 3 follow-ups per question.",
+  "description": "A standard behavioral interview format with 3 main questions and 1 follow-up per question.",
   "main_question_count": 3,
   "max_follow_ups_per_point": 1,
   "allow_early_stop": true,

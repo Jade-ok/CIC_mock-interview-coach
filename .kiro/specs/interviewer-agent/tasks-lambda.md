@@ -149,4 +149,4 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
 
 ## Done Criteria
 
-The Lambda is deployed, returns a valid runtime_context when called with analyst_output, and the Function URL is accessible. The frontend person can now call it and use the response to start a Nova Sonic session.
+The Lambda is deployed, returns a valid runtime_context when called with analyst_output, and the Function URL is accessible. The other person can now use this runtime_context as the system instruction for their Voice Agent Server on AgentCore Runtime.

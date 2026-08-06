@@ -152,9 +152,9 @@ If the user ends early, the Evaluator should score only what was covered and avo
 
 - Amazon S3 for résumé upload and configuration files
 - Amazon Bedrock for the Analyst and Evaluator
-- Amazon Nova 2 Sonic for the spoken interview
+- Amazon Nova 2 Sonic for the spoken interview (via Bedrock AgentCore Runtime)
+- Amazon Bedrock AgentCore Runtime for managed WebSocket proxy between the browser and Nova Sonic
 - AWS Lambda for résumé analysis, configuration loading, and evaluation
-- Amazon API Gateway for frontend-to-backend requests
 - AWS Amplify Hosting for the frontend
 
 No database, authentication, hints, or permanent interview history are required for the first version.
