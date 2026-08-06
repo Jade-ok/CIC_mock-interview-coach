@@ -52,6 +52,25 @@
         "chatSessionId": "sess_a21c34eb-57c3-47b4-bf50-fe498a1d8dd1",
         "timestamp": 1786048839459
       }
+    ],
+    "3. WebSocketClient 서비스: services/webSocketClient.ts 구현 (connect, disconnect, getState, sendSessionStart → Promise with ack 대기, sendAudioChunk, sendTextInput), 재연결 로직 (exponential backoff 1s/2s, 최대 2회), session_start_ack 수신 처리, session_invalid 수신 처리, mock-socket 기반 WS 서버 stub, 단위 테스트 + PBT (Property 7)": [
+      {
+        "executionId": "9e5aa029-df75-4f97-a73c-c139c3db9abf",
+        "chatSessionId": "sess_8b4033ee-169e-4cdf-bd65-29046b0210c7",
+        "timestamp": 1786048971097
+      }
+    ],
+    "4. AudioManager 서비스: services/audioManager.ts 구현 (initialize, startCapture, pauseCapture, resumeCapture, enqueueAudio, stopPlayback, waitForPlaybackEnd, isPlaying, destroy), worklets/captureProcessor.ts (AudioWorkletProcessor, 16kHz 16-bit mono 512 frame), 에코 캔슬레이션 설정, 출력 재생 (24kHz PCM AudioBufferSourceNode 체인), 단위 테스트 + PBT (Property 5, 6)": [
+      {
+        "executionId": "9b34ac0e-55e9-46ad-be19-a223bb5854eb",
+        "chatSessionId": "sess_208f7ef6-3512-44c9-bde8-cffd0af080d0",
+        "timestamp": 1786050208534
+      },
+      {
+        "executionId": "9b34ac0e-55e9-46ad-be19-a223bb5854eb",
+        "chatSessionId": "sess_208f7ef6-3512-44c9-bde8-cffd0af080d0",
+        "timestamp": 1786050606006
+      }
     ]
   }
 }

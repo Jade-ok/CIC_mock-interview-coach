@@ -64,11 +64,11 @@ graph TD
   - **Requirements**: All (상태 관리 중심)
   - **Dependencies**: 1
 
-- [ ] 3. WebSocketClient 서비스: services/webSocketClient.ts 구현 (connect, disconnect, getState, sendSessionStart → Promise with ack 대기, sendAudioChunk, sendTextInput), 재연결 로직 (exponential backoff 1s/2s, 최대 2회), session_start_ack 수신 처리, session_invalid 수신 처리, mock-socket 기반 WS 서버 stub, 단위 테스트 + PBT (Property 7)
+- [x] 3. WebSocketClient 서비스: services/webSocketClient.ts 구현 (connect, disconnect, getState, sendSessionStart → Promise with ack 대기, sendAudioChunk, sendTextInput), 재연결 로직 (exponential backoff 1s/2s, 최대 2회), session_start_ack 수신 처리, session_invalid 수신 처리, mock-socket 기반 WS 서버 stub, 단위 테스트 + PBT (Property 7)
   - **Requirements**: 2.2, 2.4, 3.1, 3.14
   - **Dependencies**: 1, 2
 
-- [ ] 4. AudioManager 서비스: services/audioManager.ts 구현 (initialize, startCapture, pauseCapture, resumeCapture, enqueueAudio, stopPlayback, waitForPlaybackEnd, isPlaying, destroy), worklets/captureProcessor.ts (AudioWorkletProcessor, 16kHz 16-bit mono 512 frame), 에코 캔슬레이션 설정, 출력 재생 (24kHz PCM AudioBufferSourceNode 체인), 단위 테스트 + PBT (Property 5, 6)
+- [x] 4. AudioManager 서비스: services/audioManager.ts 구현 (initialize, startCapture, pauseCapture, resumeCapture, enqueueAudio, stopPlayback, waitForPlaybackEnd, isPlaying, destroy), worklets/captureProcessor.ts (AudioWorkletProcessor, 16kHz 16-bit mono 512 frame), 에코 캔슬레이션 설정, 출력 재생 (24kHz PCM AudioBufferSourceNode 체인), 단위 테스트 + PBT (Property 5, 6)
   - **Requirements**: 3.1, 3.2, 3.4, 3.7, 3.9, 3.10
   - **Dependencies**: 1
 
