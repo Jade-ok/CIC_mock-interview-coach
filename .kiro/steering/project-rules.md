@@ -32,14 +32,17 @@ If a Bedrock model feels too slow during testing, swap to `global.anthropic.clau
 
 - The Interviewer Lambda is a context-builder — it does NOT conduct the interview or call any LLM.
 - It loads interview structure + interview profile from S3, combines them with the Analyst output, and returns the runtime context to the frontend.
-- The frontend connects directly to Nova Sonic via WebSocket using the runtime context as the system instruction.
+- A Voice Agent Server (Python WebSocket, deployed on Bedrock AgentCore Runtime) proxies bidirectional audio between the browser and Nova Sonic.
+- The frontend connects to AgentCore Runtime's managed WebSocket endpoint (SigV4-authenticated). AgentCore proxies to the Voice Agent Server container, which relays events to/from Nova Sonic.
 - Nova Sonic handles all question generation, follow-ups, and speech.
-- After the interview, the frontend sends the Analyst output + Q&A transcript to the Evaluator.
+- After the interview, the frontend sends the Analyst output + Q&A conversation to the Evaluator.
 
 ## Architecture
 
-- Stateless. No database, no API Gateway. The browser holds all state.
+- Stateless. No database. The browser holds all state.
 - S3 is used only for interview configuration files (interview structure, interview profile) — not for session state.
+- Bedrock AgentCore Runtime manages the WebSocket proxy, scaling, and SigV4 auth for the voice interview. No API Gateway needed for the WebSocket layer.
+- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, pdf_parser, and Polly endpoints (no API Gateway for those either, unless added later).
 - LLM does subjective judgment only (analyst: candidate analysis, evaluator: answer scoring). Deterministic logic (score calculation, classification, flow decisions) is done in Python.
 - The interviewer does not score or judge — it only builds context for Nova Sonic.
 
@@ -83,6 +86,16 @@ interviewer/
 **Other Lambdas:**
 - `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
 - `polly`: single `handler.py` only, no Bedrock.
+
+**Voice Agent Server (AgentCore Runtime, not Lambda):**
+```
+voice-agent/
+  server.py               # FastAPI WebSocket server, event relay, large event splitting
+  s2s_session_manager.py  # Manages bidirectional stream to Nova Sonic via Bedrock SDK
+  s2s_events.py           # Event factory for Nova Sonic protocol
+  Dockerfile              # Container image for AgentCore deployment
+  requirements.txt        # fastapi, uvicorn, aws-sdk-bedrock-runtime
+```
 
 ## Deployment Gotchas
 
