@@ -104,32 +104,15 @@ The frontend connects to Nova Sonic directly using the presigned URL. There is n
 1. Success: `{"statusCode": 200, "body": "{\"success\": true, \"runtime_context\": \"...\"}"}`
 2. Error: `{"statusCode": N, "body": "{\"success\": false, \"error_message\": \"...\"}"}`
 
-## Requirements: Signing Lambda
+## Nova Sonic Connection (Frontend Responsibility)
 
-### Requirement 6: Generate Presigned WebSocket URL
+The frontend connects to Nova Sonic using `@aws-sdk/client-bedrock-runtime` with credentials from Cognito Identity Pool (`us-east-1:be3da380-d032-46f4-b4a2-85846a61bc52`). The SDK handles SigV4 WebSocket signing internally. No signing Lambda needed.
 
-#### Acceptance Criteria
-
-1. Generate a SigV4-presigned URL for: `wss://bedrock-runtime.us-east-1.amazonaws.com/model/amazon.nova-2-sonic-v1:0/invoke-with-bidirectional-stream`
-2. URL SHALL be valid for at least 5 minutes
-3. The Lambda execution role MUST have `bedrock:InvokeModelWithResponseStream` permission
-4. Return the URL in the response body
-
-### Requirement 7: Signing Lambda Entry Point
+### Requirement 6: Cognito Authentication
 
 #### Acceptance Criteria
 
-1. Support Function URL and direct invocation (same pattern as Interviewer)
-2. No input payload required — just call it to get a URL
-3. Success → 200 with `{"url": "wss://..."}`
-4. If signing fails → 500 with error message
-5. No CORS headers in code
-
-### Requirement 8: Security
-
-#### Acceptance Criteria
-
-1. AWS credentials SHALL NOT be exposed to the frontend
-2. The presigned URL is the only thing returned to the browser
-3. The URL is time-limited (expires after ~5 minutes)
-4. The frontend connects to Nova Sonic using the presigned URL — no additional signing needed
+1. A Cognito Identity Pool provides unauthenticated temporary credentials to the frontend
+2. Credentials are scoped to `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on the Nova Sonic model
+3. No user login is required
+4. The frontend uses `fromCognitoIdentityPool()` from `@aws-sdk/credential-providers`
