@@ -3,12 +3,12 @@
 import json
 import logging
 
-import validator
-import prompt_builder
-import bedrock_client
-import scorer
-import response_assembler
-from exceptions import ValidationError, EvaluationError
+from evaluator import validator
+from evaluator import prompt_builder
+from evaluator import bedrock_client
+from evaluator import scorer
+from evaluator import response_assembler
+from evaluator.exceptions import ValidationError, EvaluationError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
