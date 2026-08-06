@@ -9,4 +9,5 @@ node_modules/
 dist/
 
 # env — but see note below
+.env
 frontend/.env

@@ -2,425 +2,413 @@
 
 ## Overview
 
-The Interviewer module is a lightweight session-setup Lambda (Python 3.12) that prepares a runtime context for Amazon Nova Sonic. It receives the complete Analyst output, loads interview configuration from S3, combines everything into a single instruction, and returns it to the frontend. The frontend then connects directly to Nova Sonic via WebSocket to conduct the spoken interview.
+The Interviewer module is a stateless AWS Lambda (Python 3.12) that builds a runtime context for Amazon Nova Sonic. It receives the Analyst output from the frontend, loads two configuration files from S3, combines everything into a single system instruction string, and returns it. The frontend then passes that string to Nova Sonic via WebSocket to conduct the spoken interview.
 
-This Lambda makes no LLM calls, streams no audio, scores nothing, and has no involvement after returning the runtime context. It is a pure context-builder.
-
-After the interview ends, the frontend sends the original Analyst output plus the Q&A transcript (collected from Nova Sonic session events) directly to the Evaluator Lambda. The Interviewer is not in that path.
+This Lambda makes no LLM calls, streams no audio, scores nothing, and is not involved after returning the runtime context.
 
 ### Design Goals
 
-- **Simplicity**: Single request-response Lambda — no WebSocket, no audio, no long-running process
-- **Context assembly**: Combines candidate-specific data (Analyst) with configurable interview behavior (S3 configs) into one Nova Sonic system instruction
-- **Stateless**: No database, no session tracking — the frontend owns all state
-- **Schema pass-through**: The Analyst output is included in the runtime context unchanged
-- **Configurable**: Interview structure and profile loaded from S3, swappable without code changes
+- **Single responsibility**: Accept input, load configs, assemble context, return it
+- **Stateless**: No database, no session tracking — the frontend holds all state
+- **Configurable**: Interview format and behavior defined in S3, changeable without redeploy
+- **Pass-through**: Analyst output included in the context unchanged
+- **Simple failure modes**: Fail fast with clear error messages
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    Browser["Frontend"]
-    InterviewerLambda["Interviewer Lambda"]
-    S3["S3 (configs)"]
-    NovaSonic["Amazon Nova Sonic (WebSocket)"]
-    EvaluatorLambda["Evaluator Lambda"]
+    Frontend["Frontend (you)"]
+    Interviewer["Interviewer Lambda"]
+    S3["S3 Bucket"]
+    NovaSonic["Nova Sonic (WebSocket)"]
+    Evaluator["Evaluator Lambda"]
 
-    Browser -->|"1. POST analyst_output"| InterviewerLambda
-    InterviewerLambda -->|load configs| S3
-    S3 -->|"interview structure + profile"| InterviewerLambda
-    InterviewerLambda -->|"2. Return runtime_context"| Browser
-    Browser <-->|"3. WebSocket: audio + transcripts"| NovaSonic
-    Browser -->|"4. POST analyst_output + transcript"| EvaluatorLambda
+    Frontend -->|"1. POST {analyst_output}"| Interviewer
+    Interviewer -->|"load configs"| S3
+    Interviewer -->|"2. Return {runtime_context}"| Frontend
+    Frontend <-->|"3. WebSocket (audio + transcript)"| NovaSonic
+    Frontend -->|"4. POST {analyst_output + transcript}"| Evaluator
 ```
 
-### End-to-End Flow
+**Steps 1–2** are this module's scope. Steps 3–4 are owned by the frontend.
 
-1. **Frontend → Interviewer Lambda**: Sends the complete Analyst output
-2. **Interviewer Lambda**: Loads interview structure + interview profile from S3, combines them with the Analyst output into a runtime context, returns it
-3. **Frontend → Nova Sonic**: Opens a WebSocket connection, provides the runtime context as the system instruction, streams bidirectional audio for the interview
-4. **Frontend → Evaluator Lambda**: After the interview ends, sends the Analyst output + the Q&A transcript
+## Infrastructure
 
-### What the Interviewer Lambda Does
-
-1. Parse the request (Function URL or direct invocation)
-2. Validate that analyst_output is present and non-empty
-3. Load interview structure JSON from S3
-4. Load interview profile JSON from S3
-5. Assemble the runtime context (analyst_output + interview_structure + interview_profile + behavioral instructions)
-6. Return the runtime context to the frontend
-
-### What the Interviewer Lambda Does NOT Do
-
-- Conduct the interview (frontend + Nova Sonic handle this)
-- Stream or process audio
-- Track interview state or manage turns
-- Score or evaluate answers
-- Call any LLM or Bedrock text model
-- Communicate with the Evaluator
+| Resource | Value |
+|----------|-------|
+| Region | `us-east-1` |
+| Runtime | Python 3.12 |
+| S3 Bucket | `cic-mock-interview-configs-002859476624` |
+| Structure Key | `interview_structure.json` |
+| Profile Key | `student_interview_profile.json` |
+| Invocation | Lambda Function URL (no API Gateway) |
+| CORS | Configured on Function URL, not in code |
 
 ## Module Structure
 
 ```
 interviewer/
-  __init__.py
-  handler.py              # Lambda entry point (Function URL + direct invocation)
-  validation.py           # Input validation (analyst_output presence)
-  config_loader.py        # S3 fetch + basic validation of configs
-  context_builder.py      # Assembles runtime context from analyst_output + configs
+  __init__.py           # Empty, makes it a package
+  handler.py            # Lambda entry point
+  validation.py         # Input validation
+  config_loader.py      # S3 fetch for interview configs
+  context_builder.py    # Assembles runtime context string
+  .env                  # Environment variables (not deployed, reference only)
 ```
 
 ## Components and Interfaces
 
-### handler.py — Lambda Entry Point
+### handler.py
+
+The Lambda entry point. Detects invocation mode, orchestrates the pipeline, returns the response.
 
 ```python
+import json
+import traceback
+from interviewer.validation import validate_input
+from interviewer.config_loader import load_interview_structure, load_interview_profile, ConfigLoadError
+from interviewer.context_builder import build_runtime_context
+import os
+
+
 def lambda_handler(event: dict, context) -> dict:
     """
-    Parse Function URL or direct event, invoke pipeline, return response.
-
-    Supports two modes:
-    - Function URL: parse event['body'] as JSON
+    Entry point. Supports two invocation modes:
+    - Function URL: event has 'body' key containing a JSON string
     - Direct invocation: event IS the payload
 
     Returns:
-        {
-            "statusCode": int,       # 200, 400, or 500
-            "body": str              # JSON-encoded response body
-        }
+        {"statusCode": int, "body": "<JSON string>"}
     """
 ```
 
-**Success response body:**
+**Logic flow:**
+
+1. If `event` has a `body` key → parse `event['body']` as JSON. If parse fails → return 400.
+2. If `event` has no `body` key → use `event` as the payload directly.
+3. Call `validate_input(payload)` → if error, return 200 with error.
+4. Call `load_interview_structure(...)` → if `ConfigLoadError`, return 200 with error.
+5. Call `load_interview_profile(...)` → if `ConfigLoadError`, return 200 with error.
+6. Call `build_runtime_context(analyst_output, structure, profile)` → get context string.
+7. Return 200 with `{"success": true, "runtime_context": context_string}`.
+8. Wrap everything in try/except → unhandled exceptions return 500.
+
+**Response format (always):**
+
 ```python
 {
-    "success": True,
-    "runtime_context": str   # The assembled system instruction for Nova Sonic
+    "statusCode": int,
+    "body": json.dumps({"success": bool, ...})
 }
 ```
 
-**Error response body:**
-```python
-{
-    "success": False,
-    "error_message": str     # Human-readable description of what went wrong
-}
-```
+### validation.py
 
-### validation.py — Input Validation
+Single function. Validates that `analyst_output` exists and is non-empty.
 
 ```python
 def validate_input(payload: dict) -> tuple[dict | None, str | None]:
     """
-    Validate the request payload.
+    Check that the payload contains a non-empty analyst_output.
 
-    Checks:
-    - analyst_output is present and non-empty
+    Args:
+        payload: The parsed request payload dict.
 
     Returns:
-        (validated_payload, None) on success
-        (None, error_message) on failure
+        (analyst_output, None) on success.
+        (None, error_message) on failure.
+
+    Validation rules:
+        - payload must be a dict
+        - payload must contain 'analyst_output' key
+        - analyst_output must be a non-empty dict
+
+    Does NOT validate the internal schema of analyst_output.
     """
 ```
 
-### config_loader.py — S3 Configuration Loading
+### config_loader.py
+
+Fetches JSON configs from S3. Each function is independent.
 
 ```python
+import json
 import boto3
+import os
+
 
 class ConfigLoadError(Exception):
     """Raised when an S3 config cannot be loaded or parsed."""
     pass
 
+
+# S3 client created at module level (reused across warm invocations)
+_s3_client = boto3.client("s3", region_name=os.environ.get("AWS_REGION", "us-east-1"))
+
+
 def load_interview_structure(bucket: str, key: str) -> dict:
     """
-    Fetch interview structure JSON from S3.
+    Fetch and parse interview_structure.json from S3.
 
-    Raises ConfigLoadError if the object is missing or not valid JSON.
+    Args:
+        bucket: S3 bucket name (from S3_BUCKET env var)
+        key: S3 object key (from INTERVIEW_STRUCTURE_KEY env var)
+
+    Returns:
+        Parsed dict of the interview structure.
+
+    Raises:
+        ConfigLoadError: If the object is missing, inaccessible, or not valid JSON.
+            Error message will include "interview_structure" for identification.
     """
+
 
 def load_interview_profile(bucket: str, key: str) -> dict:
     """
-    Fetch interview profile JSON from S3.
+    Fetch and parse student_interview_profile.json from S3.
 
-    Raises ConfigLoadError if the object is missing or not valid JSON.
+    Args:
+        bucket: S3 bucket name (from S3_BUCKET env var)
+        key: S3 object key (from INTERVIEW_PROFILE_KEY env var)
+
+    Returns:
+        Parsed dict of the interview profile.
+
+    Raises:
+        ConfigLoadError: If the object is missing, inaccessible, or not valid JSON.
+            Error message will include "interview_profile" for identification.
     """
 ```
 
-**Environment variables used:**
+**Error handling:**
+- Catch `botocore.exceptions.ClientError` (NoSuchKey, AccessDenied, etc.)
+- Catch `json.JSONDecodeError` (file exists but isn't valid JSON)
+- Wrap both in `ConfigLoadError` with a descriptive message
 
-| Variable | Purpose |
-|---|---|
-| `S3_BUCKET` | S3 bucket containing interview configs |
-| `INTERVIEW_STRUCTURE_KEY` | S3 object key for the interview structure JSON |
-| `INTERVIEW_PROFILE_KEY` | S3 object key for the interview profile JSON |
+### context_builder.py
 
-### context_builder.py — Runtime Context Assembly
+Combines all inputs into a single string that becomes Nova Sonic's system instruction.
 
 ```python
+import json
+
+
 def build_runtime_context(
     analyst_output: dict,
     interview_structure: dict,
     interview_profile: dict
 ) -> str:
     """
-    Assemble the runtime context that becomes Nova Sonic's system instruction.
+    Assemble the runtime context for Nova Sonic.
 
-    Combines:
-    - analyst_output: Full candidate data from the Analyst (included as-is)
-    - interview_structure: What the interview covers (points, topics, follow-up guidance)
-    - interview_profile: How the interviewer behaves (tone, style, rules)
-    - Behavioral instructions for Nova Sonic
+    Args:
+        analyst_output: Full Analyst output (included as-is, JSON-serialized).
+        interview_structure: What the interview covers (from S3).
+        interview_profile: How the interviewer behaves (from S3).
 
-    Returns a formatted string suitable for use as Nova Sonic's system instruction.
+    Returns:
+        A formatted string containing all three sections plus behavioral
+        instructions. This string is used directly as Nova Sonic's system
+        instruction.
+
+    The output format:
+        [CANDIDATE DATA]
+        <JSON dump of analyst_output>
+
+        [INTERVIEW STRUCTURE]
+        <JSON dump of interview_structure>
+
+        [INTERVIEW PROFILE]
+        <JSON dump of interview_profile>
+
+        [BEHAVIORAL INSTRUCTIONS]
+        - Ask one question at a time (no compound questions)
+        - Keep questions concise and use clear language
+        - Follow the tone specified in the interview profile
+        - Accept all experience types listed in the interview profile
+        - Do not invent details not present in the candidate data
+        - Do not give feedback or score answers during the interview
+        - Do not ask the candidate to rate themselves
+        - Signal transitions between interview points
+        - Stop gracefully when the session ends
     """
 ```
 
-**Behavioral instructions included in the context:**
-
-- Ask one question at a time (no compound questions)
-- Keep questions concise and use clear language
-- Follow the tone specified by the interview profile
-- Accept the experience types listed in the interview profile
-- Do not invent details not present in the candidate data
-- Do not give feedback or score answers during the interview
-- Stop gracefully when the session ends
-
-## Request Flow Detail
-
-```
-Frontend POST → handler.py
-                  │
-                  ├─ event has 'body'? → parse JSON from event['body']
-                  │   └─ parse fails? → return 400
-                  ├─ no 'body'? → use event as payload directly
-                  │
-                  ▼
-              validation.py
-                  │
-                  ├─ analyst_output missing/empty? → return 200 with error
-                  │
-                  ▼
-              config_loader.py
-                  │
-                  ├─ load interview_structure from S3
-                  │   └─ fails? → return 200 with error (which config failed)
-                  ├─ load interview_profile from S3
-                  │   └─ fails? → return 200 with error (which config failed)
-                  │
-                  ▼
-              context_builder.py
-                  │
-                  ├─ combine analyst_output + structure + profile + instructions
-                  │
-                  ▼
-              handler.py → return 200 with runtime_context
-```
-
-## External Schema References
-
-This module consumes and produces data conforming to schemas defined elsewhere:
-
-| Schema | Direction | Purpose |
-|---|---|---|
-| Analyst → Interviewer | Input | Candidate data from the Analyst (the `analyst_output` field in the request) |
-| Interview Structure | Input (S3) | Defines what the interview covers (points, focus, follow-up topics, number of questions) |
-| Interview Profile | Input (S3) | Defines how the interviewer behaves (tone, style, expectations, rules) |
-| Interviewer → Evaluator | Not used here | The frontend assembles and sends this directly to the Evaluator |
-
-The module validates presence of inputs but does not validate schema conformance — that responsibility belongs to the producing agent (Analyst validates its own output, configs are validated at upload time).
-
-## Error Handling
-
-| Category | Source | HTTP Status | Behavior |
-|---|---|---|---|
-| Malformed request | Handler | 400 | `event['body']` missing/null/not-JSON |
-| Missing analyst_output | Validator | 200 | Returns `{success: false, error_message: ...}` |
-| S3 config load failure | ConfigLoader | 200 | Returns error identifying which config failed |
-| Unhandled exception | Handler | 500 | Catch-all with error message |
-
-**Key principles:**
-
-- Validation errors return 200 with `success: false` because the HTTP request itself is well-formed — the error is semantic
-- The handler never sets CORS headers (handled by Function URL config)
-- No retries on S3 failures — the frontend can retry the request
-
-## Configuration
-
-**Environment variables:**
-
-| Variable | Purpose |
-|---|---|
-| `S3_BUCKET` | S3 bucket containing interview configs |
-| `INTERVIEW_STRUCTURE_KEY` | S3 key for the interview structure JSON |
-| `INTERVIEW_PROFILE_KEY` | S3 key for the interview profile JSON |
-| `AWS_REGION` | Set to `us-west-2` |
-
-## What the Frontend Handles (Not This Module)
-
-For clarity, here is what the frontend owns after receiving the runtime context:
-
-- Opening the WebSocket connection to Nova Sonic
-- Providing the runtime context as Nova Sonic's system instruction
-- Streaming audio bidirectionally (microphone → Nova Sonic, Nova Sonic → speaker)
-- Tracking interview state (current point, stage, follow-up count)
-- Collecting transcripts from Nova Sonic session events
-- Handling early stop (closing the session gracefully)
-- Sending the Analyst output + transcript to the Evaluator Lambda when the interview ends
+**Key rules:**
+- `analyst_output` is JSON-serialized as-is (no filtering, no transformation)
+- The behavioral instructions are hardcoded strings, not pulled from config
+- Output must be deterministic (same input → same output)
 
 ## Data Models
 
-### Request Payload
+### Input (Request Payload)
 
-```python
-# Input from frontend (or direct invocation)
+```json
 {
-    "analyst_output": {
-        # Complete Analyst output — included as-is in the runtime context.
-        # Contains: candidate profile, job details, selected experiences,
-        # skills alignment, interview context.
-        # Schema defined by the Analyst module; this module does not validate shape.
-        ...
-    }
+  "analyst_output": {
+    "schema_version": "1.0",
+    "candidate_profile": { ... },
+    "target_role": { ... },
+    "resume_job_alignment": { ... },
+    "interview_plan": [ ... ],
+    "selected_experiences": [ ... ],
+    "analysis_warnings": [ ... ]
+  }
 }
 ```
 
-### Interview Structure (S3 config)
+Full schema: `schemas/analyst_output.json`
 
-```python
+### S3: Interview Structure
+
+Defines what the interview covers. See: `.kiro/specs/interviewer-agent/schemas/interview_structure.json`
+
+Key fields: `main_question_count`, `max_follow_ups_per_point`, `interview_points[]` (each with focus, topic, objective, listen_for, follow_up_topics).
+
+### S3: Interview Profile
+
+Defines how the interviewer behaves. See: `.kiro/specs/interviewer-agent/schemas/student_interview.json`
+
+Key fields: `tone`, `question_style`, `follow_up_behavior`, `acceptable_experience_types`, `interviewer_rules`, `session_behavior`.
+
+### Output (Success Response)
+
+```json
 {
-    "schema_version": str,             # e.g. "1.0"
-    "structure_id": str,               # e.g. "resume_deep_dive_v1"
-    "display_name": str,               # Human-readable name
-    "main_question_count": int,        # Number of main questions
-    "max_follow_ups_per_point": int,   # Max follow-ups allowed per point
-    "allow_early_stop": bool,          # Whether the session can end early
-    "interview_points": [              # Ordered list of interview points
-        {
-            "point_id": str,
-            "focus": str,              # e.g. "ownership", "problem_solving"
-            "topic": str,
-            "objective": str,
-            "experience_selection": {
-                "preferred_types": list[str],   # Optional
-                "selection_strategy": str
-            },
-            "listen_for": list[str],
-            "follow_up_topics": list[str]
-        }
-    ]
+  "statusCode": 200,
+  "body": "{\"success\": true, \"runtime_context\": \"<assembled string>\"}"
 }
 ```
 
-### Interview Profile (S3 config)
+### Output (Error Responses)
 
-```python
-{
-    "schema_version": str,             # e.g. "1.0"
-    "profile_id": str,                 # e.g. "student_v1"
-    "display_name": str,
-    "candidate_level": str,            # e.g. "student_intern"
-    "tone": str,                       # e.g. "supportive_professional"
-    "question_style": {
-        "ask_one_question_at_a_time": bool,
-        "use_clear_language": bool,
-        "keep_questions_concise": bool,
-        "avoid_unnecessary_jargon": bool,
-        "acknowledge_student_experience": bool
-    },
-    "follow_up_behavior": {
-        "max_follow_ups_per_point": int,
-        "follow_up_depth": int,
-        "challenge_frequency": str,
-        "request_evidence_gently": bool,
-        "can_introduce_constraint": bool,
-        "follow_up_must_reference_answer": bool
-    },
-    "acceptable_experience_types": list[str],
-    "evaluation_expectations": {
-        "reward": list[str],
-        "do_not_expect": list[str],
-        "do_not_heavily_penalize": list[str]
-    },
-    "interviewer_rules": {
-        "do_not_invent_resume_details": bool,
-        "do_not_accuse_candidate_of_exaggeration": bool,
-        "remain_professional": bool,
-        "do_not_give_feedback_during_interview": bool,
-        "do_not_ask_multiple_questions_at_once": bool
-    }
-}
+```json
+// Validation or config error (request was well-formed HTTP, error is semantic)
+{"statusCode": 200, "body": "{\"success\": false, \"error_message\": \"...\"}"}
+
+// Malformed request body (not valid JSON)
+{"statusCode": 400, "body": "{\"success\": false, \"error_message\": \"Request body is not valid JSON\"}"}
+
+// Unhandled exception
+{"statusCode": 500, "body": "{\"success\": false, \"error_message\": \"...\"}"}
 ```
 
-### Success Response
+## Request Flow
 
-```python
-{
-    "statusCode": 200,
-    "body": "{\"success\": true, \"runtime_context\": \"<assembled system instruction string>\"}"
-}
+```
+Frontend POST
+    │
+    ▼
+handler.py: detect mode
+    ├─ event has 'body'? → json.loads(event['body'])
+    │     └─ JSONDecodeError? → return 400
+    └─ no 'body'? → payload = event
+    │
+    ▼
+validation.py: validate_input(payload)
+    └─ analyst_output missing/empty? → return 200 + error
+    │
+    ▼
+config_loader.py: load_interview_structure(bucket, key)
+    └─ ConfigLoadError? → return 200 + error
+    │
+    ▼
+config_loader.py: load_interview_profile(bucket, key)
+    └─ ConfigLoadError? → return 200 + error
+    │
+    ▼
+context_builder.py: build_runtime_context(analyst_output, structure, profile)
+    │
+    ▼
+handler.py: return 200 + {"success": true, "runtime_context": "..."}
 ```
 
-### Error Response
+## Error Handling
 
-```python
-# Validation / config error
-{
-    "statusCode": 200,
-    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
-}
+| Scenario | Status | Error Message Contains |
+|----------|--------|----------------------|
+| `event['body']` not valid JSON | 400 | `"Request body is not valid JSON"` |
+| `analyst_output` missing or empty | 200 | `"analyst_output is required"` |
+| S3 structure load fails | 200 | `"interview_structure"` |
+| S3 profile load fails | 200 | `"interview_profile"` |
+| Unhandled exception | 500 | Exception description |
 
-# Malformed request (body not valid JSON)
-{
-    "statusCode": 400,
-    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
-}
+**Principles:**
+- Fail fast: validation errors stop execution before S3 calls
+- Semantic errors use 200 (the HTTP layer worked fine)
+- No CORS headers in code (Function URL handles it)
+- No retries on S3 — the frontend can retry the whole request
 
-# Unhandled exception
-{
-    "statusCode": 500,
-    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
-}
-```
+## Environment Variables
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `S3_BUCKET` | `cic-mock-interview-configs-002859476624` | S3 bucket for configs |
+| `INTERVIEW_STRUCTURE_KEY` | `interview_structure.json` | S3 key for structure |
+| `INTERVIEW_PROFILE_KEY` | `student_interview_profile.json` | S3 key for profile |
+| `AWS_REGION` | `us-east-1` | AWS region for S3 client |
 
 ## Correctness Properties
 
-1. **Analyst output integrity**: The Analyst output included in the runtime context must be byte-for-byte identical to what was received — no fields added, removed, or transformed.
-2. **Complete context assembly**: The returned runtime_context must contain all three components (analyst_output, interview_structure, interview_profile) plus behavioral instructions. Missing any component is a bug.
-3. **Config isolation**: Loading one S3 config must not affect the other. A failure in interview_structure loading must not corrupt or skip interview_profile loading — each failure is reported independently.
-4. **Idempotency**: Given the same analyst_output and the same S3 config contents, the Lambda must return the same runtime_context every time.
-5. **No side effects**: The Lambda must not write to S3, call any LLM, invoke other Lambdas, or produce any observable effect beyond returning the response.
-6. **Fail-fast on missing input**: If analyst_output is absent or empty, the module must return an error immediately without attempting S3 loads.
-7. **Mode detection correctness**: The handler must correctly distinguish Function URL invocations (event has `body` key) from direct invocations (event is the payload) and never double-parse or skip parsing.
-8. **Error responses are well-formed**: Every error path must return a response with `success: false` and a non-empty `error_message`. No path may return a bare exception or empty body.
+1. **Analyst output integrity**: The analyst_output in the runtime context must be identical to what was received — no fields added, removed, or modified.
+2. **Complete assembly**: The runtime_context must contain all four sections (analyst_output, structure, profile, behavioral instructions). Missing any section is a bug.
+3. **Idempotent**: Same input + same S3 contents = same output, every time.
+4. **No side effects**: The Lambda reads from S3 and returns a response. It does not write to S3, call LLMs, invoke other Lambdas, or produce any other effect.
+5. **Fail-fast**: If analyst_output is invalid, return error before touching S3.
+6. **Mode detection**: Never double-parse (Function URL body parsed as JSON, then treated as a string again) or skip parsing.
+7. **Well-formed errors**: Every error path returns `{"success": false, "error_message": "<non-empty>"}`. No bare exceptions or empty bodies.
 
 ## Testing Strategy
 
 ### Unit Tests
 
-| Component | What to test |
-|---|---|
-| `validation.py` | Accept valid payload with analyst_output; reject missing/empty analyst_output; reject non-dict payloads |
-| `config_loader.py` | Parse valid JSON from mocked S3 response; raise `ConfigLoadError` on missing key; raise `ConfigLoadError` on invalid JSON |
-| `context_builder.py` | Output contains analyst_output, interview_structure, interview_profile, and behavioral instructions; output is a non-empty string; idempotent across calls with same input |
-| `handler.py` | Function URL mode: parse event['body'] correctly; Direct mode: use event as payload; Return 400 for malformed body; Return 500 for unhandled exceptions; Correct statusCode and body structure for all paths |
+| File | Tests |
+|------|-------|
+| `validation.py` | Valid payload passes; missing analyst_output fails; empty dict fails; non-dict payload fails |
+| `config_loader.py` | Valid S3 JSON parses correctly; missing key raises ConfigLoadError; invalid JSON raises ConfigLoadError; error message contains config name |
+| `context_builder.py` | Output contains all four sections; analyst_output appears as JSON; output is a non-empty string; same input produces same output |
+| `handler.py` | Function URL mode parses body; direct mode uses event; 400 on bad JSON; 200 + error on validation failure; 200 + error on S3 failure; 200 + success on happy path; 500 on unhandled exception |
 
-### Integration Tests
+### Integration Test
 
-- **Happy path**: Invoke the handler with a valid analyst_output and mocked S3 (moto or stubbed boto3). Verify 200 response with `success: true` and a runtime_context containing all three sections.
-- **S3 failure**: Mock S3 to raise `NoSuchKey`. Verify the response indicates which config failed.
-- **Function URL parsing**: Pass a wrapped event (`{"body": "<json>"}`) and verify the payload is unwrapped correctly.
+Invoke `lambda_handler` with a realistic analyst_output and mocked S3 (using `unittest.mock.patch` on boto3). Verify the full happy path returns 200 with a runtime_context containing all sections.
 
-### Test Environment
+### Running Tests
 
-- Use `pytest` as the test runner
-- Mock `boto3` S3 calls with `unittest.mock.patch` or `moto`
-- No real AWS credentials required for unit/integration tests
-- Tests run with `python3 -m pytest interviewer/tests/`
+```bash
+python3 -m pytest interviewer/tests/ -v
+```
 
-## Future Extensibility
+Mock boto3 S3 calls — no real AWS credentials needed for tests.
 
-- New interview profiles (standard-v1, challenging-v1) added to S3 without code changes
-- New interview structures (system-design, behavioral-extended) added as new S3 configs
-- The request could include a `profile_id` or `structure_id` field to select which configs to load, allowing the frontend to offer interview type selection
-- Schemas are versioned independently — the module can check `schema_version` on loaded configs if needed
+## Deployment
+
+```bash
+# Package
+cd /path/to/project
+zip -r interviewer.zip interviewer/
+
+# Deploy (create or update)
+aws lambda create-function \
+  --function-name mock-interview-interviewer \
+  --runtime python3.12 \
+  --handler interviewer.handler.lambda_handler \
+  --zip-file fileb://interviewer.zip \
+  --role <execution-role-arn> \
+  --region us-east-1 \
+  --environment "Variables={S3_BUCKET=cic-mock-interview-configs-002859476624,INTERVIEW_STRUCTURE_KEY=interview_structure.json,INTERVIEW_PROFILE_KEY=student_interview_profile.json,AWS_REGION=us-east-1}"
+
+# Enable Function URL
+aws lambda create-function-url-config \
+  --function-name mock-interview-interviewer \
+  --auth-type NONE \
+  --cors "AllowOrigins=*,AllowMethods=POST,AllowHeaders=content-type" \
+  --region us-east-1
+```
+
+**IAM permissions needed:**
+- `s3:GetObject` on `arn:aws:s3:::cic-mock-interview-configs-002859476624/*`
+- `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` for the frontend to call it
+
+**No bundled dependencies** — boto3 ships with the Lambda runtime. No pip install needed.

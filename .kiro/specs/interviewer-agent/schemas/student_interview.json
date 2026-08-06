@@ -15,7 +15,7 @@
     "frame_questions_around_learning": true
   },
   "follow_up_behavior": {
-    "max_follow_ups_per_point": 3,
+    "max_follow_ups_per_point": 1,
     "follow_up_depth": 1,
     "challenge_frequency": "low",
     "request_evidence_gently": true,
