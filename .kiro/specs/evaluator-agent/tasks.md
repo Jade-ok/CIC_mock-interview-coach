@@ -2,34 +2,34 @@
 
 ## Task 1: Project Setup and Module Scaffolding
 
-- [ ] Create the `evaluator/` directory structure with all module files
-- [ ] Create `evaluator/__init__.py`
-- [ ] Create `evaluator/lambda_handler.py` with handler stub
-- [ ] Create `evaluator/validator.py` with empty function stubs
-- [ ] Create `evaluator/prompt_builder.py` with empty function stubs
-- [ ] Create `evaluator/bedrock_client.py` with empty function stubs
-- [ ] Create `evaluator/scorer.py` with empty function stubs
-- [ ] Create `evaluator/response_assembler.py` with empty function stubs
-- [ ] Create `evaluator/exceptions.py` with ValidationError and EvaluationError classes
-- [ ] Create `evaluator/schemas.py` with tool schema definition placeholder
+- [x] Create the `evaluator/` directory structure with all module files
+- [x] Create `evaluator/__init__.py`
+- [x] Create `evaluator/lambda_handler.py` with handler stub
+- [x] Create `evaluator/validator.py` with empty function stubs
+- [x] Create `evaluator/prompt_builder.py` with empty function stubs
+- [x] Create `evaluator/bedrock_client.py` with empty function stubs
+- [x] Create `evaluator/scorer.py` with empty function stubs
+- [x] Create `evaluator/response_assembler.py` with empty function stubs
+- [x] Create `evaluator/exceptions.py` with ValidationError and EvaluationError classes
+- [x] Create `evaluator/schemas.py` with tool schema definition placeholder
 
 ## Task 2: Implement Input Validation
 
-- [ ] Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event
-- [ ] Validate presence of required fields: conversation, interview_metadata, resume_analysis
-- [ ] Validate conversation length (1-6 pairs)
-- [ ] Validate each turn contains point_id, turn_type, question, answer
-- [ ] Raise `ValidationError` with descriptive messages on failure
-- [ ] Write unit tests for validator with valid input, missing fields, empty conversation, >6 turns, and missing turn fields
+- [x] Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event
+- [x] Validate presence of required fields: conversation, interview_metadata, resume_analysis
+- [x] Validate conversation length (1-6 pairs)
+- [x] Validate each turn contains point_id, turn_type, question, answer
+- [x] Raise `ValidationError` with descriptive messages on failure
+- [x] Write unit tests for validator with valid input, missing fields, empty conversation, >6 turns, and missing turn fields
 
 ## Task 3: Implement Prompt Builder
 
-- [ ] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
-- [ ] Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object
-- [ ] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
-- [ ] Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple
-- [ ] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
-- [ ] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
+- [x] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
+- [x] Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object
+- [x] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
+- [x] Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple
+- [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
+- [x] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 
 ## Task 4: Implement Bedrock Client
 

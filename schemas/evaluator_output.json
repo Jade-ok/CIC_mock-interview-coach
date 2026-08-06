@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+
+  "per_question_scores": [
+    {
+      "question_text": "string — the interview question that was asked",
+      "answer_summary": "string — brief summary of the student's answer",
+      "scores": {
+        "concrete_example": "integer 1-5 — did the student provide a specific, real example?",
+        "situation_action_result": "integer 1-5 — did the answer follow SAR structure?",
+        "link_to_job": "integer 1-5 — did the student connect their experience to the target role?",
+        "quantifiable_outcome": "integer 1-5 — did the student include measurable results or impact?"
+      }
+    }
+  ],
+
+  "overall_scores": {
+    "dimensions": {
+      "concrete_example": "float — average across all answered questions, rounded to 1 decimal",
+      "situation_action_result": "float — average across all answered questions, rounded to 1 decimal",
+      "link_to_job": "float — average across all answered questions, rounded to 1 decimal",
+      "quantifiable_outcome": "float — average across all answered questions, rounded to 1 decimal"
+    },
+    "total": "float — average of the four dimension averages, rounded to 1 decimal"
+  },
+
+  "question_count": "integer — number of questions actually scored (1 to 6)",
+
+  "readiness_label": "string — one of: 'Interview ready' (4.3-5.0), 'Strong foundation' (3.5-4.2), 'Developing well' (2.8-3.4), 'Needs more practice' (2.0-2.7), 'Needs clearer examples' (1.0-1.9)",
+
+  "strengths": ["string — specific praise with direct quotes or references from the conversation"],
+
+  "improvements": ["string — specific, actionable improvement advice tied to scoring dimensions"],
+
+  "contextual_advice": ["string — advice referencing unused resume experiences or job competency gaps from analyst_output"],
+
+  "interview_metadata": {
+    "candidate_level": "string — passed through from input (e.g. student_intern)",
+    "target_role": "string — passed through from input",
+    "status": "completed | ended_early — passed through from input",
+    "completion_reason": "all_questions_completed | user_ended_early — passed through from input",
+    "main_questions_completed": "integer 0-3 — passed through from input",
+    "follow_ups_completed": "integer 0-3 — passed through from input",
+    "ended_early": "boolean — passed through from input"
+  }
+}
