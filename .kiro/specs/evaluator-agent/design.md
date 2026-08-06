@@ -219,7 +219,7 @@ EVALUATION_TOOL_SCHEMA = {
 **Responsibility:** Wraps the Bedrock Converse API call with retry logic.
 
 **Key design decisions:**
-- Uses model ID `global.anthropic.claude-fable-5` in `us-west-2`
+- Uses model ID `global.anthropic.claude-fable-5` in `us-east-1`
 - Enforces tool_use via `toolChoice: {"tool": {"name": "submit_evaluation"}}`
 - Retries once on failure (max 2 total attempts)
 - Extracts tool_use input from the response
@@ -229,7 +229,7 @@ import boto3
 from botocore.config import Config
 
 MODEL_ID = "global.anthropic.claude-fable-5"
-REGION = "us-west-2"
+REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 
 client = boto3.client("bedrock-runtime", region_name=REGION, config=Config(retries={"max_attempts": 0}))
