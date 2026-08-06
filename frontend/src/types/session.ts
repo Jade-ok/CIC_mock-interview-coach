@@ -70,6 +70,7 @@ export type SessionAction =
   | { type: 'AGENT3_SUCCESS'; payload: unknown }
   | { type: 'AGENT3_FAILED'; payload: { message: string } }
   | { type: 'TIMEOUT' }
+  | { type: 'MIC_DENIED' }
   | { type: 'TICK' }
   | { type: 'RESET' };
 

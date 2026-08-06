@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
+import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
+import type { WebSocketClient } from '@/services/webSocketClient';
 
 // --- Sub-components ---
 
@@ -28,14 +30,14 @@ function AITile({ isActive }: { isActive: boolean }) {
   );
 }
 
-function UserTile({ isActive }: { isActive: boolean }) {
+function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean }) {
   return (
     <div
       className={`participant-tile participant-tile--user ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="user-tile"
     >
       <div className="participant-tile__content">
-        {isActive && (
+        {isActive && !textOnly && (
           <div className="waveform" data-testid="user-waveform" aria-label="User speaking waveform">
             <span className="waveform__bar" />
             <span className="waveform__bar" />
@@ -44,20 +46,23 @@ function UserTile({ isActive }: { isActive: boolean }) {
             <span className="waveform__bar" />
           </div>
         )}
-        {!isActive && (
+        {textOnly && (
+          <div className="participant-tile__icon" aria-hidden="true" data-testid="text-mode-icon">⌨️</div>
+        )}
+        {!isActive && !textOnly && (
           <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
       </div>
-      <span className="participant-tile__label">You</span>
+      <span className="participant-tile__label">You{textOnly ? ' (텍스트 모드)' : ''}</span>
     </div>
   );
 }
 
-function ParticipantTiles({ turnState }: { turnState: string }) {
+function ParticipantTiles({ turnState, textOnly }: { turnState: string; textOnly: boolean }) {
   return (
     <div className="participant-tiles" data-testid="participant-tiles">
       <AITile isActive={turnState === 'ai_speaking'} />
-      <UserTile isActive={turnState === 'user_turn'} />
+      <UserTile isActive={turnState === 'user_turn'} textOnly={textOnly} />
     </div>
   );
 }
@@ -129,14 +134,16 @@ function ControlBar({
   );
 }
 
-function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
+function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => void; onInputChange?: (hasText: boolean) => void }) {
   const [value, setValue] = useState('');
+  const hadTextRef = useRef(false);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
     if (trimmed) {
       onSubmit(trimmed);
       setValue('');
+      hadTextRef.current = false;
     }
   }, [value, onSubmit]);
 
@@ -150,13 +157,27 @@ function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
     [handleSubmit]
   );
 
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      setValue(newValue);
+
+      const hasText = newValue.length > 0;
+      if (hasText !== hadTextRef.current) {
+        hadTextRef.current = hasText;
+        onInputChange?.(hasText);
+      }
+    },
+    [onInputChange]
+  );
+
   return (
     <div className="text-input" data-testid="text-input">
       <input
         className="text-input__field"
         type="text"
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Type your answer..."
         aria-label="Text input fallback"
@@ -177,9 +198,16 @@ function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
 
 // --- Main Component ---
 
-export function InterviewScreen() {
+export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Audio streaming integration
+  const { audioManagerRef } = useInterviewStreaming({
+    phase: state.phase,
+    wsClient: wsClient ?? null,
+    dispatch,
+  });
 
   // beforeunload effect — only active during interview phase
   useEffect(() => {
@@ -218,22 +246,53 @@ export function InterviewScreen() {
 
   const handleTextSubmit = useCallback(
     (text: string) => {
-      // Text input dispatch is a placeholder for the actual WS send logic
       dispatch({ type: 'TEXT_INPUT_CLEAR' });
-      // In a real implementation, this would send the text via WebSocket
-      void text;
+      // Send text via WebSocket
+      if (wsClient && wsClient.getState() === 'connected') {
+        wsClient.sendTextInput(text, 'default', 'text-input');
+      }
+      // Resume capture after text submit (if audio manager available)
+      if (audioManagerRef.current && state.inputMode === 'voice') {
+        audioManagerRef.current.resumeCapture();
+      }
     },
-    [dispatch]
+    [dispatch, wsClient, audioManagerRef, state.inputMode]
+  );
+
+  const handleTextInputChange = useCallback(
+    (hasText: boolean) => {
+      if (hasText) {
+        dispatch({ type: 'TEXT_INPUT_START' });
+        // Pause capture while composing text
+        if (audioManagerRef.current && state.inputMode === 'voice') {
+          audioManagerRef.current.pauseCapture();
+        }
+      } else {
+        dispatch({ type: 'TEXT_INPUT_CLEAR' });
+        // Resume capture when text cleared
+        if (audioManagerRef.current && state.inputMode === 'voice') {
+          audioManagerRef.current.resumeCapture();
+        }
+      }
+    },
+    [dispatch, audioManagerRef, state.inputMode]
   );
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
+      {/* Mic denied error message */}
+      {state.inputMode === 'text_only' && state.error?.code === 'MIC_DENIED' && (
+        <div className="interview-screen__mic-error" data-testid="mic-denied-error" role="alert">
+          {state.error.message}
+        </div>
+      )}
+
       <div className="interview-screen__main">
         <div className="interview-screen__left">
-          <ParticipantTiles turnState={state.turnState} />
+          <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
           {/* Practice Bubbles placeholder */}
           <div className="practice-bubbles" data-testid="practice-bubbles" />
-          <TextInput onSubmit={handleTextSubmit} />
+          <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
         </div>
         <div className="interview-screen__right">
           {/* Guide Panel placeholder */}
@@ -265,6 +324,16 @@ export function InterviewScreen() {
           gap: 12px;
           padding: 12px;
           overflow: hidden;
+        }
+
+        .interview-screen__mic-error {
+          background-color: var(--color-error-bg, rgba(255, 92, 92, 0.15));
+          border: 1px solid var(--color-error, #FF5C5C);
+          border-radius: 8px;
+          padding: 10px 16px;
+          margin: 12px 12px 0;
+          font-size: 13px;
+          color: var(--color-error, #FF5C5C);
         }
 
         .interview-screen__left {

@@ -182,6 +182,17 @@ export function sessionReducer(
         },
       };
 
+    case 'MIC_DENIED':
+      return {
+        ...state,
+        inputMode: 'text_only',
+        error: {
+          code: 'MIC_DENIED',
+          message: '마이크 권한이 거부되었습니다. 텍스트 전용 모드로 전환합니다.',
+          retryable: false,
+        },
+      };
+
     case 'TICK':
       return {
         ...state,
