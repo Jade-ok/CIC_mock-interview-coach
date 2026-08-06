@@ -1,0 +1,57 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "Vite + React + TypeScript 프로젝트 초기화 (`frontend/` 디렉토리)": [
+      {
+        "executionId": "de24663a-38b8-45c8-a51a-301e45bc06e3",
+        "chatSessionId": "sess_59c07b51-423c-4e5f-ad84-16d009d9398b",
+        "timestamp": 1786046911557
+      }
+    ],
+    "의존성 설치: react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket": [
+      {
+        "executionId": "2fbd9609-257b-437e-8683-cd64ae2dc7e7",
+        "chatSessionId": "sess_5895ee89-575b-4cf9-8df5-8b8ac2aa53de",
+        "timestamp": 1786046995430
+      }
+    ],
+    "Vite 설정 (dev server, build output)": [
+      {
+        "executionId": "d57167a5-1aee-4007-8706-ca45121a84c6",
+        "chatSessionId": "sess_0713760b-84fd-4a79-b644-877038944df3",
+        "timestamp": 1786047155897
+      }
+    ],
+    "전역 타입 정의 파일 생성 (`types/index.ts`): SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등 design.md의 모든 인터페이스": [
+      {
+        "executionId": "9820f587-52bc-4781-a908-72ba7d73c6c8",
+        "chatSessionId": "sess_01ee9690-f8b1-4604-b4c9-45df01244e1c",
+        "timestamp": 1786047172054
+      }
+    ],
+    "1. 프로젝트 초기 세팅: Vite + React + TypeScript 프로젝트 초기화 (frontend/ 디렉토리), 의존성 설치 (react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket), tsconfig.json 설정, Vite 설정, 디렉토리 구조 생성 (components, hooks, services, reducers, types, utils, worklets), 전역 타입 정의 파일 생성 (SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등)": [
+      {
+        "executionId": "2fab2536-efa9-48c9-8ac6-ac0fb383d065",
+        "chatSessionId": "sess_4ea4a48e-c1ed-47b0-bbdd-a38f1435551a",
+        "timestamp": 1786048176142
+      },
+      {
+        "executionId": "2fab2536-efa9-48c9-8ac6-ac0fb383d065",
+        "chatSessionId": "sess_4ea4a48e-c1ed-47b0-bbdd-a38f1435551a",
+        "timestamp": 1786048510588
+      }
+    ],
+    "2. SessionManager (Reducer + Context): reducers/sessionReducer.ts 구현 (SUBMIT_UPLOAD, AGENT1_SUCCESS/FAILED, WS_CONNECTED, SESSION_START_ACKED, WS_DISCONNECTED, WS_RECONNECT_SUCCESS/FAILED, WS_SESSION_INVALID, INTERVIEW_READY, AI_SPEAKING, USER_TURN, BARGE_IN, APPEND_TRANSCRIPT, TOGGLE_PRACTICE_MODE, TEXT_INPUT_START/CLEAR, END_INTERVIEW, AGENT3_LOADING/SUCCESS/FAILED, TIMEOUT, TICK, RESET), SessionContext + SessionProvider 구현, maybeStartSession() 조율 로직 (AGENT1_SUCCESS와 WS_CONNECTED 양쪽에서 호출), 단위 테스트 + PBT (Property 8, 13)": [
+      {
+        "executionId": "6346756e-e9e7-4be3-afe0-305c1484656e",
+        "chatSessionId": "sess_a21c34eb-57c3-47b4-bf50-fe498a1d8dd1",
+        "timestamp": 1786048594206
+      },
+      {
+        "executionId": "6346756e-e9e7-4be3-afe0-305c1484656e",
+        "chatSessionId": "sess_a21c34eb-57c3-47b4-bf50-fe498a1d8dd1",
+        "timestamp": 1786048839459
+      }
+    ]
+  }
+}

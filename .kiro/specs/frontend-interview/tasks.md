@@ -56,11 +56,11 @@ graph TD
 
 ## Tasks
 
-- [-] 1. 프로젝트 초기 세팅: Vite + React + TypeScript 프로젝트 초기화 (frontend/ 디렉토리), 의존성 설치 (react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket), tsconfig.json 설정, Vite 설정, 디렉토리 구조 생성 (components, hooks, services, reducers, types, utils, worklets), 전역 타입 정의 파일 생성 (SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등)
+- [x] 1. 프로젝트 초기 세팅: Vite + React + TypeScript 프로젝트 초기화 (frontend/ 디렉토리), 의존성 설치 (react, react-dom, typescript, vite, vitest, @testing-library/react, fast-check, mock-socket), tsconfig.json 설정, Vite 설정, 디렉토리 구조 생성 (components, hooks, services, reducers, types, utils, worklets), 전역 타입 정의 파일 생성 (SessionState, TranscriptEntry, CompetencyGuide, SessionError, SessionAction 등)
   - **Requirements**: N/A (인프라)
   - **Dependencies**: None
 
-- [ ] 2. SessionManager (Reducer + Context): reducers/sessionReducer.ts 구현 (SUBMIT_UPLOAD, AGENT1_SUCCESS/FAILED, WS_CONNECTED, SESSION_START_ACKED, WS_DISCONNECTED, WS_RECONNECT_SUCCESS/FAILED, WS_SESSION_INVALID, INTERVIEW_READY, AI_SPEAKING, USER_TURN, BARGE_IN, APPEND_TRANSCRIPT, TOGGLE_PRACTICE_MODE, TEXT_INPUT_START/CLEAR, END_INTERVIEW, AGENT3_LOADING/SUCCESS/FAILED, TIMEOUT, TICK, RESET), SessionContext + SessionProvider 구현, maybeStartSession() 조율 로직 (AGENT1_SUCCESS와 WS_CONNECTED 양쪽에서 호출), 단위 테스트 + PBT (Property 8, 13)
+- [x] 2. SessionManager (Reducer + Context): reducers/sessionReducer.ts 구현 (SUBMIT_UPLOAD, AGENT1_SUCCESS/FAILED, WS_CONNECTED, SESSION_START_ACKED, WS_DISCONNECTED, WS_RECONNECT_SUCCESS/FAILED, WS_SESSION_INVALID, INTERVIEW_READY, AI_SPEAKING, USER_TURN, BARGE_IN, APPEND_TRANSCRIPT, TOGGLE_PRACTICE_MODE, TEXT_INPUT_START/CLEAR, END_INTERVIEW, AGENT3_LOADING/SUCCESS/FAILED, TIMEOUT, TICK, RESET), SessionContext + SessionProvider 구현, maybeStartSession() 조율 로직 (AGENT1_SUCCESS와 WS_CONNECTED 양쪽에서 호출), 단위 테스트 + PBT (Property 8, 13)
   - **Requirements**: All (상태 관리 중심)
   - **Dependencies**: 1
 
