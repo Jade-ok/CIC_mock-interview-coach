@@ -29,7 +29,6 @@ export class InfraStack extends cdk.Stack {
     // 1. Analyst Lambda — Bedrock (Claude)
     // ------------------------------------------------------------------
     const analystFn = new lambda.Function(this, 'AnalystFunction', {
-      functionName: 'mock-interview-analyst',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../analyst'),
       handler: 'handler.lambda_handler',
@@ -53,7 +52,6 @@ export class InfraStack extends cdk.Stack {
     // 2. Evaluator Lambda — Bedrock (Claude)
     // ------------------------------------------------------------------
     const evaluatorFn = new lambda.Function(this, 'EvaluatorFunction', {
-      functionName: 'mock-interview-evaluator',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../evaluator'),
       handler: 'lambda_handler.handler',
@@ -77,7 +75,6 @@ export class InfraStack extends cdk.Stack {
     // 3. Interviewer Lambda — context builder (S3 read, no LLM)
     // ------------------------------------------------------------------
     const interviewerFn = new lambda.Function(this, 'InterviewerFunction', {
-      functionName: 'mock-interview-interviewer',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../interviewer'),
       handler: 'handler.lambda_handler',
@@ -99,7 +96,6 @@ export class InfraStack extends cdk.Stack {
     // 4. PDF Parser Lambda — pypdf (bundled via Docker)
     // ------------------------------------------------------------------
     const pdfParserFn = new lambda.Function(this, 'PdfParserFunction', {
-      functionName: 'mock-interview-pdf-parser',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../pdf_parser', {
         bundling: {
@@ -125,7 +121,6 @@ export class InfraStack extends cdk.Stack {
     // 5. Polly Lambda — Amazon Polly TTS
     // ------------------------------------------------------------------
     const pollyFn = new lambda.Function(this, 'PollyFunction', {
-      functionName: 'mock-interview-polly',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../polly'),
       handler: 'handler.lambda_handler',
