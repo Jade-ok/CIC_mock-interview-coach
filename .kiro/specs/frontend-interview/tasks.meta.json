@@ -95,6 +95,18 @@
         "chatSessionId": "sess_81e47eff-6290-414f-9b83-a1f1fa223b84",
         "timestamp": 1786051429635
       }
+    ],
+    "7. Interview Screen 레이아웃 및 기본 UI: components/InterviewScreen.tsx (다크 테마 Zoom 스타일, ParticipantTiles AITile/UserTile 웨이브폼, ControlBar EndButton/PracticeModeToggle, Timer TICK 기반, TextInput fallback), Turn 상태 시각 표시 (ai_speaking/user_turn), beforeunload 등록/해제, 종료 버튼 항상 활성, 단위 테스트 + PBT (Property 15, 16)": [
+      {
+        "executionId": "1783cafc-7be3-425d-9d2d-7b9760c60fa6",
+        "chatSessionId": "sess_1eedab97-ba30-444b-92be-1ae1c6bc2635",
+        "timestamp": 1786051524632
+      },
+      {
+        "executionId": "1783cafc-7be3-425d-9d2d-7b9760c60fa6",
+        "chatSessionId": "sess_1eedab97-ba30-444b-92be-1ae1c6bc2635",
+        "timestamp": 1786051903117
+      }
     ]
   }
 }

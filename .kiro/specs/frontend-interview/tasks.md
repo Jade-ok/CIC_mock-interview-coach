@@ -80,7 +80,7 @@ graph TD
   - **Requirements**: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
   - **Dependencies**: 2, 3
 
-- [ ] 7. Interview Screen 레이아웃 및 기본 UI: components/InterviewScreen.tsx (다크 테마 Zoom 스타일, ParticipantTiles AITile/UserTile 웨이브폼, ControlBar EndButton/PracticeModeToggle, Timer TICK 기반, TextInput fallback), Turn 상태 시각 표시 (ai_speaking/user_turn), beforeunload 등록/해제, 종료 버튼 항상 활성, 단위 테스트 + PBT (Property 15, 16)
+- [x] 7. Interview Screen 레이아웃 및 기본 UI: components/InterviewScreen.tsx (다크 테마 Zoom 스타일, ParticipantTiles AITile/UserTile 웨이브폼, ControlBar EndButton/PracticeModeToggle, Timer TICK 기반, TextInput fallback), Turn 상태 시각 표시 (ai_speaking/user_turn), beforeunload 등록/해제, 종료 버튼 항상 활성, 단위 테스트 + PBT (Property 15, 16)
   - **Requirements**: 3.5, 3.12, 3.13, 3.15, 4.2, 4.8, 8.3
   - **Dependencies**: 2, 4
 
