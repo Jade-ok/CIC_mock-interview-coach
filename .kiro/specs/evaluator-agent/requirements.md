@@ -13,7 +13,8 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 ## Glossary
 
 - **Evaluator**: The AWS Lambda function that scores and provides feedback on a completed mock interview
-- **Transcript**: The complete conversation history from the Interviewer agent, containing between 1 and 6 question-answer pairs (3 main questions each with 1 follow-up at maximum)
+- **Conversation**: The complete conversation history from the Interviewer agent as an array of turn objects, each containing point_id, turn_type, question, and answer fields (1 to 6 turns)
+- **Interview_Metadata**: Metadata about the interview session including candidate_level, target_role, completion status, and question counts — passed through to the response for frontend reference
 - **Main_Question**: One of up to 3 primary interview questions asked by the Interviewer
 - **Follow_Up_Question**: A single follow-up question paired with each main question to probe deeper into the student's answer
 - **Resume_Analysis**: The output from the Analyst agent containing 4-6 extracted interview topics and key experiences from the student's resume
@@ -33,12 +34,13 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. WHEN the Evaluator receives a request, THE Evaluator SHALL validate that the transcript, resume_analysis, and job_description fields are all present and non-empty
-2. WHEN the transcript contains fewer than one question-answer pair, THE Evaluator SHALL reject the input with a descriptive error message
-3. WHEN the transcript contains more than 6 question-answer pairs, THE Evaluator SHALL reject the input with a descriptive error message indicating the transcript exceeds the expected interview length
+1. WHEN the Evaluator receives a request, THE Evaluator SHALL validate that the conversation, interview_metadata, resume_analysis, and job_description fields are all present and non-empty
+2. WHEN the conversation contains fewer than one question-answer pair, THE Evaluator SHALL reject the input with a descriptive error message
+3. WHEN the conversation contains more than 6 question-answer pairs, THE Evaluator SHALL reject the input with a descriptive error message indicating the transcript exceeds the expected interview length
 4. IF any required field is missing or empty, THEN THE Evaluator SHALL return an error response with a 400 status code and a message identifying the missing field
 5. WHEN the Evaluator receives a valid request via Function URL, THE Evaluator SHALL parse the JSON payload from the event body field
-6. THE Evaluator SHALL accept transcripts of any length between 1 and 6 question-answer pairs inclusive, supporting early termination by the student
+6. THE Evaluator SHALL accept conversations of any length between 1 and 6 question-answer pairs inclusive, supporting early termination by the student
+7. THE Evaluator SHALL validate that each item in the conversation array contains point_id, turn_type, question, and answer fields
 
 ### Requirement 2: Prompt Construction
 
@@ -46,7 +48,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. WHEN building the evaluation prompt, THE Prompt_Builder SHALL include the full transcript, resume analysis, and job description as context
+1. WHEN building the evaluation prompt, THE Prompt_Builder SHALL include the full conversation, resume analysis, and job description as context
 2. WHEN building the evaluation prompt, THE Prompt_Builder SHALL specify all four Scoring_Dimensions with their definitions
 3. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to score each dimension on a 1-5 integer scale
 4. WHEN building the evaluation prompt, THE Prompt_Builder SHALL instruct the LLM to provide the scoring judgment only, without calculating aggregate scores or classification labels
@@ -127,11 +129,12 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. THE Evaluator SHALL return the Feedback_Report as a JSON object containing: per_question_scores, overall_scores, readiness_label, strengths, improvements, and contextual_advice fields
+1. THE Evaluator SHALL return the Feedback_Report as a JSON object containing: per_question_scores, overall_scores, readiness_label, strengths, improvements, contextual_advice, and interview_metadata fields
 2. WHEN the evaluation succeeds, THE Evaluator SHALL return an HTTP 200 response with the Feedback_Report as the response body
 3. THE Evaluator SHALL ensure the per_question_scores field is an array with one entry per question actually answered, each containing the question text, student answer summary, and four dimension scores (each 1-5)
 4. THE Evaluator SHALL ensure the overall_scores field contains the four dimension averages and the total overall score, all on the 1-5 scale
 5. THE Evaluator SHALL include a question_count field indicating how many questions were scored out of the maximum 6
+6. THE Evaluator SHALL pass through the interview_metadata object unchanged in the response for frontend reference
 
 ### Requirement 10: Error Handling
 
