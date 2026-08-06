@@ -31,7 +31,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Define and raise custom `EmptyDocumentError` when PDF yields zero text
     - _Requirements: 1.1, 1.3, 1.4, 2.1_
 
-- [ ] 4. Implement pdf_parser — orchestrator and handler
+- [x] 4. Implement pdf_parser — orchestrator and handler
   - [x] 4.1 Create pdf_parser/orchestrator.py
     - Implement `process_documents(payload: dict) -> dict`
     - Handle resume (always PDF), job_posting (PDF or text based on format flag)
@@ -47,7 +47,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Catch unexpected exceptions and return 500 error envelope
     - _Requirements: 12.1, 12.2, 11.1, 11.2_
 
-  - [ ] 4.3 Add pdf_parser/test_event.json sample payloads
+  - [x] 4.3 Add pdf_parser/test_event.json sample payloads
     - Create `pdf_parser/test_event.json` with two example events:
       - Direct mode: `{"resume": {"content": "<short base64 PDF>", "format": "pdf"}}`
       - Function URL mode: `{"body": "{\"resume\": {\"content\": \"<short base64 PDF>\", \"format\": \"pdf\"}}"}`
@@ -79,8 +79,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Raise `BedrockCallFailed` after 2 failed attempts with reason
     - _Requirements: 7.1, 9.1, 9.2, 9.3_
 
-- [ ] 8. Implement analyst — parser (response parsing + schema validation + warnings)
-  - [ ] 8.1 Create analyst/parser.py
+- [x] 8. Implement analyst — parser (response parsing + schema validation + warnings)
+  - [x] 8.1 Create analyst/parser.py
     - Implement `parse_converse_response(response: dict) -> dict`
       - Extract tool_use result from `response["output"]["message"]["content"][0]["toolUse"]["input"]`
       - Validate all top-level keys present (`candidate_profile`, `target_role`, `resume_job_alignment`, `selected_experiences`, `analysis_warnings`, `schema_version`, `interview_plan`)
@@ -96,22 +96,22 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Raise `SchemaValidationError` on non-conforming output
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3, 6.5, 6.6, 10.1, 10.2, 10.3, 10.4_
 
-- [ ] 9. Implement analyst — orchestrator and handler
-  - [ ] 9.1 Create analyst/orchestrator.py
+- [x] 9. Implement analyst — orchestrator and handler
+  - [x] 9.1 Create analyst/orchestrator.py
     - Implement `analyze(payload: dict) -> dict`
     - Pipeline: validate → build prompt → call Bedrock (with retry) → parse response → check warnings → inject warnings into output
     - On `SchemaValidationError` from parser, trigger retry in bedrock_client
     - Return success envelope with full analyst_output, or error envelope with descriptive message
     - _Requirements: 5.1, 6.4, 6.5, 6.6, 9.1_
 
-  - [ ] 9.2 Create analyst/handler.py entry point
+  - [x] 9.2 Create analyst/handler.py entry point
     - Implement `lambda_handler(event, context) -> dict`
     - Call `detect_invocation_mode` → `validate_request` → `analyze`
     - Wrap all responses in standard envelope
     - Catch unexpected exceptions and return 500 error envelope
     - _Requirements: 12.3, 12.4, 11.3, 11.4_
 
-  - [ ] 9.3 Add analyst/test_event.json sample payload
+  - [x] 9.3 Add analyst/test_event.json sample payload
     - Create `analyst/test_event.json` with two example events:
       - Direct mode: `{"resume_text": "Jane Doe, Software Engineering student...", "job_posting_text": "Software Engineer at Acme Corp..."}`
       - Function URL mode: `{"body": "{\"resume_text\": \"Jane Doe...\", \"job_posting_text\": \"Software Engineer at Acme Corp...\"}"}`

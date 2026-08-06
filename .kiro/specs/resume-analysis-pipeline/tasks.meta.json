@@ -237,6 +237,16 @@
         "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786051869208
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051942693
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052185009
       }
     ],
     "6.1 Create analyst/prompt_builder.py": [
@@ -293,6 +303,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313395
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051943441
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052185848
       }
     ],
     "9.1 Create analyst/orchestrator.py": [
@@ -300,6 +320,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313433
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052190694
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052319556
       }
     ],
     "9.2 Create analyst/handler.py entry point": [
@@ -307,6 +337,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313467
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052191386
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052320387
       }
     ],
     "9.3 Add analyst/test_event.json sample payload": [
@@ -314,6 +354,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313499
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052324470
+      },
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052387469
       }
     ],
     "3. Implement pdf_parser — PDF text extraction": [
@@ -335,6 +385,27 @@
         "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786051859270
+      }
+    ],
+    "4. Implement pdf_parser — orchestrator and handler": [
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052185044
+      }
+    ],
+    "8. Implement analyst — parser (response parsing + schema validation + warnings)": [
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052185888
+      }
+    ],
+    "9. Implement analyst — orchestrator and handler": [
+      {
+        "executionId": "1e5fb4fc-69dd-4103-acc9-0ca8720f93f3",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786052387514
       }
     ]
   }
