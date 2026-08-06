@@ -83,6 +83,18 @@
         "chatSessionId": "sess_09f0c6c5-7fef-4449-8031-69e39a042fec",
         "timestamp": 1786051013478
       }
+    ],
+    "6. Waiting Room 컴포넌트: components/WaitingRoom.tsx (로딩 아이콘 + 대기 문구, 30초 타임아웃, 에러 표시 + 재시도/돌아가기 버튼), Agent 1 HTTP POST mock/stub, 병렬 요청 + maybeStartSession 조율 (agent1Ready, wsConnectionState 추적), 부분 재시도 (실패 항목만 재요청, 성공 캐시 유지), WS 재시도 시 캐시된 novaSonicContext로 session_start 재전송, 단위 테스트 + PBT (Property 3, 4)": [
+      {
+        "executionId": "1a95ebf1-3ce8-4814-9343-7b6d37a8543e",
+        "chatSessionId": "sess_81e47eff-6290-414f-9b83-a1f1fa223b84",
+        "timestamp": 1786051045794
+      },
+      {
+        "executionId": "1a95ebf1-3ce8-4814-9343-7b6d37a8543e",
+        "chatSessionId": "sess_81e47eff-6290-414f-9b83-a1f1fa223b84",
+        "timestamp": 1786051429635
+      }
     ]
   }
 }

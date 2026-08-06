@@ -76,7 +76,7 @@ graph TD
   - **Requirements**: 1.1, 1.2, 1.3, 1.4, 1.5
   - **Dependencies**: 1, 2
 
-- [~] 6. Waiting Room 컴포넌트: components/WaitingRoom.tsx (로딩 아이콘 + 대기 문구, 30초 타임아웃, 에러 표시 + 재시도/돌아가기 버튼), Agent 1 HTTP POST mock/stub, 병렬 요청 + maybeStartSession 조율 (agent1Ready, wsConnectionState 추적), 부분 재시도 (실패 항목만 재요청, 성공 캐시 유지), WS 재시도 시 캐시된 novaSonicContext로 session_start 재전송, 단위 테스트 + PBT (Property 3, 4)
+- [x] 6. Waiting Room 컴포넌트: components/WaitingRoom.tsx (로딩 아이콘 + 대기 문구, 30초 타임아웃, 에러 표시 + 재시도/돌아가기 버튼), Agent 1 HTTP POST mock/stub, 병렬 요청 + maybeStartSession 조율 (agent1Ready, wsConnectionState 추적), 부분 재시도 (실패 항목만 재요청, 성공 캐시 유지), WS 재시도 시 캐시된 novaSonicContext로 session_start 재전송, 단위 테스트 + PBT (Property 3, 4)
   - **Requirements**: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
   - **Dependencies**: 2, 3
 
