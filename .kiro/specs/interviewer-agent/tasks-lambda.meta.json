@@ -1,0 +1,667 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "Create `interviewer/__init__.py` (empty)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176822
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047188417
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047233637
+      }
+    ],
+    "Create `interviewer/tests/__init__.py` (empty)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176855
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047189221
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047234385
+      }
+    ],
+    "Delete `interviewer/.gitkeep` if it exists": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176878
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047190183
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047235211
+      }
+    ],
+    "Implement `validate_input(payload)` function": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176898
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047239652
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047354166
+      }
+    ],
+    "Check payload is a dict": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176955
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047239996
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047354923
+      }
+    ],
+    "Check `analyst_output` key exists": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176979
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047240835
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047355699
+      }
+    ],
+    "Check `analyst_output` is a non-empty dict": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047176998
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047241675
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047356541
+      }
+    ],
+    "Return `(analyst_output, None)` on success": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177022
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047242632
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047357467
+      }
+    ],
+    "Return `(None, \"analyst_output is required and must be a non-empty object\")` on failure": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177045
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047243597
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047358465
+      }
+    ],
+    "Define `ConfigLoadError(Exception)` class": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177064
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047252632
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047359289
+      }
+    ],
+    "Create module-level S3 client: `boto3.client(\"s3\", region_name=os.environ.get(\"AWS_REGION\", \"us-east-1\"))`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177088
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047252709
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047360354
+      }
+    ],
+    "Implement `load_interview_structure(bucket, key)` → returns parsed dict": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177110
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047252676
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047361374
+      }
+    ],
+    "Implement `load_interview_profile(bucket, key)` → returns parsed dict": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177132
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047252738
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047362233
+      }
+    ],
+    "Catch `botocore.exceptions.ClientError` → raise `ConfigLoadError` (message includes config name)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177155
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047252775
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047363426
+      }
+    ],
+    "Catch `json.JSONDecodeError` → raise `ConfigLoadError` (message includes config name)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177178
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047253669
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047364269
+      }
+    ],
+    "Implement `build_runtime_context(analyst_output, interview_structure, interview_profile)` → returns string": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177196
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047254760
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047365216
+      }
+    ],
+    "Format with sections: `[CANDIDATE DATA]`, `[INTERVIEW STRUCTURE]`, `[INTERVIEW PROFILE]`, `[BEHAVIORAL INSTRUCTIONS]`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177219
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047256462
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047366357
+      }
+    ],
+    "JSON-dump each dict with `indent=2`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177239
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047257543
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047367208
+      }
+    ],
+    "Hardcode behavioral instructions:": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177263
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047258617
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047368146
+      }
+    ],
+    "Implement `lambda_handler(event, context)`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177291
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047373517
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047544040
+      }
+    ],
+    "Mode detection: `event` has `body` key → parse JSON; otherwise use event as payload": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177315
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047375050
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047544856
+      }
+    ],
+    "If JSON parse fails → return `{\"statusCode\": 400, \"body\": json.dumps({\"success\": false, \"error_message\": \"Request body is not valid JSON\"})}`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177345
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047376635
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047545900
+      }
+    ],
+    "Call `validate_input(payload)` → on error, return 200 with error": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177371
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047377775
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047546836
+      }
+    ],
+    "Read env vars: `S3_BUCKET`, `INTERVIEW_STRUCTURE_KEY`, `INTERVIEW_PROFILE_KEY`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177393
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047378940
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047547865
+      }
+    ],
+    "Call `load_interview_structure` → on `ConfigLoadError`, return 200 with error (use `str(e)`)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177422
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047380362
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047548778
+      }
+    ],
+    "Call `load_interview_profile` → on `ConfigLoadError`, return 200 with error (use `str(e)`)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177445
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047381283
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047549737
+      }
+    ],
+    "Call `build_runtime_context` → get context string": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177469
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047382366
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047550620
+      }
+    ],
+    "Return `{\"statusCode\": 200, \"body\": json.dumps({\"success\": true, \"runtime_context\": context_string})}`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177493
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047383383
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047551539
+      }
+    ],
+    "Wrap all in try/except → return 500 on unhandled exceptions": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177514
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047384733
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047552473
+      }
+    ],
+    "Do NOT set CORS headers": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177542
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047385790
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047553280
+      }
+    ],
+    "`interviewer/tests/test_validation.py`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177565
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047558434
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047700310
+      }
+    ],
+    "`interviewer/tests/test_config_loader.py`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177589
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047559171
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047701038
+      }
+    ],
+    "`interviewer/tests/test_context_builder.py`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177610
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047560015
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047702005
+      }
+    ],
+    "`interviewer/tests/test_handler.py`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177631
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047560967
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047702887
+      }
+    ],
+    "Package: `zip -r interviewer.zip interviewer/`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177660
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047776689
+      }
+    ],
+    "Create Lambda (see `design.md` Deployment section for full command)": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177681
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047777864
+      }
+    ],
+    "Set env vars on the Lambda": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177705
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047778778
+      }
+    ],
+    "Enable Function URL with CORS": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177737
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047779541
+      }
+    ],
+    "Test with curl:": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177758
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047780297
+      }
+    ],
+    "Verify: 200 response, `success: true`, non-empty `runtime_context`": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177778
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047781612
+      }
+    ],
+    "Share the Function URL with the frontend person": [
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047177809
+      },
+      {
+        "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
+        "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
+        "timestamp": 1786047782565
+      }
+    ]
+  }
+}
