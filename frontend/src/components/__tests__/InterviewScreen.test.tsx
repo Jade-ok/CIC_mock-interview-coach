@@ -124,10 +124,14 @@ describe('InterviewScreen', () => {
       expect(endBtn).not.toBeDisabled();
     });
 
-    it('end button dispatches END_INTERVIEW on click', () => {
+    it('end button shows confirm modal on click, confirm dispatches END_INTERVIEW', () => {
       render(<InterviewScreen />);
       const endBtn = screen.getByTestId('end-button');
       fireEvent.click(endBtn);
+      // Modal should appear
+      expect(screen.getByTestId('end-confirm-modal')).toBeInTheDocument();
+      // Confirm the modal
+      fireEvent.click(screen.getByTestId('end-confirm-ok'));
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'END_INTERVIEW',
         payload: { reason: 'manual' },

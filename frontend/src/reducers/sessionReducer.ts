@@ -17,6 +17,8 @@ export const initialState: SessionState = {
   agent1Ready: false,
   wsReady: false,
   error: null,
+  agent3Loading: false,
+  feedbackResult: null,
 };
 
 export function sessionReducer(
@@ -155,16 +157,21 @@ export function sessionReducer(
     case 'AGENT3_LOADING':
       return {
         ...state,
+        agent3Loading: true,
+        error: null,
       };
 
     case 'AGENT3_SUCCESS':
       return {
         ...state,
+        agent3Loading: false,
+        feedbackResult: action.payload,
       };
 
     case 'AGENT3_FAILED':
       return {
         ...state,
+        agent3Loading: false,
         error: {
           code: 'AGENT3_FAILED',
           message: action.payload.message,

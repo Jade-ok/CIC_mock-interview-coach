@@ -107,6 +107,13 @@
         "chatSessionId": "sess_1eedab97-ba30-444b-92be-1ae1c6bc2635",
         "timestamp": 1786051903117
       }
+    ],
+    "11. 인터뷰 종료 흐름: EndConfirmModal (확인/취소), 수동 종료 (확인 → stopPlayback + session_end + disconnect + Feedback 전환), 자동 종료 (end_interview tool_use → waitForPlaybackEnd + session_end + disconnect + Feedback 전환), transcript Agent 3 HTTP POST (mock/stub), Agent 3 실패 → 에러 + 재시도, components/FeedbackScreen.tsx (로딩/에러/결과 분기), 통합 테스트 + PBT (Property 14)": [
+      {
+        "executionId": "2ca37ca2-7812-480e-bfb4-046e50cae4e3",
+        "chatSessionId": "sess_c52b5be7-812c-49b8-b5d8-bed7d4c481ff",
+        "timestamp": 1786052371816
+      }
     ]
   }
 }

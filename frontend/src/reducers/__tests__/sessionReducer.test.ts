@@ -420,6 +420,8 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
       agent1Ready: fc.boolean(),
       wsReady: fc.boolean(),
       error: fc.constant(null),
+      agent3Loading: fc.boolean(),
+      feedbackResult: fc.constant(null),
     });
 
     fc.assert(

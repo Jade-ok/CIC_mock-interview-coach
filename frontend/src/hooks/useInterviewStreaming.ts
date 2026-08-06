@@ -22,6 +22,8 @@ export interface UseInterviewStreamingOptions {
   dispatch: React.Dispatch<SessionAction>;
   /** Allows injection of a custom AudioManager factory (for testing) */
   audioManagerFactory?: () => AudioManager;
+  /** Callback triggered when auto-end (end_interview tool_use) completes */
+  onAutoEnd?: () => void;
 }
 
 export function useInterviewStreaming({
@@ -29,6 +31,7 @@ export function useInterviewStreaming({
   wsClient,
   dispatch,
   audioManagerFactory,
+  onAutoEnd,
 }: UseInterviewStreamingOptions) {
   const audioManagerRef = useRef<AudioManager | null>(null);
   const cleanedUpRef = useRef(false);
@@ -39,6 +42,9 @@ export function useInterviewStreaming({
 
   const wsClientRef = useRef(wsClient);
   wsClientRef.current = wsClient;
+
+  const onAutoEndRef = useRef(onAutoEnd);
+  onAutoEndRef.current = onAutoEnd;
 
   // --- Sub-task 1: Initialize AudioManager + start capture + wire audio → WS ---
   useEffect(() => {
@@ -132,6 +138,34 @@ export function useInterviewStreaming({
       // session_invalid → error + route to upload
       case 'session_invalid': {
         dispatchRef.current({ type: 'WS_SESSION_INVALID' });
+        break;
+      }
+
+      // Sub-task 6: tool_use → handle end_interview
+      case 'tool_use': {
+        if (event.payload.toolName === 'end_interview') {
+          // Auto end sequence: wait for playback to finish → session_end → disconnect → feedback
+          const autoEndSequence = async () => {
+            const am = audioManagerRef.current;
+            if (am) {
+              await am.waitForPlaybackEnd();
+            }
+
+            const ws = wsClientRef.current;
+            if (ws && ws.getState() === 'connected') {
+              ws.send({ type: 'session_end', payload: { promptName: 'default' } });
+              ws.disconnect();
+            }
+
+            dispatchRef.current({ type: 'END_INTERVIEW', payload: { reason: 'auto' } });
+
+            // Trigger Agent 3 callback
+            if (onAutoEndRef.current) {
+              onAutoEndRef.current();
+            }
+          };
+          autoEndSequence();
+        }
         break;
       }
 

@@ -17,6 +17,8 @@ export interface SessionState {
   agent1Ready: boolean;
   wsReady: boolean;
   error: SessionError | null;
+  agent3Loading: boolean;
+  feedbackResult: unknown;
 }
 
 export interface TranscriptEntry {

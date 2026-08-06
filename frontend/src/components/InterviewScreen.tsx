@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
+import { EndConfirmModal } from '@/components/EndConfirmModal';
+import { callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
 
 // --- Sub-components ---
@@ -201,12 +203,29 @@ function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => vo
 export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showEndModal, setShowEndModal] = useState(false);
+
+  /** Trigger Agent 3 with current transcript */
+  const triggerAgent3 = useCallback(async () => {
+    dispatch({ type: 'AGENT3_LOADING' });
+    try {
+      const result = await callAgent3({
+        transcript: state.transcript,
+        competency_guides: state.competencyGuides,
+      });
+      dispatch({ type: 'AGENT3_SUCCESS', payload: result });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Agent 3 요청에 실패했습니다.';
+      dispatch({ type: 'AGENT3_FAILED', payload: { message } });
+    }
+  }, [dispatch, state.transcript, state.competencyGuides]);
 
   // Audio streaming integration
   const { audioManagerRef } = useInterviewStreaming({
     phase: state.phase,
     wsClient: wsClient ?? null,
     dispatch,
+    onAutoEnd: triggerAgent3,
   });
 
   // beforeunload effect — only active during interview phase
@@ -236,9 +255,37 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     }
   }, [state.phase, dispatch]);
 
+  /** Manual end: user clicks End button → show modal */
   const handleEnd = useCallback(() => {
+    setShowEndModal(true);
+  }, []);
+
+  /** Manual end confirmed: stop playback → session_end → disconnect → feedback */
+  const handleEndConfirm = useCallback(() => {
+    setShowEndModal(false);
+
+    // Stop playback immediately (user-intentional, no wait)
+    if (audioManagerRef.current) {
+      audioManagerRef.current.stopPlayback();
+    }
+
+    // Send session_end via WebSocket
+    if (wsClient && wsClient.getState() === 'connected') {
+      wsClient.send({ type: 'session_end', payload: { promptName: 'default' } });
+      wsClient.disconnect();
+    }
+
+    // Transition to feedback
     dispatch({ type: 'END_INTERVIEW', payload: { reason: 'manual' } });
-  }, [dispatch]);
+
+    // Trigger Agent 3
+    triggerAgent3();
+  }, [audioManagerRef, wsClient, dispatch, triggerAgent3]);
+
+  /** Modal cancelled */
+  const handleEndCancel = useCallback(() => {
+    setShowEndModal(false);
+  }, []);
 
   const handleTogglePracticeMode = useCallback(() => {
     dispatch({ type: 'TOGGLE_PRACTICE_MODE' });
@@ -306,6 +353,12 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         practiceMode={state.practiceMode}
         onTogglePracticeMode={handleTogglePracticeMode}
         onEnd={handleEnd}
+      />
+
+      <EndConfirmModal
+        open={showEndModal}
+        onConfirm={handleEndConfirm}
+        onCancel={handleEndCancel}
       />
 
       <style>{`
