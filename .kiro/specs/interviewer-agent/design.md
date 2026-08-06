@@ -268,6 +268,156 @@ For clarity, here is what the frontend owns after receiving the runtime context:
 - Handling early stop (closing the session gracefully)
 - Sending the Analyst output + transcript to the Evaluator Lambda when the interview ends
 
+## Data Models
+
+### Request Payload
+
+```python
+# Input from frontend (or direct invocation)
+{
+    "analyst_output": {
+        # Complete Analyst output — included as-is in the runtime context.
+        # Contains: candidate profile, job details, selected experiences,
+        # skills alignment, interview context.
+        # Schema defined by the Analyst module; this module does not validate shape.
+        ...
+    }
+}
+```
+
+### Interview Structure (S3 config)
+
+```python
+{
+    "schema_version": str,             # e.g. "1.0"
+    "structure_id": str,               # e.g. "resume_deep_dive_v1"
+    "display_name": str,               # Human-readable name
+    "main_question_count": int,        # Number of main questions
+    "max_follow_ups_per_point": int,   # Max follow-ups allowed per point
+    "allow_early_stop": bool,          # Whether the session can end early
+    "interview_points": [              # Ordered list of interview points
+        {
+            "point_id": str,
+            "focus": str,              # e.g. "ownership", "problem_solving"
+            "topic": str,
+            "objective": str,
+            "experience_selection": {
+                "preferred_types": list[str],   # Optional
+                "selection_strategy": str
+            },
+            "listen_for": list[str],
+            "follow_up_topics": list[str]
+        }
+    ]
+}
+```
+
+### Interview Profile (S3 config)
+
+```python
+{
+    "schema_version": str,             # e.g. "1.0"
+    "profile_id": str,                 # e.g. "student_v1"
+    "display_name": str,
+    "candidate_level": str,            # e.g. "student_intern"
+    "tone": str,                       # e.g. "supportive_professional"
+    "question_style": {
+        "ask_one_question_at_a_time": bool,
+        "use_clear_language": bool,
+        "keep_questions_concise": bool,
+        "avoid_unnecessary_jargon": bool,
+        "acknowledge_student_experience": bool
+    },
+    "follow_up_behavior": {
+        "max_follow_ups_per_point": int,
+        "follow_up_depth": int,
+        "challenge_frequency": str,
+        "request_evidence_gently": bool,
+        "can_introduce_constraint": bool,
+        "follow_up_must_reference_answer": bool
+    },
+    "acceptable_experience_types": list[str],
+    "evaluation_expectations": {
+        "reward": list[str],
+        "do_not_expect": list[str],
+        "do_not_heavily_penalize": list[str]
+    },
+    "interviewer_rules": {
+        "do_not_invent_resume_details": bool,
+        "do_not_accuse_candidate_of_exaggeration": bool,
+        "remain_professional": bool,
+        "do_not_give_feedback_during_interview": bool,
+        "do_not_ask_multiple_questions_at_once": bool
+    }
+}
+```
+
+### Success Response
+
+```python
+{
+    "statusCode": 200,
+    "body": "{\"success\": true, \"runtime_context\": \"<assembled system instruction string>\"}"
+}
+```
+
+### Error Response
+
+```python
+# Validation / config error
+{
+    "statusCode": 200,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+
+# Malformed request (body not valid JSON)
+{
+    "statusCode": 400,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+
+# Unhandled exception
+{
+    "statusCode": 500,
+    "body": "{\"success\": false, \"error_message\": \"<description>\"}"
+}
+```
+
+## Correctness Properties
+
+1. **Analyst output integrity**: The Analyst output included in the runtime context must be byte-for-byte identical to what was received — no fields added, removed, or transformed.
+2. **Complete context assembly**: The returned runtime_context must contain all three components (analyst_output, interview_structure, interview_profile) plus behavioral instructions. Missing any component is a bug.
+3. **Config isolation**: Loading one S3 config must not affect the other. A failure in interview_structure loading must not corrupt or skip interview_profile loading — each failure is reported independently.
+4. **Idempotency**: Given the same analyst_output and the same S3 config contents, the Lambda must return the same runtime_context every time.
+5. **No side effects**: The Lambda must not write to S3, call any LLM, invoke other Lambdas, or produce any observable effect beyond returning the response.
+6. **Fail-fast on missing input**: If analyst_output is absent or empty, the module must return an error immediately without attempting S3 loads.
+7. **Mode detection correctness**: The handler must correctly distinguish Function URL invocations (event has `body` key) from direct invocations (event is the payload) and never double-parse or skip parsing.
+8. **Error responses are well-formed**: Every error path must return a response with `success: false` and a non-empty `error_message`. No path may return a bare exception or empty body.
+
+## Testing Strategy
+
+### Unit Tests
+
+| Component | What to test |
+|---|---|
+| `validation.py` | Accept valid payload with analyst_output; reject missing/empty analyst_output; reject non-dict payloads |
+| `config_loader.py` | Parse valid JSON from mocked S3 response; raise `ConfigLoadError` on missing key; raise `ConfigLoadError` on invalid JSON |
+| `context_builder.py` | Output contains analyst_output, interview_structure, interview_profile, and behavioral instructions; output is a non-empty string; idempotent across calls with same input |
+| `handler.py` | Function URL mode: parse event['body'] correctly; Direct mode: use event as payload; Return 400 for malformed body; Return 500 for unhandled exceptions; Correct statusCode and body structure for all paths |
+
+### Integration Tests
+
+- **Happy path**: Invoke the handler with a valid analyst_output and mocked S3 (moto or stubbed boto3). Verify 200 response with `success: true` and a runtime_context containing all three sections.
+- **S3 failure**: Mock S3 to raise `NoSuchKey`. Verify the response indicates which config failed.
+- **Function URL parsing**: Pass a wrapped event (`{"body": "<json>"}`) and verify the payload is unwrapped correctly.
+
+### Test Environment
+
+- Use `pytest` as the test runner
+- Mock `boto3` S3 calls with `unittest.mock.patch` or `moto`
+- No real AWS credentials required for unit/integration tests
+- Tests run with `python3 -m pytest interviewer/tests/`
+
 ## Future Extensibility
 
 - New interview profiles (standard-v1, challenging-v1) added to S3 without code changes
