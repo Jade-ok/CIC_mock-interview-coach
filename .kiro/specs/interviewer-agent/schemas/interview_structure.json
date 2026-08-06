@@ -1,22 +1,24 @@
 {
   "schema_version": "1.0",
-  "structure_id": "resume_deep_dive_v1",
-  "display_name": "Resume Deep-Dive Interview",
+  "structure_id": "general_v1",
+  "display_name": "General Interview Structure",
+  "description": "A standard behavioral interview format with 3 main questions and up to 3 follow-ups per question.",
   "main_question_count": 3,
-  "max_follow_ups_per_point": 1,
+  "max_follow_ups_per_point": 3,
   "allow_early_stop": true,
   "interview_points": [
     {
       "point_id": "point_1",
       "focus": "ownership",
       "topic": "Project overview and personal contribution",
-      "objective": "Understand the experience, its purpose, and the candidate's individual contribution.",
+      "objective": "Understand a significant experience, its purpose, and the candidate's individual contribution.",
       "experience_selection": {
         "preferred_types": [
           "internship",
           "personal_project",
           "academic_project",
-          "hackathon"
+          "hackathon",
+          "professional_project"
         ],
         "selection_strategy": "highest_relevance"
       },
@@ -24,13 +26,13 @@
         "clear project context",
         "specific personal contribution",
         "distinction between individual and team work",
-        "result or learning"
+        "result or impact"
       ],
       "follow_up_topics": [
         "specific responsibilities",
         "features implemented",
-        "team role",
-        "project outcome"
+        "team role and coordination",
+        "project outcome and metrics"
       ]
     },
     {
@@ -42,45 +44,46 @@
         "selection_strategy": "reuse_previous_or_next_highest"
       },
       "listen_for": [
-        "clear challenge",
+        "clear challenge definition",
         "reasoning behind the approach",
         "alternatives considered",
         "testing or validation",
         "lesson learned"
       ],
       "follow_up_topics": [
-        "why the approach was selected",
-        "tradeoffs",
-        "testing",
-        "what the candidate would change"
+        "why the approach was selected over alternatives",
+        "tradeoffs considered",
+        "how the solution was validated",
+        "what the candidate would change in hindsight"
       ]
     },
     {
       "point_id": "point_3",
       "focus": "growth_and_alignment",
       "topic": "Learning, collaboration, and role alignment",
-      "objective": "Understand what the candidate learned and how the experience relates to the target role.",
+      "objective": "Understand what the candidate learned, how they collaborate, and how the experience connects to the target role.",
       "experience_selection": {
         "preferred_types": [
           "hackathon",
           "student_club",
           "academic_project",
           "internship",
-          "volunteering"
+          "volunteering",
+          "professional_project"
         ],
         "selection_strategy": "best_for_collaboration_or_growth"
       },
       "listen_for": [
         "specific collaboration example",
-        "something learned",
-        "reflection",
-        "connection to the role"
+        "something learned or improved",
+        "self-reflection",
+        "connection to the target role"
       ],
       "follow_up_topics": [
-        "team coordination",
-        "rapid learning",
+        "team coordination and conflict resolution",
+        "rapid learning under pressure",
         "transferable skills",
-        "job relevance"
+        "relevance to the job they are applying for"
       ]
     }
   ]
