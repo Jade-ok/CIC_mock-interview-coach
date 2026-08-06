@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+
+  "candidate_profile": {
+    "candidate_level": "student_intern | new_grad",
+    "education_summary": "string — summary of education background",
+    "experience_summary": "string — summary of overall experience",
+    "relevant_skills": ["string"],
+    "experience_types_available": ["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club"]
+  },
+
+  "target_role": {
+    "title": "string — job title from posting",
+    "company": "string — company name",
+    "seniority": "intern | new_grad | junior",
+    "role_summary": "string — one-line role description",
+    "required_skills": ["string"],
+    "preferred_skills": ["string"],
+    "key_responsibilities": ["string"],
+    "evaluation_priorities": ["string"]
+  },
+
+  "resume_job_alignment": {
+    "strong_matches": [
+      {
+        "resume_evidence": "string — what the resume says",
+        "job_requirement": "string — what the job needs",
+        "match_reason": "string — why this is a strong match"
+      }
+    ],
+    "partial_matches": [
+      {
+        "resume_evidence": "string",
+        "job_requirement": "string",
+        "match_reason": "string"
+      }
+    ],
+    "areas_to_explore": [
+      {
+        "topic": "string — gap or unclear area",
+        "reason": "string — why this needs probing"
+      }
+    ]
+  },
+
+  "interview_plan": [
+    {
+      "topic": "string — what to ask about",
+      "priority": "integer — 1 is highest, max 5 entries",
+      "question_type": "behavioral",
+      "target_skill": "string — skill being assessed",
+      "source_experience_id": "string | null — links to selected_experiences.experience_id"
+    }
+  ],
+
+  "selected_experiences": [
+    {
+      "experience_id": "exp_1",
+      "title": "string — experience title",
+      "experience_type": "internship | coursework | academic_project | personal_project | hackathon | student_club",
+      "organization": "string",
+      "summary": "string — brief description",
+      "candidate_claims": ["string — claims made in resume"],
+      "skills_demonstrated": ["string"],
+      "job_requirements_supported": ["string"],
+      "relevance_score": "float — 0.0 to 1.0",
+      "relevance_reason": "string — why this experience is relevant",
+      "details_to_clarify": ["string — what the interviewer should probe"]
+    }
+  ],
+
+  "analysis_warnings": ["string — data quality issues, empty list if none"]
+}

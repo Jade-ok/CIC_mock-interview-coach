@@ -254,7 +254,7 @@ The module validates presence of inputs but does not validate schema conformance
 | `S3_BUCKET` | S3 bucket containing interview configs |
 | `INTERVIEW_STRUCTURE_KEY` | S3 key for the interview structure JSON |
 | `INTERVIEW_PROFILE_KEY` | S3 key for the interview profile JSON |
-| `AWS_REGION` | Set to `us-west-2` |
+| `AWS_REGION` | Set to `us-east-1` |
 
 ## What the Frontend Handles (Not This Module)
 
