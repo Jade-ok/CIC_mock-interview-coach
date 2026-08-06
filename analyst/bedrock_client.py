@@ -59,4 +59,4 @@ def call_converse(request: dict) -> dict:
                 # Non-retryable client error — fail immediately
                 raise BedrockCallFailed(str(e)) from e
 
-    raise BedrockCallFailed(f"Bedrock call failed after {MAX_ATTEMPTS} attempts: {last_error}")
+    raise BedrockCallFailed(f"Bedrock API call failed after {MAX_ATTEMPTS} attempts: {last_error}")
