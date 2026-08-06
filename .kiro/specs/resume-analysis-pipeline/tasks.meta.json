@@ -161,6 +161,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050322713
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050843844
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051197660
       }
     ],
     "4.1 Create pdf_parser/orchestrator.py": [
@@ -168,6 +178,26 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313229
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051202688
+      },
+      {
+        "executionId": "782aeca5-1647-4e75-a7c2-2652344faef0",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051259384
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051684763
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051857727
       }
     ],
     "4.2 Create pdf_parser/handler.py entry point": [
@@ -175,6 +205,26 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313268
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051203620
+      },
+      {
+        "executionId": "782aeca5-1647-4e75-a7c2-2652344faef0",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051260266
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051685475
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051858497
       }
     ],
     "4.3 Add pdf_parser/test_event.json sample payloads": [
@@ -182,6 +232,11 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313298
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051869208
       }
     ],
     "6.1 Create analyst/prompt_builder.py": [
@@ -194,6 +249,16 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050323460
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786050844520
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051198412
       }
     ],
     "7.1 Create analyst/bedrock_client.py": [
@@ -201,6 +266,26 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313362
+      },
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051204316
+      },
+      {
+        "executionId": "782aeca5-1647-4e75-a7c2-2652344faef0",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051261060
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051686254
+      },
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051859238
       }
     ],
     "8.1 Create analyst/parser.py": [
@@ -229,6 +314,27 @@
         "executionId": "62e35f73-debe-4159-b491-3aed37f9a3e3",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
         "timestamp": 1786050313499
+      }
+    ],
+    "3. Implement pdf_parser — PDF text extraction": [
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051197694
+      }
+    ],
+    "6. Implement analyst — prompt_builder": [
+      {
+        "executionId": "6c11366e-245c-43d2-8261-c6874136d737",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051198459
+      }
+    ],
+    "7. Implement analyst — bedrock_client": [
+      {
+        "executionId": "ce63c6cc-ad82-4ccf-8e4c-70643e09a332",
+        "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
+        "timestamp": 1786051859270
       }
     ]
   }

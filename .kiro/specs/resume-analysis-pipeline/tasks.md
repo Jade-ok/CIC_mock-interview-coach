@@ -22,8 +22,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Return `(is_valid, error_message_or_none)` tuple
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 11.1, 11.2_
 
-- [ ] 3. Implement pdf_parser — PDF text extraction
-  - [ ] 3.1 Create pdf_parser/parser.py
+- [x] 3. Implement pdf_parser — PDF text extraction
+  - [x] 3.1 Create pdf_parser/parser.py
     - Implement `extract_text_from_pdf(base64_content: str) -> str`
     - Decode base64, open with `pypdf.PdfReader` via `io.BytesIO`
     - Concatenate text from all pages
@@ -32,7 +32,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - _Requirements: 1.1, 1.3, 1.4, 2.1_
 
 - [ ] 4. Implement pdf_parser — orchestrator and handler
-  - [ ] 4.1 Create pdf_parser/orchestrator.py
+  - [x] 4.1 Create pdf_parser/orchestrator.py
     - Implement `process_documents(payload: dict) -> dict`
     - Handle resume (always PDF), job_posting (PDF or text based on format flag)
     - Support combined requests: both documents, resume-only, job-posting-only
@@ -40,7 +40,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Plain text job postings pass through without processing
     - _Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 4.2 Create pdf_parser/handler.py entry point
+  - [x] 4.2 Create pdf_parser/handler.py entry point
     - Implement `lambda_handler(event, context) -> dict`
     - Call `detect_invocation_mode` → `validate_request` → `process_documents`
     - Wrap all responses in standard envelope: `{"status": "success", "data": {...}}` or `{"status": "error", "error": "..."}`
@@ -60,8 +60,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Return `(is_valid, error_message_or_none)` with specific field names in error
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 11.3, 11.4_
 
-- [ ] 6. Implement analyst — prompt_builder
-  - [ ] 6.1 Create analyst/prompt_builder.py
+- [x] 6. Implement analyst — prompt_builder
+  - [x] 6.1 Create analyst/prompt_builder.py
     - Define `MODEL_ID = "global.anthropic.claude-sonnet-4-6"`
     - Implement `build_converse_request(resume_text, job_posting_text) -> dict`
     - Build system prompt with analyst persona and instructions for behavioral interview context
@@ -70,8 +70,8 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Set `toolChoice: {"tool": {"name": "analyst_output"}}` to force structured output
     - _Requirements: 5.1, 6.4, 7.1, 7.2, 7.3_
 
-- [ ] 7. Implement analyst — bedrock_client
-  - [ ] 7.1 Create analyst/bedrock_client.py
+- [x] 7. Implement analyst — bedrock_client
+  - [x] 7.1 Create analyst/bedrock_client.py
     - Define `REGION = "us-east-1"` and `MAX_ATTEMPTS = 2`
     - Create boto3 bedrock-runtime client for us-east-1
     - Implement `call_converse(request: dict) -> dict`
