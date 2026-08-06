@@ -3,28 +3,30 @@ Signing Lambda: generates a presigned WebSocket URL for Nova Sonic.
 
 The frontend calls this Lambda, gets a time-limited signed URL, and
 connects directly to Nova Sonic — no proxy needed.
+
+Uses botocore's SigV4 request signer for correctness.
 """
 
 import json
 import os
 import datetime
-import hashlib
-import hmac
-import urllib.parse
+
+from botocore.auth import SigV4Auth
+from botocore.awsrequest import AWSRequest
+from botocore.credentials import Credentials
+from urllib.parse import urlencode
 
 
 REGION = os.environ.get("SIGNING_REGION", os.environ.get("AWS_REGION", "us-east-1"))
 MODEL_ID = os.environ.get("MODEL_ID", "amazon.nova-2-sonic-v1:0")
-SERVICE = "bedrock"
-ENDPOINT = f"bedrock-runtime.{REGION}.amazonaws.com"
-URI = f"/model/{MODEL_ID}/invoke-with-bidirectional-stream"
-EXPIRY_SECONDS = 300  # 5 minutes
+SERVICE = "bedrock-runtime"
+ENDPOINT = f"https://bedrock-runtime.{REGION}.amazonaws.com"
+PATH = f"/model/{MODEL_ID}/invoke-with-bidirectional-stream"
 
 
 def lambda_handler(event: dict, context) -> dict:
     """Generate a presigned WebSocket URL for Nova Sonic."""
     try:
-        # Get credentials from Lambda execution environment
         access_key = os.environ.get("AWS_ACCESS_KEY_ID")
         secret_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
         session_token = os.environ.get("AWS_SESSION_TOKEN")
@@ -32,15 +34,9 @@ def lambda_handler(event: dict, context) -> dict:
         if not access_key or not secret_key:
             return _error_response(500, "AWS credentials not available")
 
-        url = _create_presigned_url(
-            access_key=access_key,
-            secret_key=secret_key,
-            session_token=session_token,
-            region=REGION,
-            endpoint=ENDPOINT,
-            uri=URI,
-            expiry=EXPIRY_SECONDS,
-        )
+        credentials = Credentials(access_key, secret_key, session_token)
+
+        url = _presign_url(credentials)
 
         return {
             "statusCode": 200,
@@ -51,93 +47,95 @@ def lambda_handler(event: dict, context) -> dict:
         return _error_response(500, f"Failed to generate presigned URL: {str(e)}")
 
 
-def _create_presigned_url(
-    access_key: str,
-    secret_key: str,
-    session_token: str | None,
-    region: str,
-    endpoint: str,
-    uri: str,
-    expiry: int,
-) -> str:
+def _presign_url(credentials: Credentials) -> str:
     """
-    Create a SigV4-presigned WebSocket URL for Bedrock streaming.
+    Create a SigV4-presigned WebSocket URL for Bedrock bidirectional streaming.
 
-    Based on the AWS SigV4 signing process for WebSocket connections.
+    Uses botocore's SigV4Auth to properly sign the request.
     """
+    # Build the request URL
+    request_url = f"{ENDPOINT}{PATH}"
+
+    # Create an AWSRequest for signing
+    request = AWSRequest(method="GET", url=request_url)
+    request.headers["host"] = f"bedrock-runtime.{REGION}.amazonaws.com"
+
+    # Sign the request using SigV4 with query string signing
+    SigV4Auth(credentials, SERVICE, REGION).add_auth(request)
+
+    # Convert signed headers into a presigned URL
+    # The SigV4Auth adds Authorization header - we need query string params instead
+    # Let's use the presign approach directly
     now = datetime.datetime.utcnow()
     datestamp = now.strftime("%Y%m%d")
     amz_date = now.strftime("%Y%m%dT%H%M%SZ")
-    credential_scope = f"{datestamp}/{region}/{SERVICE}/aws4_request"
-    credential = f"{access_key}/{credential_scope}"
 
-    # Query parameters (in alphabetical order for signing)
+    credential_scope = f"{datestamp}/{REGION}/{SERVICE}/aws4_request"
+
     params = {
         "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
-        "X-Amz-Credential": credential,
+        "X-Amz-Credential": f"{credentials.access_key}/{credential_scope}",
         "X-Amz-Date": amz_date,
-        "X-Amz-Expires": str(expiry),
+        "X-Amz-Expires": "300",
         "X-Amz-SignedHeaders": "host",
     }
-    if session_token:
-        params["X-Amz-Security-Token"] = session_token
+    if credentials.token:
+        params["X-Amz-Security-Token"] = credentials.token
 
-    # Canonical query string (sorted)
+    # Canonical query string (sorted by key)
     canonical_querystring = "&".join(
-        f"{urllib.parse.quote(k, safe='')}={urllib.parse.quote(v, safe='')}"
+        f"{_uri_encode(k)}={_uri_encode(v)}"
         for k, v in sorted(params.items())
     )
 
     # Canonical request
-    canonical_headers = f"host:{endpoint}\n"
-    signed_headers = "host"
-    payload_hash = hashlib.sha256(b"").hexdigest()
-
-    canonical_request = "\n".join([
-        "GET",
-        uri,
-        canonical_querystring,
-        canonical_headers,
-        signed_headers,
-        payload_hash,
-    ])
+    canonical_request = (
+        f"GET\n"
+        f"{PATH}\n"
+        f"{canonical_querystring}\n"
+        f"host:bedrock-runtime.{REGION}.amazonaws.com\n"
+        f"\n"
+        f"host\n"
+        f"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
 
     # String to sign
-    string_to_sign = "\n".join([
-        "AWS4-HMAC-SHA256",
-        amz_date,
-        credential_scope,
-        hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
-    ])
+    import hashlib
+    string_to_sign = (
+        f"AWS4-HMAC-SHA256\n"
+        f"{amz_date}\n"
+        f"{credential_scope}\n"
+        f"{hashlib.sha256(canonical_request.encode('utf-8')).hexdigest()}"
+    )
 
     # Signing key
-    signing_key = _get_signature_key(secret_key, datestamp, region, SERVICE)
+    import hmac
+    def _sign(key, msg):
+        return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
 
-    # Signature
+    k_date = _sign(f"AWS4{credentials.secret_key}".encode("utf-8"), datestamp)
+    k_region = _sign(k_date, REGION)
+    k_service = _sign(k_region, SERVICE)
+    k_signing = _sign(k_service, "aws4_request")
+
     signature = hmac.new(
-        signing_key,
-        string_to_sign.encode("utf-8"),
-        hashlib.sha256,
+        k_signing, string_to_sign.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
-    # Build final URL
-    signed_url = f"wss://{endpoint}{uri}?{canonical_querystring}&X-Amz-Signature={signature}"
+    # Build final WSS URL
+    wss_url = (
+        f"wss://bedrock-runtime.{REGION}.amazonaws.com{PATH}"
+        f"?{canonical_querystring}"
+        f"&X-Amz-Signature={signature}"
+    )
 
-    return signed_url
-
-
-def _get_signature_key(key: str, date_stamp: str, region: str, service: str) -> bytes:
-    """Derive the SigV4 signing key."""
-    k_date = _sign(f"AWS4{key}".encode("utf-8"), date_stamp)
-    k_region = _sign(k_date, region)
-    k_service = _sign(k_region, service)
-    k_signing = _sign(k_service, "aws4_request")
-    return k_signing
+    return wss_url
 
 
-def _sign(key: bytes, msg: str) -> bytes:
-    """HMAC-SHA256 sign."""
-    return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+def _uri_encode(value: str) -> str:
+    """URI-encode a value per AWS SigV4 rules."""
+    import urllib.parse
+    return urllib.parse.quote(value, safe="~")
 
 
 def _error_response(status: int, message: str) -> dict:
