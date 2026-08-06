@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+
+  "analyst_output": "object — the complete Analyst output conforming to schemas/analyst_output.json, passed through unchanged",
+
+  "conversation": [
+    {
+      "point_id": "string — matches interview_structure.interview_points[].point_id (e.g. point_1)",
+      "turn_type": "main_question | follow_up",
+      "question": "string — what Nova Sonic asked (from transcript)",
+      "answer": "string — what the candidate said (from transcript)"
+    }
+  ],
+
+  "interview_metadata": {
+    "candidate_level": "string — from analyst_output.candidate_profile.candidate_level (e.g. student_intern)",
+    "target_role": "string — from analyst_output.target_role.title",
+    "status": "completed | ended_early",
+    "completion_reason": "all_questions_completed | user_ended_early",
+    "main_questions_completed": "integer — 0 to 3",
+    "follow_ups_completed": "integer — 0 to 3",
+    "ended_early": "boolean"
+  }
+}

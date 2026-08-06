@@ -111,16 +111,33 @@ Session teardown:
 - [ ] Listen for `textOutput` events — this is the transcript text
 - [ ] For ASSISTANT role: check `additionalModelFields.generationStage` — use `SPECULATIVE` for final text
 - [ ] For USER role: this is the ASR (automatic speech recognition) of what the candidate said
-- [ ] Build transcript array in memory:
+- [ ] Build conversation array structured by point (not flat role/text):
   ```json
   [
-    {"role": "interviewer", "text": "Tell me about a project you worked on."},
-    {"role": "candidate", "text": "I built a web app for my database course..."},
-    {"role": "interviewer", "text": "What was the most challenging part?"},
-    {"role": "candidate", "text": "Designing the schema was tricky because..."}
+    {
+      "point_id": "point_1",
+      "turn_type": "main_question",
+      "question": "Tell me about a project you worked on.",
+      "answer": "I built a web app for my database course..."
+    },
+    {
+      "point_id": "point_1",
+      "turn_type": "follow_up",
+      "question": "What was the most challenging part?",
+      "answer": "Designing the schema was tricky because..."
+    },
+    {
+      "point_id": "point_2",
+      "turn_type": "main_question",
+      "question": "...",
+      "answer": "..."
+    }
   ]
   ```
-- [ ] Append each completed turn to the array after `contentEnd`
+- [ ] Use the interview state (Task 6) to determine `point_id` and `turn_type` for each pair
+- [ ] Pair each ASSISTANT textOutput (question) with the next USER textOutput (answer) into one conversation entry
+- [ ] Append completed entries after both question and answer are received
+- [ ] This structure matches `schemas/evaluator_input.json`
 
 ---
 
@@ -168,26 +185,69 @@ Session teardown:
 
 ### Task 8: Send Results to Evaluator
 
-- [ ] After interview ends (naturally or early), assemble payload:
+- [ ] After interview ends (naturally or early), assemble payload per `schemas/evaluator_input.json`:
   ```json
   {
-    "analyst_output": { "...original analyst output saved from step 1..." },
-    "transcript": [
-      {"role": "interviewer", "text": "..."},
-      {"role": "candidate", "text": "..."}
+    "analyst_output": { "...the full analyst_output object saved in memory from step 1, unchanged..." },
+    "conversation": [
+      {
+        "point_id": "point_1",
+        "turn_type": "main_question",
+        "question": "Could you describe the project and what you personally contributed?",
+        "answer": "My team built a multilingual communication app, and I worked mainly on the frontend."
+      },
+      {
+        "point_id": "point_1",
+        "turn_type": "follow_up",
+        "question": "What specific frontend feature did you implement?",
+        "answer": "I built the language selection interface and connected it to the backend API."
+      },
+      {
+        "point_id": "point_2",
+        "turn_type": "main_question",
+        "question": "...",
+        "answer": "..."
+      },
+      {
+        "point_id": "point_2",
+        "turn_type": "follow_up",
+        "question": "...",
+        "answer": "..."
+      },
+      {
+        "point_id": "point_3",
+        "turn_type": "main_question",
+        "question": "...",
+        "answer": "..."
+      },
+      {
+        "point_id": "point_3",
+        "turn_type": "follow_up",
+        "question": "...",
+        "answer": "..."
+      }
     ],
     "interview_metadata": {
-      "completed_main_questions": 3,
-      "completed_follow_ups": 3,
-      "ended_early": false,
-      "candidate_level": "student_intern"
+      "candidate_level": "student_intern",
+      "target_role": "Software Engineering Intern",
+      "status": "completed",
+      "completion_reason": "all_questions_completed",
+      "main_questions_completed": 3,
+      "follow_ups_completed": 3,
+      "ended_early": false
     }
   }
   ```
+- [ ] `analyst_output` is the exact object from `schemas/analyst_output.json` — pass through unchanged
+- [ ] `conversation` is structured by point_id + turn_type (not a flat role/text list)
+- [ ] Map transcript turns to the correct `point_id` using the interview state (Task 6)
+- [ ] `turn_type` is `"main_question"` or `"follow_up"`
+- [ ] `interview_metadata.candidate_level` comes from `analyst_output.candidate_profile.candidate_level`
+- [ ] `interview_metadata.target_role` comes from `analyst_output.target_role.title`
+- [ ] If ended early: `status: "ended_early"`, `completion_reason: "user_ended_early"`, counts reflect what was actually completed
 - [ ] POST to Evaluator Lambda Function URL
 - [ ] Handle success: display scores and feedback to user
-- [ ] Handle error: show retry button, don't lose transcript
-- [ ] Note: the Evaluator schema is defined by the Evaluator team — adapt once available
+- [ ] Handle error: show retry button, don't lose transcript/conversation in memory
 
 ---
 
