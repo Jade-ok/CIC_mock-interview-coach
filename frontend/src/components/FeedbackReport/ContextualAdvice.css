@@ -1,0 +1,41 @@
+.contextual-advice {
+  padding: var(--section-gap) 0;
+  border-top: 1px solid var(--bg-control);
+}
+
+.contextual-advice__heading {
+  font-size: var(--font-section-title);
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.contextual-advice__subheading {
+  font-size: var(--font-body);
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+}
+
+.contextual-advice__list {
+  padding: 0;
+  margin: 0;
+  counter-reset: advice-counter;
+  list-style: none;
+}
+
+.contextual-advice__item {
+  font-size: var(--font-body);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 20px;
+  padding-left: 32px;
+  position: relative;
+  counter-increment: advice-counter;
+}
+
+.contextual-advice__item::before {
+  content: counter(advice-counter, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--text-primary);
+}
