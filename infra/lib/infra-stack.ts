@@ -32,7 +32,7 @@ export class InfraStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../analyst'),
       handler: 'handler.lambda_handler',
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(150),
       memorySize: 512,
     });
 
@@ -55,7 +55,7 @@ export class InfraStack extends cdk.Stack {
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../evaluator'),
       handler: 'lambda_handler.handler',
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(90),
       memorySize: 512,
     });
 
@@ -81,7 +81,9 @@ export class InfraStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {
-        CONFIG_BUCKET: configBucket.bucketName,
+        S3_BUCKET: configBucket.bucketName,
+        INTERVIEW_STRUCTURE_KEY: 'interview_structure.json',
+        INTERVIEW_PROFILE_KEY: 'student_interview_profile.json',
       },
     });
 

@@ -114,6 +114,23 @@
         "chatSessionId": "sess_c52b5be7-812c-49b8-b5d8-bed7d4c481ff",
         "timestamp": 1786052371816
       }
+    ],
+    "10. Practice Mode + Guide 패널: PracticeModeToggle (초기값 ON), PracticeBubbles (ON → interviewer 텍스트 말풍선, OFF → 숨김, ON→OFF → 즉시 제거), components/GuidePanel.tsx (competency_guides 상시 표시), utils/keywordMatcher.ts (case-insensitive 한글/영문 매칭, word boundary), Practice Mode ON + 새 텍스트 → 하이라이트, OFF → 하이라이트 비활성, 단위 테스트 + PBT (Property 8, 9, 10, 11, 12)": [
+      {
+        "executionId": "3ec7520a-3e14-4b66-bc51-0fab414cd6d9",
+        "chatSessionId": "sess_f7d245c0-6000-4c2f-8bdd-43034105e7b2",
+        "timestamp": 1786123967358
+      },
+      {
+        "executionId": "e0973005-14b3-4efb-984a-1d6db928ba22",
+        "chatSessionId": "sess_c87fca1c-1713-435d-8425-3943df922c83",
+        "timestamp": 1786124060756
+      },
+      {
+        "executionId": "e0973005-14b3-4efb-984a-1d6db928ba22",
+        "chatSessionId": "sess_c87fca1c-1713-435d-8425-3943df922c83",
+        "timestamp": 1786124561352
+      }
     ]
   }
 }

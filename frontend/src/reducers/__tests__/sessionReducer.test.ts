@@ -28,6 +28,33 @@ describe('sessionReducer', () => {
       expect(result.phase).toBe('waiting');
       expect(result.error).toBeNull();
     });
+
+    it('stores uploaded pdf and jdText in state', () => {
+      const pdf = new File(['%PDF-1.4'], 'resume.pdf', { type: 'application/pdf' });
+      const jdText = 'Software Engineer at Acme Corp';
+      const result = sessionReducer(initialState, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf, jdText },
+      });
+      expect(result.uploadedPdf).toBe(pdf);
+      expect(result.uploadedJdText).toBe(jdText);
+    });
+
+    it('overwrites previously stored upload data on re-submit', () => {
+      const pdf1 = new File(['first'], 'first.pdf');
+      const pdf2 = new File(['second'], 'second.pdf');
+      let state = sessionReducer(initialState, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf: pdf1, jdText: 'first jd' },
+      });
+      // Simulate going back and re-submitting
+      state = sessionReducer({ ...state, phase: 'upload' }, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf: pdf2, jdText: 'second jd' },
+      });
+      expect(state.uploadedPdf).toBe(pdf2);
+      expect(state.uploadedJdText).toBe('second jd');
+    });
   });
 
   describe('AGENT1_SUCCESS', () => {
@@ -476,6 +503,8 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
       agent3Loading: fc.boolean(),
       feedbackResult: fc.constant(null),
       analystOutput: fc.constant(null),
+      uploadedPdf: fc.constant(null),
+      uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
     });
 
     fc.assert(

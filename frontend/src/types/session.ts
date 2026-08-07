@@ -20,6 +20,8 @@ export interface SessionState {
   agent3Loading: boolean;
   feedbackResult: unknown;
   analystOutput: Record<string, unknown> | null;
+  uploadedPdf: File | null;
+  uploadedJdText: string;
 }
 
 export interface TranscriptEntry {

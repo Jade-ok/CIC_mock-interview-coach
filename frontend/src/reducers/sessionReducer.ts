@@ -20,6 +20,8 @@ export const initialState: SessionState = {
   agent3Loading: false,
   feedbackResult: null,
   analystOutput: null,
+  uploadedPdf: null,
+  uploadedJdText: '',
 };
 
 export function sessionReducer(
@@ -32,6 +34,8 @@ export function sessionReducer(
         ...state,
         phase: 'waiting',
         error: null,
+        uploadedPdf: action.payload.pdf,
+        uploadedJdText: action.payload.jdText,
       };
 
     case 'AGENT1_SUCCESS':

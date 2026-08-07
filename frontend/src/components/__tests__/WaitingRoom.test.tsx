@@ -46,11 +46,16 @@ const mockedCallAgent1 = vi.mocked(callAgent1);
 const MockedWebSocketClient = vi.mocked(WebSocketClient);
 
 describe('WaitingRoom', () => {
+  const testPdf = new File(['%PDF-1.4 test content'], 'resume.pdf', { type: 'application/pdf' });
+  const testJdText = 'Software Engineer at Acme Corp';
+
   beforeEach(() => {
     vi.useFakeTimers();
     mockState = {
       ...initialState,
       phase: 'waiting',
+      uploadedPdf: testPdf,
+      uploadedJdText: testJdText,
     };
     mockDispatch.mockClear();
     mockSetWebSocketClient.mockClear();
@@ -84,11 +89,57 @@ describe('WaitingRoom', () => {
     });
   });
 
+  describe('Guard: missing upload data', () => {
+    it('dispatches RESET when uploadedPdf is null (e.g. page refresh)', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        uploadedPdf: null,
+        uploadedJdText: '',
+      };
+
+      render(<WaitingRoom />);
+
+      expect(mockDispatch).toHaveBeenCalledWith({ type: 'RESET' });
+    });
+
+    it('does not call agent1 when uploadedPdf is null', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        uploadedPdf: null,
+        uploadedJdText: '',
+      };
+
+      render(<WaitingRoom />);
+
+      expect(mockedCallAgent1).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Upload data passed to agent1', () => {
+    it('calls callAgent1 with the actual pdf and jdText from state', async () => {
+      render(<WaitingRoom />);
+
+      // Wait for the async callAgent1 to be invoked
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockedCallAgent1).toHaveBeenCalledWith({
+        pdf: testPdf,
+        jdText: testJdText,
+      });
+    });
+  });
+
   describe('30-second Timeout', () => {
     it('dispatches TIMEOUT after 30 seconds if not both ready', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: false,
         wsReady: false,
       };
@@ -106,6 +157,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: true,
       };
@@ -127,16 +180,18 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'AGENT1_FAILED',
-          message: 'Agent 1 request failed.',
+          message: 'Agent 1 요청에 실패했습니다.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 request failed.');
+      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 요청에 실패했습니다.');
       expect(screen.getByText('Retry')).toBeInTheDocument();
       expect(screen.getByText('Go Back')).toBeInTheDocument();
     });
@@ -145,16 +200,18 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'WS_CONNECT_FAILED',
-          message: 'WebSocket connection failed.',
+          message: 'WebSocket 연결에 실패했습니다.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket connection failed.');
+      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket 연결에 실패했습니다.');
       expect(screen.getByText('Retry')).toBeInTheDocument();
     });
 
@@ -162,6 +219,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'TIMEOUT',
           message: 'Connection timed out. Please try again.',
@@ -181,6 +240,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: false,
         wsReady: false,
         wsConnectionState: 'connected',
@@ -203,6 +264,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: false,
         wsConnectionState: 'disconnected',
@@ -231,6 +294,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: true,
       };
@@ -246,6 +311,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'TIMEOUT',
           message: 'Timeout',
@@ -261,9 +328,9 @@ describe('WaitingRoom', () => {
     });
   });
 
-  describe('Property 3: Waiting Room Timeout', () => {
+  describe('Property 3: 대기실 타임아웃', () => {
     /**
-     * Feature: frontend-interview, Property 3: Waiting Room Timeout
+     * Feature: frontend-interview, Property 3: 대기실 타임아웃
      * Validates: Requirements 2.5
      *
      * For any Waiting Room entry, if 30s passes without both agent1Ready
@@ -284,6 +351,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready,
               wsReady,
               wsConnectionState: agent1Ready ? 'connected' : 'disconnected',
@@ -312,6 +381,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready: true,
               wsReady: true,
             };
@@ -332,9 +403,9 @@ describe('WaitingRoom', () => {
     });
   });
 
-  describe('Property 4: Waiting Room Partial Retry', () => {
+  describe('Property 4: 대기실 부분 재시도', () => {
     /**
-     * Feature: frontend-interview, Property 4: Waiting Room Partial Retry
+     * Feature: frontend-interview, Property 4: 대기실 부분 재시도
      * Validates: Requirements 2.4
      *
      * For any partial failure scenario (one of agent1/ws succeeds, other fails),
@@ -358,6 +429,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready: agent1Succeeded,
               wsReady: false,
               wsConnectionState: wsConnected ? 'connected' : 'disconnected',
