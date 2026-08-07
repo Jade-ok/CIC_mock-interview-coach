@@ -4,10 +4,16 @@ import { UploadScreen } from '@/components/UploadScreen';
 import { WaitingRoom } from '@/components/WaitingRoom';
 import { InterviewScreen } from '@/components/InterviewScreen';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
+import { FeedbackPreview } from '@/pages/FeedbackPreview';
 import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 
 function AppContent() {
   const { state, dispatch, webSocketClient } = useSession();
+
+  // Dev-only: /feedback-preview shows FeedbackReport with mock data
+  if (import.meta.env.DEV && window.location.pathname === '/feedback-preview') {
+    return <FeedbackPreview />;
+  }
 
   const handleUploadSubmit = useCallback(
     (pdf: File, jdText: string) => {
