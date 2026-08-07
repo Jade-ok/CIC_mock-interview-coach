@@ -1,0 +1,21 @@
+.dimension-scores-grid {
+  padding: var(--section-gap) 0;
+}
+
+.dimension-scores-grid__title {
+  font-size: var(--font-section-title);
+  color: var(--text-primary);
+  margin: 0 0 24px;
+}
+
+.dimension-scores-grid__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .dimension-scores-grid__grid {
+    grid-template-columns: 1fr;
+  }
+}

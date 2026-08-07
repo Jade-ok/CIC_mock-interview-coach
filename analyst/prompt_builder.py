@@ -1,6 +1,6 @@
 """Prompt construction for the Analyst agent's Bedrock Converse API call."""
 
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"
+MODEL_ID = "global.anthropic.claude-sonnet-5"
 
 SYSTEM_PROMPT = """You are a resume analyst for a mock behavioral interview coaching application \
 designed for university students and new graduates.

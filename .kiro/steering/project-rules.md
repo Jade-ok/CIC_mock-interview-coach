@@ -14,17 +14,16 @@ Each agent uses a different model or service — this is intentional.
 
 | Agent | Model / Service |
 |-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
 | interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) — no Bedrock text model |
-| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
-| polly | Amazon Polly only — no Bedrock |
+| evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
 | pdf_parser | pypdf only — no Bedrock |
 
-If a Bedrock model feels too slow during testing, swap to `global.anthropic.claude-sonnet-4-6` by changing the model ID string in that Lambda only. No other code changes needed.
+Both Bedrock agents use the same Sonnet 5 model to keep analysis and evaluation behavior consistent.
 
 ## Bedrock (analyst, evaluator only)
 
-- Region: `us-east-1` for Bedrock, Polly, Nova Sonic, and all Lambdas.
+- Region: `us-east-1` for Bedrock, Nova Sonic, and all Lambdas.
 - Use the Converse API with `tool_use` to force JSON output. Never parse plain text.
 - Retry each Bedrock call once (max 2 attempts) on failure or invalid response.
 
@@ -32,8 +31,7 @@ If a Bedrock model feels too slow during testing, swap to `global.anthropic.clau
 
 - The Interviewer Lambda is a context-builder — it does NOT conduct the interview or call any LLM.
 - It loads interview structure + interview profile from S3, combines them with the Analyst output, and returns the runtime context to the frontend.
-- A Voice Agent Server (Python WebSocket, deployed on Bedrock AgentCore Runtime) proxies bidirectional audio between the browser and Nova Sonic.
-- The frontend connects to AgentCore Runtime's managed WebSocket endpoint (SigV4-authenticated). AgentCore proxies to the Voice Agent Server container, which relays events to/from Nova Sonic.
+- A Cognito Identity Pool provides unauthenticated credentials to the frontend for Bedrock access. The Bedrock JS SDK handles WebSocket signing internally.
 - Nova Sonic handles all question generation, follow-ups, and speech.
 - After the interview, the frontend sends the Analyst output + Q&A conversation to the Evaluator.
 
@@ -41,8 +39,8 @@ If a Bedrock model feels too slow during testing, swap to `global.anthropic.clau
 
 - Stateless. No database. The browser holds all state.
 - S3 is used only for interview configuration files (interview structure, interview profile) — not for session state.
-- Bedrock AgentCore Runtime manages the WebSocket proxy, scaling, and SigV4 auth for the voice interview. No API Gateway needed for the WebSocket layer.
-- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, pdf_parser, and Polly endpoints (no API Gateway for those either, unless added later).
+- The frontend connects directly to Nova Sonic via the Bedrock JS SDK with Cognito credentials. No proxy server, no containers.
+- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, and pdf_parser endpoints.
 - LLM does subjective judgment only (analyst: candidate analysis, evaluator: answer scoring). Deterministic logic (score calculation, classification, flow decisions) is done in Python.
 - The interviewer does not score or judge — it only builds context for Nova Sonic.
 
@@ -83,19 +81,11 @@ interviewer/
   context_builder.py  # assembles runtime context for Nova Sonic
 ```
 
-**Other Lambdas:**
+**Other Lambda:**
 - `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
-- `polly`: single `handler.py` only, no Bedrock.
 
-**Voice Agent Server (AgentCore Runtime, not Lambda):**
-```
-voice-agent/
-  server.py               # FastAPI WebSocket server, event relay, large event splitting
-  s2s_session_manager.py  # Manages bidirectional stream to Nova Sonic via Bedrock SDK
-  s2s_events.py           # Event factory for Nova Sonic protocol
-  Dockerfile              # Container image for AgentCore deployment
-  requirements.txt        # fastapi, uvicorn, aws-sdk-bedrock-runtime
-```
+**Signing Lambda (presigns Nova Sonic WebSocket URL):**
+_Removed — no longer needed. Frontend uses Cognito + Bedrock SDK for direct WebSocket signing._
 
 ## Deployment Gotchas
 

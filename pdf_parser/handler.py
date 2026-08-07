@@ -2,8 +2,8 @@
 
 import json
 
-from .validation import detect_invocation_mode, validate_request
-from .orchestrator import process_documents
+from validation import detect_invocation_mode, validate_request
+from orchestrator import process_documents
 
 
 def lambda_handler(event: dict, context) -> dict:

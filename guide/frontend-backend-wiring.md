@@ -20,7 +20,6 @@
 │       ▼                                                             │
 │  Evaluator call ──► evaluator URL ──► evaluation results            │
 │                                                                     │
-│  Polly call (optional) ──► polly URL ──► audio for non-Nova pages   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,7 +38,6 @@ VITE_PDF_PARSER_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
 VITE_ANALYST_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
 VITE_INTERVIEWER_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
 VITE_EVALUATOR_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
-VITE_POLLY_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
 ```
 
 > Use `VITE_` prefix if using Vite, `REACT_APP_` for CRA, or `NEXT_PUBLIC_` for Next.js.
@@ -63,7 +61,6 @@ VITE_PDF_PARSER_URL=$(get_output PdfParserUrl)
 VITE_ANALYST_URL=$(get_output AnalystUrl)
 VITE_INTERVIEWER_URL=$(get_output InterviewerUrl)
 VITE_EVALUATOR_URL=$(get_output EvaluatorUrl)
-VITE_POLLY_URL=$(get_output PollyUrl)
 EOF
 ```
 
@@ -81,7 +78,6 @@ export const API_URLS = {
   analyst: import.meta.env.VITE_ANALYST_URL,
   interviewer: import.meta.env.VITE_INTERVIEWER_URL,
   evaluator: import.meta.env.VITE_EVALUATOR_URL,
-  polly: import.meta.env.VITE_POLLY_URL,
 } as const;
 ```
 
@@ -178,15 +174,6 @@ export function evaluateInterview(req: EvaluatorRequest) {
   return callLambda<EvaluationResult>(API_URLS.evaluator, req);
 }
 
-// --- Polly ---
-export interface PollyRequest {
-  text: string;
-  voice_id?: string;
-}
-
-export function synthesizeSpeech(req: PollyRequest) {
-  return callLambda<{ audio_base64: string }>(API_URLS.polly, req);
-}
 ```
 
 ---

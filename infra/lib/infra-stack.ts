@@ -29,10 +29,9 @@ export class InfraStack extends cdk.Stack {
     // 1. Analyst Lambda — Bedrock (Claude)
     // ------------------------------------------------------------------
     const analystFn = new lambda.Function(this, 'AnalystFunction', {
-      functionName: 'mock-interview-analyst',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../analyst'),
-      handler: 'analyst.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
     });
@@ -53,10 +52,9 @@ export class InfraStack extends cdk.Stack {
     // 2. Evaluator Lambda — Bedrock (Claude)
     // ------------------------------------------------------------------
     const evaluatorFn = new lambda.Function(this, 'EvaluatorFunction', {
-      functionName: 'mock-interview-evaluator',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../evaluator'),
-      handler: 'evaluator.handler.lambda_handler',
+      handler: 'lambda_handler.handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
     });
@@ -77,10 +75,9 @@ export class InfraStack extends cdk.Stack {
     // 3. Interviewer Lambda — context builder (S3 read, no LLM)
     // ------------------------------------------------------------------
     const interviewerFn = new lambda.Function(this, 'InterviewerFunction', {
-      functionName: 'mock-interview-interviewer',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../interviewer'),
-      handler: 'interviewer.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {
@@ -99,7 +96,6 @@ export class InfraStack extends cdk.Stack {
     // 4. PDF Parser Lambda — pypdf (bundled via Docker)
     // ------------------------------------------------------------------
     const pdfParserFn = new lambda.Function(this, 'PdfParserFunction', {
-      functionName: 'mock-interview-pdf-parser',
       runtime: lambda.Runtime.PYTHON_3_12,
       code: lambda.Code.fromAsset('../pdf_parser', {
         bundling: {
@@ -111,36 +107,12 @@ export class InfraStack extends cdk.Stack {
           ],
         },
       }),
-      handler: 'pdf_parser.handler.lambda_handler',
+      handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
     });
 
     const pdfParserUrl = pdfParserFn.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-      cors: corsOptions,
-    });
-
-    // ------------------------------------------------------------------
-    // 5. Polly Lambda — Amazon Polly TTS
-    // ------------------------------------------------------------------
-    const pollyFn = new lambda.Function(this, 'PollyFunction', {
-      functionName: 'mock-interview-polly',
-      runtime: lambda.Runtime.PYTHON_3_12,
-      code: lambda.Code.fromAsset('../polly'),
-      handler: 'polly.handler.lambda_handler',
-      timeout: cdk.Duration.seconds(30),
-      memorySize: 256,
-    });
-
-    pollyFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['polly:SynthesizeSpeech'],
-        resources: ['*'],
-      })
-    );
-
-    const pollyUrl = pollyFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: corsOptions,
     });
@@ -152,7 +124,6 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'EvaluatorUrl', { value: evaluatorUrl.url });
     new cdk.CfnOutput(this, 'InterviewerUrl', { value: interviewerUrl.url });
     new cdk.CfnOutput(this, 'PdfParserUrl', { value: pdfParserUrl.url });
-    new cdk.CfnOutput(this, 'PollyUrl', { value: pollyUrl.url });
     new cdk.CfnOutput(this, 'ConfigBucketName', { value: configBucket.bucketName });
   }
 }
