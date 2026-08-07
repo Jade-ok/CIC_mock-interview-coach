@@ -84,4 +84,5 @@ export interface Agent1Response {
 export interface Agent3Request {
   transcript: TranscriptEntry[];
   competency_guides: CompetencyGuide[];
+  analyst_output?: Record<string, unknown>;
 }
