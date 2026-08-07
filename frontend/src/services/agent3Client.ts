@@ -34,13 +34,29 @@ export async function callAgent3(request: Agent3Request): Promise<unknown> {
 
   return {
     overallScore: 78,
-    summary: '전반적으로 좋은 인터뷰 성과를 보여주셨습니다.',
+    summary: 'You showed strong overall interview performance. Your answers demonstrated solid technical depth and clear communication.',
     competencyScores: request.competency_guides.map((guide) => ({
       id: guide.id,
       title: guide.title,
       score: Math.floor(Math.random() * 30) + 70,
-      feedback: `${guide.title} 역량에서 적절한 답변을 보여주셨습니다.`,
+      feedback: `You provided relevant examples for ${guide.title}. Consider adding more quantitative impact to strengthen your responses.`,
+      suggestedExperience: getSuggestedExperience(guide.title),
     })),
     transcriptLength: request.transcript.length,
   };
+}
+
+/** Mock suggested experience text keyed by competency title */
+function getSuggestedExperience(title: string): string {
+  const suggestions: Record<string, string> = {
+    'Leadership':
+      'Your resume mentions leading a 5-person team on the migration project — using that specific example with a measurable outcome (e.g. reduced deployment time by X%) would have strengthened this answer.',
+    'Problem Solving':
+      "Your algorithm competition experience wasn't mentioned — walking through your approach to a specific hard problem would have been a strong example here.",
+    'Technical Depth':
+      'You could have referenced your work on the microservices architecture in more technical detail — specific trade-offs you considered would show deeper expertise.',
+    'Communication & Collaboration':
+      'Your resume shows cross-team coordination experience — citing a specific instance of resolving a disagreement would have added weight to this answer.',
+  };
+  return suggestions[title] ?? 'Consider referencing a specific project from your resume with measurable outcomes to strengthen your answer.';
 }

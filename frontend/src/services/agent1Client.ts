@@ -23,27 +23,34 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   return {
-    nova_sonic_context: `Interview context for ${request.pdf.name}. JD length: ${request.jdText.length} chars.`,
+    nova_sonic_context: `Interview context for ${request.pdf.name}. JD length: ${request.jdText.length} chars. Candidate has 2 years team lead experience, microservices migration project, and strong algorithmic background.`,
     competency_guides: [
       {
         id: 'cg-1',
-        title: 'Technical Problem Solving',
-        keywords: ['algorithm', 'data structure', 'optimization', 'complexity'],
-        description: 'Ability to solve complex technical problems efficiently',
-        highlighted: false,
+        title: 'Leadership',
+        keywords: ['team lead', 'mentorship', 'delegation', 'decision-making'],
+        description: 'Your resume shows 2 years of team lead experience — highlight specific decisions you made and how you mentored junior engineers.',
+        highlighted: true,
       },
       {
         id: 'cg-2',
-        title: 'System Design',
-        keywords: ['architecture', 'scalability', 'design pattern', 'distributed'],
-        description: 'Understanding of large-scale system design principles',
+        title: 'Problem Solving',
+        keywords: ['algorithm', 'optimization', 'debugging', 'root cause'],
+        description: 'You listed 3 algorithm competition awards — be ready to walk through your thought process on complex problems.',
         highlighted: false,
       },
       {
         id: 'cg-3',
-        title: 'Communication',
-        keywords: ['explain', 'clarify', 'collaborate', 'trade-off'],
-        description: 'Clear communication of technical concepts',
+        title: 'Technical Depth',
+        keywords: ['microservices', 'distributed systems', 'AWS', 'architecture'],
+        description: 'Your microservices migration project is a strong talking point — prepare to discuss trade-offs and scaling challenges.',
+        highlighted: true,
+      },
+      {
+        id: 'cg-4',
+        title: 'Communication & Collaboration',
+        keywords: ['cross-team', 'stakeholder', 'documentation', 'feedback'],
+        description: 'The JD emphasizes cross-functional work — connect your experience coordinating between frontend and platform teams.',
         highlighted: false,
       },
     ],

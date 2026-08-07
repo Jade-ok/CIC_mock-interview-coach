@@ -15,7 +15,7 @@ describe('FeedbackScreen', () => {
     it('shows loading spinner and message when loading', () => {
       render(<FeedbackScreen {...defaultProps} loading={true} />);
       expect(screen.getByTestId('feedback-loading')).toBeInTheDocument();
-      expect(screen.getByText('피드백을 생성하고 있습니다...')).toBeInTheDocument();
+      expect(screen.getByText('Generating your feedback...')).toBeInTheDocument();
     });
 
     it('does not show error or result when loading', () => {
@@ -30,7 +30,7 @@ describe('FeedbackScreen', () => {
       ...defaultProps,
       error: {
         code: 'AGENT3_FAILED' as const,
-        message: 'Agent 3 요청에 실패했습니다.',
+        message: 'Agent 3 request failed.',
         retryable: true,
       },
     };
@@ -38,7 +38,7 @@ describe('FeedbackScreen', () => {
     it('shows error message', () => {
       render(<FeedbackScreen {...errorProps} />);
       expect(screen.getByTestId('feedback-error')).toBeInTheDocument();
-      expect(screen.getByText('Agent 3 요청에 실패했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('Agent 3 request failed.')).toBeInTheDocument();
     });
 
     it('shows retry button when retryable', () => {
@@ -79,25 +79,66 @@ describe('FeedbackScreen', () => {
   describe('Result state', () => {
     const resultProps = {
       ...defaultProps,
-      feedbackResult: { overallScore: 85, summary: '좋은 성과입니다.' },
+      feedbackResult: {
+        overallScore: 85,
+        summary: 'Great performance overall.',
+        competencyScores: [
+          { id: 'cg-1', title: 'Leadership', score: 88, feedback: 'Strong examples provided.' },
+          { id: 'cg-2', title: 'Problem Solving', score: 82, feedback: 'Good analytical approach.' },
+        ],
+        transcriptLength: 5,
+      },
     };
 
-    it('shows feedback result', () => {
+    it('shows feedback result with title', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      expect(screen.getByText('인터뷰 피드백')).toBeInTheDocument();
+      expect(screen.getByText('Interview Feedback')).toBeInTheDocument();
     });
 
-    it('displays result data as JSON', () => {
+    it('displays overall score in score ring', () => {
+      render(<FeedbackScreen {...resultProps} />);
+      expect(screen.getByTestId('overall-score')).toBeInTheDocument();
+      expect(screen.getByText('85')).toBeInTheDocument();
+    });
+
+    it('displays summary text', () => {
+      render(<FeedbackScreen {...resultProps} />);
+      expect(screen.getByText('Great performance overall.')).toBeInTheDocument();
+    });
+
+    it('renders competency cards', () => {
+      render(<FeedbackScreen {...resultProps} />);
+      expect(screen.getByTestId('competency-card-cg-1')).toBeInTheDocument();
+      expect(screen.getByTestId('competency-card-cg-2')).toBeInTheDocument();
+      expect(screen.getByText('Leadership')).toBeInTheDocument();
+      expect(screen.getByText('Problem Solving')).toBeInTheDocument();
+    });
+
+    it('hides transcriptLength from the UI', () => {
       render(<FeedbackScreen {...resultProps} />);
       const resultEl = screen.getByTestId('feedback-result');
-      expect(resultEl.textContent).toContain('overallScore');
-      expect(resultEl.textContent).toContain('85');
+      expect(resultEl.textContent).not.toContain('transcriptLength');
     });
 
-    it('shows new session button', () => {
+    it('shows new session button with English text', () => {
       render(<FeedbackScreen {...resultProps} />);
-      expect(screen.getByTestId('feedback-new-session-btn')).toBeInTheDocument();
+      const btn = screen.getByTestId('feedback-new-session-btn');
+      expect(btn).toBeInTheDocument();
+      expect(btn.textContent).toBe('Start New Session');
+    });
+  });
+
+  describe('Fallback for non-standard data', () => {
+    it('falls back to raw JSON for unexpected data shape', () => {
+      const props = {
+        ...defaultProps,
+        feedbackResult: { unexpected: 'data' },
+      };
+      render(<FeedbackScreen {...props} />);
+      expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
+      const resultEl = screen.getByTestId('feedback-result');
+      expect(resultEl.textContent).toContain('unexpected');
     });
   });
 });
