@@ -63,8 +63,9 @@ def test_session_start_builds_complete_nova_setup_and_ack():
     assert events[1]["promptStart"]["audioOutputConfiguration"]["voiceId"] == "tiffany"
     tool_spec = events[1]["promptStart"]["toolConfiguration"]["tools"][0]["toolSpec"]
     assert tool_spec["name"] == "end_interview"
-    assert tool_spec["inputSchema"]["json"]["required"] == []
-    assert "additionalProperties" not in tool_spec["inputSchema"]["json"]
+    tool_schema = json.loads(tool_spec["inputSchema"]["json"])
+    assert tool_schema["required"] == []
+    assert "additionalProperties" not in tool_schema
     assert events[2]["contentStart"]["interactive"] is False
     assert events[3]["textInput"]["content"] == "You are a supportive interviewer."
     assert events[5]["contentStart"]["role"] == "USER"

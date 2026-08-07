@@ -169,6 +169,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 break
 
             try:
+                was_started = protocol.started
                 result = protocol.handle_client_message(message)
             except BrowserProtocolError as exc:
                 await websocket.send_json(
@@ -176,17 +177,22 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
                 continue
 
-            if protocol.started and not session_manager.is_active:
+            # Nova requires sessionStart to be the first input event. Send the
+            # complete initialization sequence before starting response/audio
+            # background tasks, matching AWS's documented event lifecycle.
+            if protocol.started and not was_started:
                 await session_manager.start_session()
+                for event_json in result.nova_events:
+                    await session_manager.send_event(event_json)
                 response_task = asyncio.create_task(
                     forward_responses(session_manager, websocket, protocol)
                 )
                 audio_drain_task = asyncio.create_task(
                     session_manager.drain_audio_queue()
                 )
-
-            for event_json in result.nova_events:
-                await session_manager.send_event(event_json)
+            else:
+                for event_json in result.nova_events:
+                    await session_manager.send_event(event_json)
             for event_json in result.audio_events:
                 await session_manager.send_audio_chunk(event_json)
             for browser_event in result.browser_events:
@@ -203,10 +209,8 @@ async def websocket_endpoint(websocket: WebSocket):
         except Exception:
             pass
     finally:
-        # Clean up
-        await session_manager.close()
-
-        # Cancel background tasks
+        # Stop readers before closing the underlying stream so the AWS CRT does
+        # not try to resolve a response future that was cancelled mid-close.
         for task in [response_task, audio_drain_task]:
             if task is not None and not task.done():
                 task.cancel()
@@ -215,6 +219,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 except asyncio.CancelledError:
                     pass
 
+        await session_manager.close()
         logger.info("WebSocket session cleaned up")
 
 

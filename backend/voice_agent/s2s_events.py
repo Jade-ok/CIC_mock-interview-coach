@@ -6,6 +6,7 @@ Each function returns a JSON string ready to send to the Nova Sonic stream.
 
 import json
 import uuid
+from copy import deepcopy
 
 
 def generate_id() -> str:
@@ -59,11 +60,20 @@ def prompt_start_event(
         },
     }
     if tools:
+        wire_tools = deepcopy(tools)
+        for tool in wire_tools:
+            schema = (
+                tool.get("toolSpec", {})
+                .get("inputSchema", {})
+                .get("json")
+            )
+            if isinstance(schema, dict):
+                tool["toolSpec"]["inputSchema"]["json"] = json.dumps(schema)
         prompt_start["toolUseOutputConfiguration"] = {
             "mediaType": "application/json",
         }
         prompt_start["toolConfiguration"] = {
-            "tools": tools,
+            "tools": wire_tools,
             "toolChoice": {"auto": {}},
         }
     return json.dumps({"event": {"promptStart": prompt_start}})
