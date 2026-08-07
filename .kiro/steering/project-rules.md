@@ -31,11 +31,11 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - There is no persistent application database or server-side session store.
 - Four Lambda Function URLs expose PDF Parser, Analyst, Interviewer, and Evaluator.
 - CDK uploads `backend/config/interview_structure.json` and `backend/config/student_interview_profile.json`; the Interviewer reads the resulting S3 object keys and returns a runtime-context string.
-- `backend/voice_agent/` contains the FastAPI/Python WebSocket relay and container assets. Account-specific AgentCore configuration is local and ignored; the relay opens the Nova 2 Sonic bidirectional stream and holds transient state and queues only for the lifetime of a voice connection.
+- `backend/voice_agent/` contains the FastAPI/Python WebSocket relay, container assets, and current `@aws/agentcore` CLI/CDK configuration. Deployment targets contain account/Region identifiers but no credentials; teammates may replace or add a target for their AWS account.
 - The frontend uses the real relay by default and reads `VITE_VOICE_WS_URL`, falling back to `ws://localhost:8080/` for local work. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
 - `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter is unit-tested, but a live browser/Nova session remains unverified.
 - The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
-- AgentCore authentication is not implemented. `.bedrock_agentcore.yaml` belongs only to the temporary legacy Starter Toolkit workflow and is ignored; production deployment first requires migration to the current AgentCore CLI/configuration plus an authorizer for the active account.
+- The deployed development AgentCore runtime uses AWS IAM/SigV4 authorization. Its authenticated WebSocket handshake has been verified, but browser-compatible Cognito/OIDC JWT authorization is not implemented yet. `.bedrock_agentcore.yaml` remains ignored legacy configuration and is not the canonical deployment path.
 - Frontend hosting and Amplify authentication are not provisioned in this repository. The Lambda Function URLs currently use public `NONE` authentication and permissive CORS.
 
 ## Target Deployment Architecture
@@ -61,14 +61,15 @@ Canonical inter-component payload definitions live in `schemas/`:
 
 Runtime interview configuration lives in `backend/config/` and is uploaded to S3 by CDK. Configuration files are not inter-agent contracts.
 
+The frontend and PDF Parser both enforce a 4 MB PDF limit so oversized files are rejected before upload.
+
 Known integration gaps must not be documented as working behavior:
 
-- The browser/relay adapter is not yet verified against a live Nova 2 Sonic session.
-- The deployed AgentCore endpoint still needs to be supplied as `VITE_VOICE_WS_URL` in Amplify.
-- No production AgentCore configuration or authorizer/OAuth settings are tracked, so the planned authenticated browser connection is not implemented.
+- The AgentCore runtime and authenticated AWS-IAM WebSocket handshake are verified, but a paid live Nova 2 Sonic conversation is not yet verified.
+- The deployed AgentCore endpoint still needs to be supplied as `VITE_VOICE_WS_URL` in Amplify after browser-compatible JWT authorization is configured.
+- Current AgentCore CLI/CDK configuration is tracked and uses AWS IAM authorization; Cognito/OIDC custom-JWT settings and frontend token handling remain unimplemented.
 - Amplify Hosting and its authentication configuration are not represented in the current CDK stack or frontend configuration.
 - All four Lambda Function URLs currently use unauthenticated public access and `*` CORS; they require an explicit protection plan before public deployment.
-- The frontend retains its existing 10 MB PDF limit while the backend rejects decoded PDFs above 4 MB. Do not change either limit without an explicit product decision.
 
 ## Function Layouts
 

@@ -6,12 +6,12 @@ AgentCore Runtime is a serverless managed container runtime. This project suppli
 
 ## Files
 
-- `server.py` — FastAPI WebSocket endpoints at `/` and `/ws`, plus `/health`
+- `server.py` — FastAPI WebSocket endpoints at `/` and `/ws`, plus `/ping` and `/health`
 - `protocol.py` — browser `{type, payload}` to/from Nova event adapter
 - `s2s_session_manager.py` — Nova stream lifecycle and audio queue
 - `s2s_events.py` — Nova protocol event builders
 - `Dockerfile` — Python 3.12 container on port 8080
-- `.bedrock_agentcore.yaml` — local, generated AgentCore deployment configuration (ignored by Git)
+- `agentcore/` — current AgentCore CLI configuration and generated CDK application
 
 ## Runtime
 
@@ -41,33 +41,34 @@ python3 -m venv .venv
 .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080
 ```
 
-Check `http://localhost:8080/health`. Local WebSocket clients can use `ws://localhost:8080/`; AgentCore uses `/ws`.
+Check `http://localhost:8080/ping` (AgentCore) or `http://localhost:8080/health` (local alias). Local WebSocket clients can use `ws://localhost:8080/`; AgentCore uses `/ws`.
 
 The relay resolves credentials through boto3's standard chain. For local development, set `AWS_PROFILE=mock-interview-dev` after signing in with IAM Identity Center. In AgentCore, the same resolver uses the runtime execution-role credentials; do not inject permanent access keys.
 
 ## AgentCore Deployment
 
-This relay currently uses the legacy Python Starter Toolkit layout and commands below. AWS now recommends the Node-based [`@aws/agentcore` CLI](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-get-started-cli.html), which uses `agentcore/agentcore.json` and `agentcore/aws-targets.json` instead of `.bedrock_agentcore.yaml`. Do not mix the two formats. Migrating this custom FastAPI WebSocket project to the current CLI is pending and should be completed before production deployment.
-
-If temporarily using the already-installed Starter Toolkit, configure AWS credentials for the deployment account and run:
-
-From `backend/voice_agent/`:
+The relay uses the Node-based [`@aws/agentcore` CLI](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-get-started-cli.html). Install Node.js 20 or later and the CLI, then deploy from `backend/voice_agent/`:
 
 ```bash
-AWS_PROFILE=mock-interview-dev agentcore configure
+npm install --global @aws/agentcore
 
-AWS_PROFILE=mock-interview-dev agentcore deploy -a mock-interview-voice-agent \
-  --env AWS_REGION=us-east-1 \
-  --env MODEL_ID=amazon.nova-2-sonic-v1:0
+AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
+  agentcore validate
 
-AWS_PROFILE=mock-interview-dev agentcore status
+AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
+  agentcore deploy --target personal
+
+AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
+  agentcore status --target personal
 ```
 
-`agentcore configure` creates account-specific values in `.bedrock_agentcore.yaml`. That file is intentionally ignored so credentials and resource identifiers from one AWS account cannot be reused accidentally in another. Review the account, execution role, ECR repository, CodeBuild role/bucket, network configuration, and authorizer settings before deploying. A default local configuration has no JWT/authorizer configuration, so it does not yet satisfy the target authenticated browser connection.
+`agentcore/aws-targets.json` records the deployment account and Region but contains no credentials. A teammate deploying to another account should replace or add a target and select it with `--target`. The runtime uses AWS IAM authorization for the initial deployment and testing. Amplify browser access still requires the planned Cognito/OIDC custom-JWT integration; never place AWS credentials in frontend environment variables.
+
+The CLI uses the checked-in `Dockerfile` as a remote CodeBuild container build. Docker Desktop is not required for this deployment path, although it remains useful for local container testing.
 
 AgentCore deployment is independent of the CDK stack in `infrastructure/`, and Amplify Hosting is a third deployment boundary. Deploying any one of the three does not deploy the others.
 
-The repository-level `scripts/deploy.sh` deploys the CDK backend by default. Its legacy AgentCore step is intentionally disabled unless `DEPLOY_LEGACY_AGENTCORE=true` is supplied; when enabled, the script refuses to deploy if the generated YAML account or Region differs from the active AWS profile.
+The repository-level `scripts/deploy.sh` deploys the Lambda/S3 CDK backend. AgentCore remains a separate deployment boundary and uses the commands above.
 
 ## Verification
 

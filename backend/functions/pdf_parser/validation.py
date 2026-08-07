@@ -2,12 +2,18 @@
 
 import json
 
-# 4 MB in bytes; base64 encoding inflates by ~4/3, so max base64 string length
-# is 4_194_304 * 4 / 3 ≈ 5_592_405 characters.
+# 4 MB in bytes. Base64 encodes each three-byte block as four characters.
 MAX_PDF_SIZE_BYTES = 4_194_304
-MAX_BASE64_LENGTH = (MAX_PDF_SIZE_BYTES * 4 + 2) // 3  # ceiling of 4MB * 4/3
+MAX_BASE64_LENGTH = 4 * ((MAX_PDF_SIZE_BYTES + 2) // 3)
 
 VALID_JOB_POSTING_FORMATS = ("pdf", "text")
+
+
+def _base64_content_exceeds_limit(content: str) -> bool:
+    """Return whether base64 content represents more than 4 MB of bytes."""
+    padding = len(content) - len(content.rstrip("="))
+    decoded_size = (len(content) * 3) // 4 - padding
+    return len(content) > MAX_BASE64_LENGTH or decoded_size > MAX_PDF_SIZE_BYTES
 
 
 def detect_invocation_mode(event: dict) -> dict:
@@ -37,7 +43,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
 
     Checks:
     - At least one document present (resume or job_posting)
-    - Base64 content size <= 4 MB per document
+    - Decoded PDF or UTF-8 text content size <= 4 MiB per document
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
 
@@ -85,8 +91,9 @@ def _validate_document(doc: dict, doc_type: str) -> tuple[bool, str | None]:
     if not isinstance(content, str):
         return False, f"'{doc_type}.content' must be a string"
 
-    # Check base64 size (base64 string length * 3/4 gives approximate decoded size)
-    if len(content) > MAX_BASE64_LENGTH:
+    # Adjacent decoded sizes can share one base64 length because encoding uses
+    # 3-byte blocks, so the padding-aware decoded estimate is also required.
+    if _base64_content_exceeds_limit(content):
         return False, f"{doc_type} exceeds the 4 MB size limit"
 
     return True, None
@@ -111,13 +118,17 @@ def _validate_job_posting(doc: dict) -> tuple[bool, str | None]:
     if not isinstance(content, str):
         return False, "'job_posting.content' must be a string"
 
-    # Check base64 size limit (applies to both pdf and text content)
-    if len(content) > MAX_BASE64_LENGTH:
-        return False, "job_posting exceeds the 4 MB size limit"
-
     # Validate format flag
     format_flag = doc["format"]
     if format_flag not in VALID_JOB_POSTING_FORMATS:
         return False, f"Invalid format flag: '{format_flag}'. Must be 'pdf' or 'text'"
+
+    if format_flag == "pdf":
+        too_large = _base64_content_exceeds_limit(content)
+    else:
+        too_large = len(content.encode("utf-8")) > MAX_PDF_SIZE_BYTES
+
+    if too_large:
+        return False, "job_posting exceeds the 4 MB size limit"
 
     return True, None

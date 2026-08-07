@@ -1,4 +1,4 @@
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_MIME_TYPE = 'application/pdf';
 
 export interface ValidationResult {
@@ -17,7 +17,7 @@ export function validateFile(file: File): ValidationResult {
   if (file.size > MAX_FILE_SIZE) {
     return {
       valid: false,
-      error: 'The file size exceeds 10 MB.',
+      error: 'The file size exceeds 4 MB.',
     };
   }
 

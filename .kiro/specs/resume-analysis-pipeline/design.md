@@ -113,7 +113,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     """
     Validates:
     - At least one document present (resume or job_posting)
-    - Base64 content size <= 4 MB per document
+    - Decoded PDF size <= 4 MiB (4,194,304 bytes) per document
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
     

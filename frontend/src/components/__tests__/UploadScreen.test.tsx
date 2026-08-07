@@ -53,20 +53,20 @@ describe('UploadScreen', () => {
       expect(screen.getByText('Only PDF files can be uploaded.')).toBeInTheDocument();
     });
 
-    it('shows error for file exceeding 10 MB', () => {
+    it('shows error for file exceeding 4 MB', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
       const fileInput = screen.getByTestId('file-input') as HTMLInputElement;
       const file = createMockFile(
         'big.pdf',
-        11 * 1024 * 1024,
+        5 * 1024 * 1024,
         'application/pdf'
       );
 
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      expect(screen.getByText('The file size exceeds 10 MB.')).toBeInTheDocument();
+      expect(screen.getByText('The file size exceeds 4 MB.')).toBeInTheDocument();
     });
 
     it('clears error when a valid file is selected after an invalid one', () => {

@@ -43,8 +43,7 @@ Upload → Waiting Room → Interview → Feedback
 
 ### UploadScreen
 
-- Accept one `application/pdf` file no larger than the current 10 MB frontend limit.
-- The PDF Parser backend still enforces 4 MB, so the limits remain intentionally documented as mismatched.
+- Accept one `application/pdf` file no larger than the shared 4 MB frontend/backend limit.
 - Accept job-description text.
 - Disable submission when either required input is missing.
 - Pass the actual `File` and text to the session reducer.
@@ -218,7 +217,7 @@ Never place long-lived AWS credentials in a `VITE_*` variable because Vite bundl
 
 ## Verification Properties
 
-1. Non-PDF or over-10-MB uploads are rejected by the current frontend.
+1. Non-PDF or over-4-MB uploads are rejected by the current frontend.
 2. Submit remains disabled until both inputs exist.
 3. Waiting Room times out unless both dependencies become ready.
 4. Retry invokes only the failed dependency.

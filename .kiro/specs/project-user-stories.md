@@ -10,7 +10,7 @@ Module-level requirements (acceptance criteria, error handling, etc.) for the In
 
 - **US-1.1** As a candidate, I want to upload my résumé as a PDF, so that I don't have to retype my background.
 - **US-1.2** As a candidate, I want to paste or upload a target job description, so that the interview is tailored to that specific role.
-- **US-1.3** As a candidate, I want the client and PDF Parser to enforce one consistent résumé limit, so that I get instant feedback instead of a failed upload. Current gap: the client permits 10 MB while the PDF Parser rejects decoded files over 4 MB.
+- **US-1.3** As a candidate, I want the client and PDF Parser to enforce one consistent 4 MB résumé limit, so that I get instant feedback instead of a failed upload.
 - **US-1.4** As a candidate, I want a clear error if my PDF can't be parsed, so that I know to re-upload rather than sit on a silent failure.
 
 ## Epic 2: Candidate Analysis (`analyst`)

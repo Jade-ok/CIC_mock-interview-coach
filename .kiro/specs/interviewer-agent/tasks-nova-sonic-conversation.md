@@ -10,7 +10,7 @@
 - [x] Add the FastAPI health endpoint and WebSocket relay in `server.py`.
 - [x] Configure `amazon.nova-2-sonic-v1:0` in `us-east-1`.
 - [x] Add the Dockerfile and Python dependencies for the relay.
-- [ ] Migrate deployment from the temporary legacy `.bedrock_agentcore.yaml` workflow to the current AgentCore CLI/configuration before production deployment.
+- [x] Migrate deployment from the temporary legacy `.bedrock_agentcore.yaml` workflow to the current AgentCore CLI/CDK configuration.
 - [x] Translate the browser `{type, payload}` contract to and from Nova events in `protocol.py`.
 - [x] Emit `session_start_ack` after the relay sends the Nova setup sequence.
 - [x] Route browser audio through `send_audio_chunk()` and the bounded queue.

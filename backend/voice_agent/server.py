@@ -218,7 +218,8 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.info("WebSocket session cleaned up")
 
 
+@app.get("/ping")
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for AgentCore Runtime."""
+    """Health check endpoint for AgentCore Runtime and local development."""
     return {"status": "healthy"}

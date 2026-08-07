@@ -4,9 +4,9 @@ import { validateFile, MAX_FILE_SIZE, ALLOWED_MIME_TYPE } from '@/utils/uploadVa
 
 /**
  * Feature: frontend-interview, Property 1: file validation. Any attachment
- * that is not a PDF or exceeds 10 MB must be rejected with an error message.
+ * that is not a PDF or exceeds 4 MB must be rejected with an error message.
  *
- * **Validates: Requirements 1.2**
+ * **Validates: Requirements 1.2, 1.3**
  */
 describe('Property 1: file validation', () => {
   // Arbitrary for non-PDF MIME types
@@ -17,13 +17,13 @@ describe('Property 1: file validation', () => {
     { minLength: 1, maxLength: 50 }
   ).filter((mime) => mime !== ALLOWED_MIME_TYPE);
 
-  // Arbitrary for file sizes exceeding 10 MB
+  // Arbitrary for file sizes exceeding 4 MB
   const oversizedFileSize = fc.integer({
     min: MAX_FILE_SIZE + 1,
     max: MAX_FILE_SIZE * 3,
   });
 
-  // Arbitrary for valid file sizes (0 to 10 MB)
+  // Arbitrary for valid file sizes (0 to 4 MB)
   const validFileSize = fc.integer({ min: 0, max: MAX_FILE_SIZE });
 
   it('rejects files with non-PDF MIME type', () => {
@@ -45,7 +45,7 @@ describe('Property 1: file validation', () => {
     );
   });
 
-  it('rejects files exceeding 10 MB', () => {
+  it('rejects files exceeding 4 MB', () => {
     fc.assert(
       fc.property(
         oversizedFileSize,
@@ -56,7 +56,7 @@ describe('Property 1: file validation', () => {
 
           expect(result.valid).toBe(false);
           expect(result.error).toBeDefined();
-          expect(result.error).toBe('The file size exceeds 10 MB.');
+          expect(result.error).toBe('The file size exceeds 4 MB.');
         }
       ),
       { numRuns: 100 }

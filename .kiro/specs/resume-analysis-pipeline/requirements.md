@@ -65,7 +65,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE PDF_Parser SHALL validate that the request payload contains at least one document (resume or job_posting) before processing.
-2. IF the request payload exceeds 4 MB for any single PDF document, THEN THE PDF_Parser SHALL return a JSON error response indicating the document exceeds the size limit.
+2. IF any decoded PDF document exceeds 4 MiB (4,194,304 bytes), THEN THE PDF_Parser SHALL return a JSON error response indicating the document exceeds the size limit.
 3. IF the request payload is missing required fields, THEN THE PDF_Parser SHALL return a JSON error response listing the missing fields.
 4. WHEN a request is received in Function_URL_Mode, THE PDF_Parser SHALL parse the JSON string from `event['body']` before validation.
 5. WHEN a request is received in Direct_Mode, THE PDF_Parser SHALL use the event payload directly for validation.

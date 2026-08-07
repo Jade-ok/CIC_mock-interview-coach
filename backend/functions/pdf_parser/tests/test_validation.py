@@ -1,10 +1,15 @@
 """Tests for PDF parser request validation."""
 
+import base64
 import json
 
 import pytest
 
-from pdf_parser.validation import detect_invocation_mode, validate_request
+from pdf_parser.validation import (
+    MAX_PDF_SIZE_BYTES,
+    detect_invocation_mode,
+    validate_request,
+)
 
 
 def test_detects_function_url_mode():
@@ -60,6 +65,57 @@ def test_accepts_valid_requests(payload):
 
 def test_rejects_oversized_document():
     valid, error = validate_request({"resume": {"content": "A" * 6_000_000}})
+
+    assert valid is False
+    assert "4 MB size limit" in error
+
+
+def test_accepts_document_exactly_at_size_limit():
+    content = base64.b64encode(b"\0" * MAX_PDF_SIZE_BYTES).decode("ascii")
+
+    valid, error = validate_request({"resume": {"content": content}})
+
+    assert valid is True
+    assert error is None
+
+
+def test_rejects_document_one_byte_over_size_limit():
+    content = base64.b64encode(b"\0" * (MAX_PDF_SIZE_BYTES + 1)).decode("ascii")
+
+    valid, error = validate_request({"resume": {"content": content}})
+
+    assert valid is False
+    assert "4 MB size limit" in error
+
+
+def test_accepts_pdf_job_posting_exactly_at_size_limit():
+    content = base64.b64encode(b"\0" * MAX_PDF_SIZE_BYTES).decode("ascii")
+
+    valid, error = validate_request(
+        {"job_posting": {"content": content, "format": "pdf"}}
+    )
+
+    assert valid is True
+    assert error is None
+
+
+def test_rejects_pdf_job_posting_one_byte_over_size_limit():
+    content = base64.b64encode(b"\0" * (MAX_PDF_SIZE_BYTES + 1)).decode("ascii")
+
+    valid, error = validate_request(
+        {"job_posting": {"content": content, "format": "pdf"}}
+    )
+
+    assert valid is False
+    assert "4 MB size limit" in error
+
+
+def test_rejects_text_job_posting_over_size_limit():
+    content = "A" * (MAX_PDF_SIZE_BYTES + 1)
+
+    valid, error = validate_request(
+        {"job_posting": {"content": content, "format": "text"}}
+    )
 
     assert valid is False
     assert "4 MB size limit" in error

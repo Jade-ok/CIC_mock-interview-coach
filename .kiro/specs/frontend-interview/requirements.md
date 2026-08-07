@@ -10,7 +10,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 
 1. The Upload Screen must accept a resume PDF and job-description text.
 2. A file with a MIME type other than `application/pdf` must be rejected.
-3. The intended product limit is 4 MB, but the current frontend limit remains 10 MB and must not be changed without an explicit product decision.
+3. PDFs larger than 4 MB must be rejected before upload, matching the PDF Parser's backend limit.
 4. The Submit button must remain disabled until both a file and non-empty job-description text exist.
 5. Submission must store the actual `File` and job-description text in session state.
 
@@ -105,7 +105,6 @@ Implemented and locally tested:
 
 Still pending:
 
-- Decide whether to align the current 10 MB frontend limit with the backend's 4 MB limit.
 - Live Nova and AgentCore verification.
 - Transcript viewing from the FeedbackReport.
 - Amplify hosting and authentication.

@@ -24,8 +24,7 @@
 
 - [x] 5. Implement Upload Screen.
   - Support file selection and drag-and-drop.
-  - Enforce PDF MIME type and preserve the existing 10 MB frontend limit.
-  - Gap: the backend still rejects decoded PDFs over 4 MB.
+  - Enforce PDF MIME type and the shared 4 MB frontend/backend limit.
   - Require job-description text.
   - Store the submitted inputs for Waiting Room.
 

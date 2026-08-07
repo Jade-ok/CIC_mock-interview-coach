@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!requirements.txt
+!server.py
+!protocol.py
+!s2s_events.py
+!s2s_session_manager.py

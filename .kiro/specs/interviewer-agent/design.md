@@ -65,7 +65,7 @@ Source: `backend/voice_agent/`
 - `protocol.py` translates the browser contract to and from Nova events.
 - `s2s_session_manager.py` owns the Nova bidirectional stream and transient queues.
 - `s2s_events.py` builds Nova protocol events.
-- `.bedrock_agentcore.yaml` is an ignored, account-specific file used only by the temporary legacy Starter Toolkit workflow. Production deployment requires migration to the current AgentCore CLI/configuration.
+- `agentcore/agentcore.json` and `agentcore/aws-targets.json` define the current CLI/CDK deployment. Targets contain account and Region identifiers but no credentials. `.bedrock_agentcore.yaml` is ignored legacy Starter Toolkit configuration and is not canonical.
 - `Dockerfile` packages the relay.
 
 The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.

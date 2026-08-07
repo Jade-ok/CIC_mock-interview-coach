@@ -106,5 +106,5 @@ The AgentCore relay is a separate deployment boundary. Its current repository la
 - Function URL calls: parse JSON from `event['body']`
 - CORS is configured on the Function URL settings, not in Python code
 - Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
-- PDF upload limits are not yet aligned: the frontend permits 10 MB, while the PDF Parser rejects decoded files over 4 MB; Lambda Function URL payloads are capped at 6 MiB
+- The frontend and PDF Parser both enforce a 4 MB PDF limit; Lambda Function URL request payloads are capped at 6 MiB
 - Trailing whitespace after URLs in `.env` causes 403 errors

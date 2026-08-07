@@ -22,7 +22,7 @@ The original hackathon build used standalone test events. The repository now use
 - [x] 2. Implement pdf_parser — validation and invocation mode detection
   - [x] 2.1 Create `backend/functions/pdf_parser/validation.py`
     - Implement `detect_invocation_mode(event)` — if `event` has `body` key with string value, parse JSON from it; otherwise return event as-is
-    - Implement `validate_request(payload)` — check at least one document present, base64 size ≤ 4 MB, format flag is `"pdf"` or `"text"` for job_posting, required fields present
+    - Implement `validate_request(payload)` — check at least one document present, decoded PDF size ≤ 4 MiB (4,194,304 bytes), format flag is `"pdf"` or `"text"` for job_posting, required fields present
     - Return `(is_valid, error_message_or_none)` tuple
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 11.1, 11.2_
 

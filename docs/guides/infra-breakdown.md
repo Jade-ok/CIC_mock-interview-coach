@@ -114,10 +114,10 @@ The complete target is intentionally split across managed services:
 | React/Vite frontend | AWS Amplify Hosting | Planned; not provisioned by this CDK stack |
 | Browser identity | Amplify Auth/Cognito or another AgentCore-supported authorization flow | Planned; not implemented |
 | PDF/Analyst/Interviewer/Evaluator HTTP backend | Lambda + S3 via this CDK stack | Implemented; Function URLs are currently public |
-| Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Relay code exists; account configuration is untracked and current-CLI migration/deployment remain pending |
+| Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Current CLI/CDK configuration is tracked; development runtime is deployed with AWS IAM authorization |
 | Speech-to-speech model | Amazon Nova 2 Sonic through the relay | Implemented in relay code |
 
-AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The environment-driven frontend endpoint and WebSocket protocol adapter are implemented and unit-tested. The authenticated public `wss://` connection and live deployed verification remain integration work.
+AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The environment-driven frontend endpoint and WebSocket protocol adapter are implemented and unit-tested. An AWS-IAM-authenticated deployed `wss://` handshake is verified; Cognito/OIDC browser authentication and a live Nova conversation remain integration work.
 
 ---
 
@@ -171,7 +171,7 @@ That's it. CDK will:
 - `cd infrastructure && npx cdk deploy` is canonical for all four Lambdas and the S3 configuration bucket.
 - Amplify Hosting and browser authentication are separate planned deployments; `cdk deploy` does not create them today.
 - AgentCore is deployed separately from `backend/voice_agent/`.
-- `scripts/deploy.sh` derives the active AWS account from `AWS_PROFILE` and deploys the canonical full CDK backend. The separate legacy AgentCore workflow is disabled by default; opting in with `DEPLOY_LEGACY_AGENTCORE=true` requires a local `.bedrock_agentcore.yaml` whose account and Region match the active deployment identity. The AgentCore portion remains pending migration to AWS's current CLI format.
+- `scripts/deploy.sh` derives the active AWS account from `AWS_PROFILE` and deploys the canonical full Lambda/S3 CDK backend. Its opt-in legacy AgentCore branch is retained only for old Starter Toolkit environments. The canonical voice deployment now uses `@aws/agentcore` from `backend/voice_agent/`.
 - `backend/functions/evaluator/template.yaml` is a standalone SAM option. It creates a separate stack and should not be treated as an update to the CDK-managed Evaluator.
 
 Avoid direct `update-function-code` examples with assumed physical names; CDK generates those names unless `functionName` is explicitly configured.
@@ -197,4 +197,4 @@ The S3 bucket has `RemovalPolicy.RETAIN`, so it will **not** be deleted — you 
 | Docker not running → synth fails for pdf_parser | Start Docker Desktop before running `cdk deploy` |
 | Handler not found on Lambda invocation | Verify the CDK handler path matches the file inside the selected function asset. |
 | Trailing whitespace in `.env` URLs | Trim the URLs after pasting |
-| Payload too large | Function URLs have a 6 MiB limit. The backend rejects decoded PDFs above 4 MB, while the frontend currently allows 10 MB. |
+| Payload too large | Function URLs have a 6 MiB request limit. The frontend and backend both reject PDFs above 4 MB. |

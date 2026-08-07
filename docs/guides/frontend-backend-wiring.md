@@ -20,7 +20,7 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 ## What Exists Today
 
 - The CDK stack defines the four Lambda Function URLs and S3 configuration bucket.
-- The Python relay can run locally; account-specific AgentCore configuration is intentionally untracked, and migration from the legacy Starter Toolkit layout to AWS's current AgentCore CLI remains pending.
+- The Python relay runs locally and is configured for deployment with AWS's current `@aws/agentcore` CLI. A development runtime is deployed with AWS IAM authorization, and its signed WebSocket handshake is verified.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
 - The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
@@ -58,7 +58,7 @@ Request:
 
 Response envelope: `{"status": "success", "data": {...}}` or `{"status": "error", "error": "..."}`.
 
-The backend enforces a 4 MB decoded PDF limit while the frontend retains its existing 10 MB limit. This mismatch is unresolved.
+The frontend and backend both enforce a 4 MB PDF limit so oversized files are rejected before upload.
 
 ### Analyst
 
@@ -120,7 +120,7 @@ Do not describe the flow as end-to-end complete until it passes a live browser/N
 
 ## Verification Checklist
 
-- [ ] Decide whether the frontend's existing 10 MB PDF limit should be aligned with the backend's 4 MB limit.
+- [x] Frontend and backend both enforce a 4 MB PDF limit.
 - [x] Interviewer response is parsed using `success` and `runtime_context`.
 - [x] Full Analyst output remains available through the interview.
 - [x] Evaluator request matches `schemas/interviewer_output.json`.
