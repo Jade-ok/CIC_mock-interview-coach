@@ -92,11 +92,11 @@ graph TD
   - **Requirements**: 3.6, 3.7, 3.8
   - **Dependencies**: 4, 7, 8
 
-- [ ] 10. Practice Mode + Guide 패널: PracticeModeToggle (초기값 ON), PracticeBubbles (ON → interviewer 텍스트 말풍선, OFF → 숨김, ON→OFF → 즉시 제거), components/GuidePanel.tsx (competency_guides 상시 표시), utils/keywordMatcher.ts (case-insensitive 한글/영문 매칭, word boundary), Practice Mode ON + 새 텍스트 → 하이라이트, OFF → 하이라이트 비활성, 단위 테스트 + PBT (Property 8, 9, 10, 11, 12)
+- [x] 10. Practice Mode + Guide 패널: PracticeModeToggle (초기값 ON), PracticeBubbles (ON → interviewer 텍스트 말풍선, OFF → 숨김, ON→OFF → 즉시 제거), components/GuidePanel.tsx (competency_guides 상시 표시), utils/keywordMatcher.ts (case-insensitive 한글/영문 매칭, word boundary), Practice Mode ON + 새 텍스트 → 하이라이트, OFF → 하이라이트 비활성, 단위 테스트 + PBT (Property 8, 9, 10, 11, 12)
   - **Requirements**: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3
   - **Dependencies**: 2, 7
 
-- [ ] 11. 인터뷰 종료 흐름: EndConfirmModal (확인/취소), 수동 종료 (확인 → stopPlayback + session_end + disconnect + Feedback 전환), 자동 종료 (end_interview tool_use → waitForPlaybackEnd + session_end + disconnect + Feedback 전환), transcript Agent 3 HTTP POST (mock/stub), Agent 3 실패 → 에러 + 재시도, components/FeedbackScreen.tsx (로딩/에러/결과 분기), 통합 테스트 + PBT (Property 14)
+- [x] 11. 인터뷰 종료 흐름: EndConfirmModal (확인/취소), 수동 종료 (확인 → stopPlayback + session_end + disconnect + Feedback 전환), 자동 종료 (end_interview tool_use → waitForPlaybackEnd + session_end + disconnect + Feedback 전환), transcript Agent 3 HTTP POST (mock/stub), Agent 3 실패 → 에러 + 재시도, components/FeedbackScreen.tsx (로딩/에러/결과 분기), 통합 테스트 + PBT (Property 14)
   - **Requirements**: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8
   - **Dependencies**: 3, 4, 7, 8
 
@@ -104,7 +104,7 @@ graph TD
   - **Requirements**: 3.14
   - **Dependencies**: 3, 8
 
-- [ ] 13. 다크 테마 스타일링 + 최종 통합: 전역 다크 테마 CSS (Zoom 스타일), 웨이브폼 애니메이션 (CSS/Canvas), 반응형 레이아웃, 전체 E2E 통합 테스트 (Upload → Waiting → Interview → Feedback), vite build 성공 확인
+- [x] 13. 다크 테마 스타일링 + 최종 통합: 전역 다크 테마 CSS (Zoom 스타일), 웨이브폼 애니메이션 (CSS/Canvas), 반응형 레이아웃, 전체 E2E 통합 테스트 (Upload → Waiting → Interview → Feedback), vite build 성공 확인
   - **Requirements**: 8.2, 8.3
   - **Dependencies**: 5, 6, 7, 8, 9, 10, 11, 12
 
