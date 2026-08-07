@@ -14,7 +14,7 @@ describe('EndConfirmModal', () => {
     render(
       <EndConfirmModal open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
     );
-    expect(screen.getByText('인터뷰를 종료하시겠습니까?')).toBeInTheDocument();
+    expect(screen.getByText('End the interview?')).toBeInTheDocument();
   });
 
   it('has role="dialog" and aria-modal="true"', () => {
@@ -48,7 +48,7 @@ describe('EndConfirmModal', () => {
     render(
       <EndConfirmModal open={true} onConfirm={vi.fn()} onCancel={vi.fn()} />
     );
-    expect(screen.getByText('종료')).toBeInTheDocument();
-    expect(screen.getByText('취소')).toBeInTheDocument();
+    expect(screen.getByText('End')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
   });
 });

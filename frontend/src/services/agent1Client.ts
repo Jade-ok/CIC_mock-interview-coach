@@ -73,6 +73,7 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   return {
     nova_sonic_context: novaSonicContext,
     competency_guides: competencyGuides,
+    analyst_output: analystOutput,
   };
 }
 

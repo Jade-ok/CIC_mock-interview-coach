@@ -6,6 +6,8 @@
  */
 
 import type { SessionError } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
+import { FeedbackReport } from './FeedbackReport';
 
 export interface FeedbackScreenProps {
   loading: boolean;
@@ -60,20 +62,11 @@ export function FeedbackScreen({
       )}
 
       {!loading && !error && feedbackResult != null && (
-        <div className="feedback-screen__result" data-testid="feedback-result">
-          <h2 className="feedback-screen__title">Interview Feedback</h2>
-          <pre className="feedback-screen__data">
-            {String(JSON.stringify(feedbackResult, null, 2))}
-          </pre>
-          <button
-            className="feedback-screen__btn feedback-screen__btn--new"
-            onClick={onNewSession}
-            type="button"
-            data-testid="feedback-new-session-btn"
-          >
-            새 세션 시작
-          </button>
-        </div>
+        <FeedbackReport
+          data={feedbackResult as EvaluatorOutput}
+          onPracticeAgain={onNewSession}
+          onViewTranscript={() => { /* TODO: open transcript view */ }}
+        />
       )}
 
       <style>{`
