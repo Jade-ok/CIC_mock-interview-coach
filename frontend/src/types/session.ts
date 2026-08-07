@@ -19,6 +19,7 @@ export interface SessionState {
   error: SessionError | null;
   agent3Loading: boolean;
   feedbackResult: unknown;
+  analystOutput: Record<string, unknown> | null;
 }
 
 export interface TranscriptEntry {
@@ -79,6 +80,7 @@ export type SessionAction =
 export interface Agent1Response {
   nova_sonic_context: string;
   competency_guides: CompetencyGuide[];
+  analyst_output?: Record<string, unknown>;
 }
 
 export interface Agent3Request {

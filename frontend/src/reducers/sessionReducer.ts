@@ -19,6 +19,7 @@ export const initialState: SessionState = {
   error: null,
   agent3Loading: false,
   feedbackResult: null,
+  analystOutput: null,
 };
 
 export function sessionReducer(
@@ -39,6 +40,7 @@ export function sessionReducer(
         agent1Ready: true,
         novaSonicContext: action.payload.nova_sonic_context,
         competencyGuides: action.payload.competency_guides,
+        analystOutput: action.payload.analyst_output ?? null,
         error: null,
       };
 

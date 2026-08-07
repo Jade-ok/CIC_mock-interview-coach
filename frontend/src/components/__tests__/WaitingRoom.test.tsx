@@ -72,15 +72,15 @@ describe('WaitingRoom', () => {
     it('displays loading spinner and waiting message', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByLabelText('로딩 중')).toBeInTheDocument();
-      expect(screen.getByText('호스트가 들여보내주길 기다리는 중입니다')).toBeInTheDocument();
+      expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+      expect(screen.getByText('Waiting for the host to let you in')).toBeInTheDocument();
     });
 
     it('shows status items for Agent and WebSocket', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByText('Agent 분석')).toBeInTheDocument();
-      expect(screen.getByText('서버 연결')).toBeInTheDocument();
+      expect(screen.getByText('Agent Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Server Connection')).toBeInTheDocument();
     });
   });
 
@@ -129,16 +129,16 @@ describe('WaitingRoom', () => {
         phase: 'waiting',
         error: {
           code: 'AGENT1_FAILED',
-          message: 'Agent 1 요청에 실패했습니다.',
+          message: 'Agent 1 request failed.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 요청에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
-      expect(screen.getByText('돌아가기')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 request failed.');
+      expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByText('Go Back')).toBeInTheDocument();
     });
 
     it('shows error message when WS connection fails', () => {
@@ -147,15 +147,15 @@ describe('WaitingRoom', () => {
         phase: 'waiting',
         error: {
           code: 'WS_CONNECT_FAILED',
-          message: 'WebSocket 연결에 실패했습니다.',
+          message: 'WebSocket connection failed.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket 연결에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket connection failed.');
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
 
     it('shows timeout error with retry button', () => {
@@ -172,7 +172,7 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByRole('alert')).toHaveTextContent('Connection timed out. Please try again.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
   });
 
@@ -193,7 +193,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should be called since it wasn't ready
       expect(mockedCallAgent1).toHaveBeenCalled();
@@ -217,7 +217,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should NOT be called again since agent1Ready is true
       expect(mockedCallAgent1).not.toHaveBeenCalled();
@@ -255,15 +255,15 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('돌아가기'));
+      fireEvent.click(screen.getByText('Go Back'));
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'RESET' });
     });
   });
 
-  describe('Property 3: 대기실 타임아웃', () => {
+  describe('Property 3: Waiting Room Timeout', () => {
     /**
-     * Feature: frontend-interview, Property 3: 대기실 타임아웃
+     * Feature: frontend-interview, Property 3: Waiting Room Timeout
      * Validates: Requirements 2.5
      *
      * For any Waiting Room entry, if 30s passes without both agent1Ready
@@ -332,9 +332,9 @@ describe('WaitingRoom', () => {
     });
   });
 
-  describe('Property 4: 대기실 부분 재시도', () => {
+  describe('Property 4: Waiting Room Partial Retry', () => {
     /**
-     * Feature: frontend-interview, Property 4: 대기실 부분 재시도
+     * Feature: frontend-interview, Property 4: Waiting Room Partial Retry
      * Validates: Requirements 2.4
      *
      * For any partial failure scenario (one of agent1/ws succeeds, other fails),
@@ -371,7 +371,7 @@ describe('WaitingRoom', () => {
             const { unmount } = render(<WaitingRoom />);
 
             // Click retry
-            const retryBtn = screen.getByText('재시도');
+            const retryBtn = screen.getByText('Retry');
             fireEvent.click(retryBtn);
 
             if (agent1Succeeded) {
