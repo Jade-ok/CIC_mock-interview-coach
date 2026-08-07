@@ -1,8 +1,13 @@
 """Orchestrator for the Analyst Lambda — wires the full analysis pipeline."""
 
-from prompt_builder import build_converse_request
-from bedrock_client import call_converse, BedrockCallFailed
-from parser import parse_converse_response, check_analysis_warnings, SchemaValidationError
+try:
+    from prompt_builder import build_converse_request
+    from bedrock_client import call_converse, BedrockCallFailed
+    from parser import parse_converse_response, check_analysis_warnings, SchemaValidationError
+except ImportError:
+    from analyst.prompt_builder import build_converse_request
+    from analyst.bedrock_client import call_converse, BedrockCallFailed
+    from analyst.parser import parse_converse_response, check_analysis_warnings, SchemaValidationError
 
 
 def analyze(payload: dict) -> dict:

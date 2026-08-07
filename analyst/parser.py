@@ -1,5 +1,7 @@
 """Response parsing, schema validation, and warning generation for the Analyst Lambda."""
 
+from __future__ import annotations
+
 # Module-level constants
 SCHEMA_VERSION = "1.0"
 ALLOWED_EXPERIENCE_TYPES = [

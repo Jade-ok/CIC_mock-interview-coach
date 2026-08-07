@@ -1,5 +1,7 @@
 """Input validation for the analyst Lambda."""
 
+from __future__ import annotations
+
 import json
 
 
