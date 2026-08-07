@@ -4,6 +4,7 @@
  */
 
 import type { Agent3Request, SessionState, TranscriptEntry } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
 
 const EVALUATOR_URL = import.meta.env.VITE_EVALUATOR_URL;
 
@@ -87,7 +88,7 @@ function pairConversation(transcript: TranscriptEntry[]): Agent3Request['convers
  * Calls the evaluator Lambda with a canonical request.
  * Returns feedback data.
  */
-export async function callAgent3(request: Agent3Request): Promise<unknown> {
+export async function callAgent3(request: Agent3Request): Promise<EvaluatorOutput> {
   if (simulateFailure) {
     throw new Error('Agent 3 request failed: Internal Server Error (500)');
   }
@@ -102,10 +103,69 @@ export async function callAgent3(request: Agent3Request): Promise<unknown> {
     body: JSON.stringify(request),
   });
 
-  const result = await response.json();
+  const result = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(`Evaluation failed: ${result.message || result.error || response.statusText}`);
+    const message = result?.message || result?.error || response.statusText || `HTTP ${response.status}`;
+    throw new Error(`Evaluation failed: ${message}`);
+  }
+
+  // The evaluator normally uses non-2xx status codes for errors, but retain a
+  // defensive check in case an intermediary returns its error body with 200.
+  if (result?.error) {
+    throw new Error(`Evaluation failed: ${result.message || result.error}`);
+  }
+
+  if (!isEvaluatorOutput(result)) {
+    throw new Error('Evaluation failed: Evaluator returned an invalid response.');
   }
 
   return result;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Narrow an HTTP response before FeedbackReport dereferences nested fields. */
+export function isEvaluatorOutput(value: unknown): value is EvaluatorOutput {
+  if (!isRecord(value)) return false;
+  const overall = value.overall_scores;
+  const metadata = value.interview_metadata;
+  if (!isRecord(overall) || !isRecord(overall.dimensions) || !isRecord(metadata)) return false;
+
+  const dimensions = overall.dimensions;
+  const dimensionKeys = [
+    'concrete_example',
+    'situation_action_result',
+    'link_to_job',
+    'quantifiable_outcome',
+  ];
+  const validDimensions = dimensionKeys.every((key) => typeof dimensions[key] === 'number');
+  const validQuestionScores = Array.isArray(value.per_question_scores)
+    && value.per_question_scores.every((item) => {
+      if (!isRecord(item) || !isRecord(item.scores)) return false;
+      const scores = item.scores;
+      return typeof item.question_text === 'string'
+        && typeof item.answer_summary === 'string'
+        && dimensionKeys.every((key) => typeof scores[key] === 'number');
+    });
+
+  return validDimensions
+    && typeof overall.total === 'number'
+    && validQuestionScores
+    && typeof value.question_count === 'number'
+    && typeof value.readiness_label === 'string'
+    && Array.isArray(value.strengths)
+    && value.strengths.every((item) => typeof item === 'string')
+    && Array.isArray(value.improvements)
+    && value.improvements.every((item) => typeof item === 'string')
+    && Array.isArray(value.contextual_advice)
+    && value.contextual_advice.every((item) => typeof item === 'string')
+    && typeof metadata.candidate_level === 'string'
+    && typeof metadata.target_role === 'string'
+    && (metadata.status === 'completed' || metadata.status === 'ended_early')
+    && typeof metadata.completion_reason === 'string'
+    && typeof metadata.main_questions_completed === 'number'
+    && typeof metadata.follow_ups_completed === 'number'
+    && typeof metadata.ended_early === 'boolean';
 }

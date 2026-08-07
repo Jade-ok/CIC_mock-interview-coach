@@ -31,12 +31,13 @@
 
 - [x] 6. Implement Waiting Room.
   - Start Agent 1 and WebSocket work in parallel.
-  - Add timeout, retry, and back behavior.
+  - Use a 30-second relay timeout and a 330-second Agent 1 timeout.
+  - Abort stale Agent 1 work on timeout/back and retry only the failed dependency.
   - Parse the Interviewer-specific success envelope.
   - Carry the connected WebSocket into Interview Screen.
 
 - [x] 7. Implement the interview shell.
-  - Add participant tiles, timer, text input, Practice Mode toggle, Guide Panel placeholder, and End button.
+  - Add participant tiles, timer, text input, Practice Mode toggle, Guide Panel, and End button.
   - Add active-turn presentation and unload protection.
 
 - [x] 8. Integrate frontend voice streaming.
@@ -51,7 +52,7 @@
   - Send cross-modal text and resume capture afterward.
   - Status: unit-tested; live Nova verification pending.
 
-- [ ] 10. Complete Practice Mode presentation.
+- [x] 10. Complete Practice Mode presentation.
   - Replace placeholders with transcript bubbles.
   - Render competency guides.
   - Add case-insensitive keyword highlighting.
@@ -71,10 +72,11 @@
   - Ensure the current transcript is not lost.
   - Validate invalid-session and exhausted-retry UI.
 
-- [ ] 13. Integrate FeedbackReport.
-  - Use the existing typed Evaluator output model in `frontend/src/types/evaluator.ts`.
-  - Render the existing FeedbackReport components instead of raw JSON.
-  - Add transcript viewing and practice-again behavior.
+- [ ] 13. Complete FeedbackReport features.
+  - [x] Use the existing typed Evaluator output model in `frontend/src/types/evaluator.ts`.
+  - [x] Render the existing FeedbackReport components instead of raw JSON.
+  - [x] Wire Practice Again to reset the session.
+  - [ ] Add transcript viewing; its controls are hidden until a callback is implemented.
 
 - [ ] 14. Complete production deployment.
   - Deploy the four Lambdas and configuration bucket with CDK.

@@ -6,7 +6,7 @@
 
 ## Overview
 
-Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-5`, region: `us-east-1`) to produce structured JSON conforming to `schemas/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
+Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-4-6`, region: `us-east-1`) to produce structured JSON conforming to `schemas/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
 
 The original hackathon build used standalone test events. The repository now uses pytest through the root `pytest.ini`, and each Lambda folder still includes a `test_event.json` for manual invocation.
 
@@ -66,7 +66,7 @@ The original hackathon build used standalone test events. The repository now use
 
 - [x] 6. Implement analyst — prompt_builder
   - [x] 6.1 Create `backend/functions/analyst/prompt_builder.py`
-    - Define `MODEL_ID = "global.anthropic.claude-sonnet-5"`
+    - Define `MODEL_ID = "global.anthropic.claude-sonnet-4-6"`
     - Implement `build_converse_request(resume_text, job_posting_text) -> dict`
     - Build system prompt with analyst persona and instructions for behavioral interview context
     - Build user message combining resume_text and job_posting_text
@@ -76,11 +76,11 @@ The original hackathon build used standalone test events. The repository now use
 
 - [x] 7. Implement analyst — bedrock_client
   - [x] 7.1 Create `backend/functions/analyst/bedrock_client.py`
-    - Define `REGION = "us-east-1"` and `MAX_ATTEMPTS = 2`
+    - Define `REGION = "us-east-1"` and `MAX_ATTEMPTS = 1`
     - Create boto3 bedrock-runtime client for us-east-1
     - Implement `call_converse(request: dict) -> dict`
-    - Retry on: `ReadTimeoutError`, `ThrottlingException`, 5xx errors, invalid/unparseable response
-    - Raise `BedrockCallFailed` after 2 failed attempts with reason
+    - Surface `ReadTimeoutError`, `ThrottlingException`, and 5xx errors after one predictable transport attempt
+    - Raise `BedrockCallFailed` after the failed attempt with reason; the orchestrator alone owns schema-recovery retry
     - _Requirements: 7.1, 9.1, 9.2, 9.3_
 
 - [x] 8. Implement analyst — parser (response parsing + schema validation + warnings)
@@ -103,8 +103,8 @@ The original hackathon build used standalone test events. The repository now use
 - [x] 9. Implement analyst — orchestrator and handler
   - [x] 9.1 Create `backend/functions/analyst/orchestrator.py`
     - Implement `analyze(payload: dict) -> dict`
-    - Pipeline: validate → build prompt → call Bedrock (with retry) → parse response → check warnings → inject warnings into output
-    - On `SchemaValidationError` from parser, trigger retry in bedrock_client
+    - Pipeline: validate → build prompt → call Bedrock → parse response → check warnings → inject warnings into output
+    - On `SchemaValidationError` from parser, make one fresh recovery call from the orchestrator
     - Return success envelope with full analyst_output, or error envelope with descriptive message
     - _Requirements: 5.1, 6.4, 6.5, 6.6, 9.1_
 
@@ -125,7 +125,7 @@ The original hackathon build used standalone test events. The repository now use
 
 - Task 1 (git commit) should be done first to unblock teammates working on interviewer/evaluator/frontend
 - `backend/functions/pdf_parser` (tasks 2–4) and `backend/functions/analyst` (tasks 5–9) are independent and can be built in parallel after task 1
-- Model is `global.anthropic.claude-sonnet-5` in `us-east-1`
+- Model is `global.anthropic.claude-sonnet-4-6` in `us-east-1`
 - `boto3` is available in the Lambda runtime — do NOT bundle it. Only bundle `pypdf` for `backend/functions/pdf_parser`.
 - Each Lambda asset is packaged independently with its module files at the ZIP root.
 - Handler path format for these flat assets: `handler.lambda_handler`

@@ -11,6 +11,8 @@ node_modules/
 .aws-sam/
 dist/
 *.zip
+bedrock_request.json
+backend/voice_agent/.bedrock_agentcore.yaml
 backend/voice_agent/tools/test_runtime_context.js
 
 # Test and coverage files

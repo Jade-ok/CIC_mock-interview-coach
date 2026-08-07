@@ -91,7 +91,33 @@ describe('callAgent3', () => {
 
   it('posts the canonical request and returns the direct Function URL body', async () => {
     const request = buildAgent3Request(stateWith(1));
-    const feedback = { readiness_label: 'Developing' };
+    const feedback = {
+      per_question_scores: [{
+        question_text: 'Question 1',
+        answer_summary: 'Answer 1',
+        scores: {
+          concrete_example: 3,
+          situation_action_result: 3,
+          link_to_job: 3,
+          quantifiable_outcome: 3,
+        },
+      }],
+      overall_scores: {
+        dimensions: {
+          concrete_example: 3,
+          situation_action_result: 3,
+          link_to_job: 3,
+          quantifiable_outcome: 3,
+        },
+        total: 3,
+      },
+      question_count: 1,
+      readiness_label: 'Developing well',
+      strengths: ['Clear example'],
+      improvements: ['Add metrics'],
+      contextual_advice: ['Connect to the role'],
+      interview_metadata: request.interview_metadata,
+    };
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(feedback), {
         status: 200,
@@ -109,5 +135,38 @@ describe('callAgent3', () => {
 
     await expect(callAgent3(request)).rejects.toThrow('At least one completed');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an evaluator error body even when an intermediary returns 200', async () => {
+    const request = buildAgent3Request(stateWith(1));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'EvaluationError', message: 'Model failed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    await expect(callAgent3(request)).rejects.toThrow('Evaluation failed: Model failed');
+  });
+
+  it('rejects a malformed successful evaluator response', async () => {
+    const request = buildAgent3Request(stateWith(1));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{}', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    await expect(callAgent3(request)).rejects.toThrow('invalid response');
+  });
+
+  it('reports the HTTP status when a failed response is not JSON', async () => {
+    const request = buildAgent3Request(stateWith(1));
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Bad gateway', { status: 502, statusText: 'Bad Gateway' })
+    );
+
+    await expect(callAgent3(request)).rejects.toThrow('Evaluation failed: Bad Gateway');
   });
 });

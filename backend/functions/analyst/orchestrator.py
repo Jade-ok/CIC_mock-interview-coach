@@ -20,7 +20,7 @@ def analyze(payload: dict) -> dict:
     Steps:
     1. Extract resume_text and job_posting_text from payload (already validated by handler)
     2. Build the Bedrock Converse API request
-    3. Call Bedrock (bedrock_client handles transient retries internally)
+    3. Call Bedrock once (transport failures are surfaced immediately)
     4. Parse and validate the response
     5. On SchemaValidationError, retry the Bedrock call ONE more time
     6. Check for analysis warnings (deterministic)
@@ -34,7 +34,7 @@ def analyze(payload: dict) -> dict:
         The analyst_output dict conforming to schema v1.0.
 
     Raises:
-        BedrockCallFailed: If Bedrock calls fail (propagates to handler).
+        BedrockCallFailed: If either Bedrock call fails (propagates to handler).
         SchemaValidationError: If schema validation fails after retry (propagates to handler).
     """
     resume_text = payload["resume_text"]

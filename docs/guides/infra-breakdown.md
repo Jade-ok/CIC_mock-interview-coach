@@ -114,10 +114,10 @@ The complete target is intentionally split across managed services:
 | React/Vite frontend | AWS Amplify Hosting | Planned; not provisioned by this CDK stack |
 | Browser identity | Amplify Auth/Cognito or another AgentCore-supported authorization flow | Planned; not implemented |
 | PDF/Analyst/Interviewer/Evaluator HTTP backend | Lambda + S3 via this CDK stack | Implemented; Function URLs are currently public |
-| Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Relay and deployment config exist; deployed separately |
+| Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Relay code exists; account configuration is untracked and current-CLI migration/deployment remain pending |
 | Speech-to-speech model | Amazon Nova 2 Sonic through the relay | Implemented in relay code |
 
-AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The authenticated public `wss://` connection, frontend endpoint configuration, and WebSocket protocol adapter are still integration work.
+AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The environment-driven frontend endpoint and WebSocket protocol adapter are implemented and unit-tested. The authenticated public `wss://` connection and live deployed verification remain integration work.
 
 ---
 
@@ -128,7 +128,8 @@ AgentCore Runtime is a serverless managed container runtime, not a server that t
 1. AWS CLI configured with a profile that has deploy permissions
 2. Node.js installed (for CDK CLI)
 3. Docker running (needed for the PDF Parser bundling step)
-4. CDK bootstrapped in your account/region:
+4. Bedrock access confirmed in the target account for `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0`
+5. CDK bootstrapped in your account/region:
    ```bash
    cd infrastructure && npx cdk bootstrap aws://<ACCOUNT_ID>/us-east-1
    ```
@@ -170,7 +171,7 @@ That's it. CDK will:
 - `cd infrastructure && npx cdk deploy` is canonical for all four Lambdas and the S3 configuration bucket.
 - Amplify Hosting and browser authentication are separate planned deployments; `cdk deploy` does not create them today.
 - AgentCore is deployed separately from `backend/voice_agent/`.
-- `scripts/deploy.sh` is an account-specific legacy/manual Interviewer + voice workflow. It hard-codes account, bucket, role, and physical function names; it does not update CDK-generated resources reliably and does not deploy the complete backend.
+- `scripts/deploy.sh` derives the active AWS account from `AWS_PROFILE` and deploys the canonical full CDK backend. The separate legacy AgentCore workflow is disabled by default; opting in with `DEPLOY_LEGACY_AGENTCORE=true` requires a local `.bedrock_agentcore.yaml` whose account and Region match the active deployment identity. The AgentCore portion remains pending migration to AWS's current CLI format.
 - `backend/functions/evaluator/template.yaml` is a standalone SAM option. It creates a separate stack and should not be treated as an update to the CDK-managed Evaluator.
 
 Avoid direct `update-function-code` examples with assumed physical names; CDK generates those names unless `functionName` is explicitly configured.

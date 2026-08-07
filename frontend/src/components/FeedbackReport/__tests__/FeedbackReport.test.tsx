@@ -62,4 +62,9 @@ describe('FeedbackReport (full page)', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onViewTranscript={() => {}} />);
     expect(screen.getByText(/2 of 6 questions answered/)).toBeTruthy();
   });
+
+  it('hides transcript controls until transcript viewing is implemented', () => {
+    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} />);
+    expect(screen.queryByText('View full transcript')).not.toBeInTheDocument();
+  });
 });

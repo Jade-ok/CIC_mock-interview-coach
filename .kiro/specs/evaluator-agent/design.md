@@ -221,16 +221,17 @@ EVALUATION_TOOL_SCHEMA = {
 **Responsibility:** Wraps the Bedrock Converse API call with retry logic.
 
 **Key design decisions:**
-- Uses model ID `global.anthropic.claude-sonnet-5` in `us-east-1`
+- Uses model ID `global.anthropic.claude-sonnet-4-6` in `us-east-1`
 - Enforces tool_use via `toolChoice: {"tool": {"name": "submit_evaluation"}}`
-- Retries once on failure (max 2 total attempts)
+- Retries transport/API exceptions once (max 2 total attempts)
+- Does not retry malformed responses or missing tool output (`EvaluationError`)
 - Extracts tool_use input from the response
 
 ```python
 import boto3
 from botocore.config import Config
 
-MODEL_ID = "global.anthropic.claude-sonnet-5"
+MODEL_ID = "global.anthropic.claude-sonnet-4-6"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 
@@ -246,6 +247,8 @@ def invoke(system: list, messages: list, tool_config: dict) -> dict:
                 toolConfig=tool_config
             )
             return _extract_tool_input(response)
+        except EvaluationError:
+            raise
         except Exception as e:
             if attempt == MAX_ATTEMPTS - 1:
                 raise EvaluationError(f"Bedrock API call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
@@ -481,12 +484,12 @@ class EvaluationError(Exception):
 | 1-5 scale (not 1-10) | Simpler for students to interpret; reduces LLM scoring variance |
 | Variable-length averaging | Students can stop early; no penalty for incomplete interviews |
 | Co-op calibration in system prompt | Ensures LLM expectations match student-level experience |
-| Single retry on API failure | Balances reliability with Lambda timeout constraints |
+| Single retry on transport/API failure | Balances reliability with the 300-second Lambda timeout; malformed model output fails immediately |
 | Separate modules per concern | Testable units; clear responsibility boundaries |
 
 ## Constraints and Assumptions
 
-- Lambda timeout must accommodate up to 2 Bedrock API calls (recommend 60s timeout)
+- Lambda timeout is 300 seconds so two 120-second Bedrock attempts plus connection and response-processing overhead fit in one invocation
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
 - Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)

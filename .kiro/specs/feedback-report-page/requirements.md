@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-07. Component implementation exists; integration into the current `FeedbackScreen` and deployment with the React app on Amplify Hosting are still pending.
+> Maintained requirements. Last verified: 2026-08-07. The component is integrated into `FeedbackScreen`; deployment with the React app on Amplify Hosting remains pending.
 
 ## Introduction
 
@@ -28,7 +28,8 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 2. THE page SHALL be a single vertically-scrollable layout with distinct visual sections
 3. THE page SHALL use CSS variables for all theme colors, not hard-coded values
 4. THE page SHALL use the system UI font stack as defined in the design theme
-5. THE page SHALL include a fixed top header with "CIC Mock Interview Coach" branding and navigation actions ("View full transcript", "Practice again")
+5. THE page SHALL include a sticky top header with "CIC Mock Interview Coach" branding and a "Practice again" action
+6. THE page SHALL show "View full transcript" only after a transcript-view callback is implemented
 
 ### Requirement 2: Readiness Label Hero Section
 
@@ -99,10 +100,10 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 #### Acceptance Criteria
 
 1. THE page SHALL end with an encouraging motivational message (e.g. "Every practice round makes the real one easier.")
-2. THE footer SHALL include action buttons: "Practice again" and "View full transcript"
+2. THE footer SHALL include "Practice again" and SHALL include "View full transcript" only when a transcript-view callback is available
 3. THE footer SHALL use the accent color background to visually anchor the page bottom
 4. THE "Practice again" button SHALL be the primary action (filled button style)
-5. THE "View full transcript" button SHALL be a secondary action (outlined button style)
+5. WHEN shown, THE "View full transcript" button SHALL be a secondary action (outlined button style)
 
 ### Requirement 8: Data Consumption
 

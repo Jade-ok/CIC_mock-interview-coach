@@ -15,7 +15,7 @@ A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, ass
 
 **Environment:**
 - Region: `us-east-1`
-- S3 Bucket: `cic-mock-interview-configs-002859476624`
+- S3 Bucket: CDK-generated configuration bucket for the active deployment account
 - Keys: `interview_structure.json`, `student_interview_profile.json`
 
 ---

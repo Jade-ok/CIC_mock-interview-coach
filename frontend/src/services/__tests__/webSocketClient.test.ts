@@ -51,6 +51,34 @@ describe('WebSocketClient', () => {
       client.disconnect();
       expect(client.getState()).toBe('disconnected');
     });
+
+    it('should reject a pending connection when disconnect() is called', async () => {
+      const pendingClient = new WebSocketClient();
+      const pendingConnection = pendingClient.connect({
+        ...testConfig,
+        url: 'ws://localhost:65534',
+      });
+
+      pendingClient.disconnect();
+
+      await expect(pendingConnection).rejects.toThrow('Connection closed');
+      expect(pendingClient.getState()).toBe('disconnected');
+    });
+
+    it('should replace a pending connection without stale socket callbacks winning', async () => {
+      const replacingClient = new WebSocketClient();
+      const firstConnection = replacingClient.connect({
+        ...testConfig,
+        url: 'ws://localhost:65533',
+      });
+      const firstRejection = expect(firstConnection).rejects.toThrow('Connection replaced');
+
+      const secondConnection = replacingClient.connect(testConfig);
+      await firstRejection;
+      await expect(secondConnection).resolves.toBeUndefined();
+      expect(replacingClient.getState()).toBe('connected');
+      replacingClient.disconnect();
+    });
   });
 
   describe('sendSessionStart', () => {

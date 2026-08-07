@@ -49,3 +49,25 @@
   margin: 0 auto;
   padding: 0 24px;
 }
+
+@media (max-width: 640px) {
+  .feedback-report__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .feedback-report__nav {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .feedback-report__nav-link {
+    flex: 1 1 auto;
+  }
+
+  .feedback-report__content {
+    padding: 0 16px;
+  }
+}

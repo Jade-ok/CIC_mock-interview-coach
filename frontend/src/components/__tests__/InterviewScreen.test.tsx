@@ -61,9 +61,38 @@ describe('InterviewScreen', () => {
       expect(screen.getByTestId('text-send-button')).toBeInTheDocument();
     });
 
-    it('renders guide panel placeholder', () => {
+    it('renders competency guides and interviewer practice bubbles', () => {
+      mockState = {
+        ...mockState,
+        competencyGuides: [
+          {
+            id: 'leadership',
+            title: 'Leadership',
+            description: 'Leading teams through change',
+            keywords: ['leadership'],
+            highlighted: false,
+          },
+        ],
+        transcript: [
+          {
+            role: 'interviewer',
+            text: 'Tell me about your leadership experience.',
+            timestamp: '2026-01-01T00:00:00Z',
+          },
+          {
+            role: 'user',
+            text: 'My private answer',
+            timestamp: '2026-01-01T00:00:01Z',
+          },
+        ],
+      };
       render(<InterviewScreen />);
+
       expect(screen.getByTestId('guide-panel')).toBeInTheDocument();
+      expect(screen.getByText('Leadership')).toBeInTheDocument();
+      expect(screen.getByText('Tell me about your leadership experience.')).toBeInTheDocument();
+      expect(screen.queryByText('My private answer')).not.toBeInTheDocument();
+      expect(screen.getByTestId('guide-panel-item')).toHaveAttribute('data-highlighted', 'true');
     });
 
     it('does not show question counter or progress indicator (Req 3.12)', () => {
@@ -233,6 +262,11 @@ describe('InterviewScreen', () => {
       fireEvent.click(toggle);
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'TOGGLE_PRACTICE_MODE' });
     });
+
+    it('exposes its current state to assistive technology', () => {
+      render(<InterviewScreen />);
+      expect(screen.getByTestId('practice-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 
   describe('TextInput', () => {
@@ -274,6 +308,22 @@ describe('InterviewScreen', () => {
           text: 'I led the API migration.',
         }),
       });
+    });
+
+    it('keeps a typed answer when the socket is reconnecting', () => {
+      const wsClient = {
+        getState: vi.fn().mockReturnValue('reconnecting'),
+        sendTextInput: vi.fn(),
+      };
+      render(<InterviewScreen wsClient={wsClient as never} />);
+      const input = screen.getByLabelText('Text input fallback');
+
+      fireEvent.change(input, { target: { value: 'Keep this answer' } });
+      fireEvent.click(screen.getByTestId('text-send-button'));
+
+      expect(input).toHaveValue('Keep this answer');
+      expect(wsClient.sendTextInput).not.toHaveBeenCalled();
+      expect(mockDispatch).not.toHaveBeenCalledWith({ type: 'TEXT_INPUT_CLEAR' });
     });
   });
 

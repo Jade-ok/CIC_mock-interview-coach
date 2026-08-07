@@ -1,6 +1,6 @@
 # Design Document — Feedback Report Page
 
-> Maintained component design. Last verified: 2026-08-07. The component exists, but application-level integration into `FeedbackScreen` and deployment with the React/Vite app on Amplify Hosting remain pending. The Evaluator is a CDK-managed Lambda; live voice runs separately in the AgentCore serverless relay.
+> Maintained component design. Last verified: 2026-08-07. The component is integrated into `FeedbackScreen`; deployment with the React/Vite app on Amplify Hosting remains pending. The Evaluator is a CDK-managed Lambda; live voice runs separately in the AgentCore serverless relay.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Key technical decisions:
 ```
 FeedbackReport (page-level container)
 ├── FeedbackHeader
-│   └── NavActions ("View full transcript", "Practice again")
+│   └── NavActions ("Practice again"; optional "View full transcript")
 ├── HeroSection
 │   ├── ReadinessLabel
 │   └── ScoreSummary (total score + question count)
@@ -43,7 +43,7 @@ FeedbackReport (page-level container)
 │       └── ScoreBar (×4)
 └── FooterCTA
     ├── PracticeAgainButton (primary)
-    └── ViewTranscriptButton (secondary)
+    └── ViewTranscriptButton (secondary, only when callback exists)
 ```
 
 ---
@@ -56,7 +56,7 @@ FeedbackReport (page-level container)
 interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
-  onViewTranscript: () => void;
+  onViewTranscript?: () => void;
 }
 ```
 
@@ -186,14 +186,14 @@ interface QuestionCardProps {
 ```typescript
 interface FooterCTAProps {
   onPracticeAgain: () => void;
-  onViewTranscript: () => void;
+  onViewTranscript?: () => void;
 }
 ```
 
 **Visual design:**
 - Background: `#FF5C5C` (accent color) for the full-width footer band
 - "Practice again" button: filled white, dark text (primary)
-- "View full transcript" button: outlined white border, white text (secondary)
+- Optional "View full transcript" button: outlined white border, white text (secondary); hidden until a callback is supplied
 - Motivational text: "Every practice round makes the real one easier." in white
 
 ---

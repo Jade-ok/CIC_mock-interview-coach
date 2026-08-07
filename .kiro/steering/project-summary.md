@@ -16,7 +16,7 @@ The interview includes:
 - 1 adaptive follow-up after each main question
 - up to 6 spoken answers
 - an option to end the interview early
-- a Practice Mode UI for optional prompts; its complete guide/bubble behavior remains unfinished
+- a Practice Mode UI with interviewer bubbles, competency guides, and keyword highlighting
 
 The three interview areas are:
 
@@ -138,7 +138,7 @@ The sequence is:
 
 The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The frontend now maps final transcript entries to `schemas/interviewer_output.json`; live end-to-end verification remains pending.
 
-Once that handoff is implemented, an early-ended interview should be scored only on what was covered, without penalizing areas with insufficient evidence.
+The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. Live deployed verification remains pending.
 
 ## AWS Services
 
@@ -147,10 +147,10 @@ The agreed deployment architecture is:
 - AWS Amplify Hosting serves the React/Vite frontend.
 - An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
 - AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
-- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke Claude Sonnet 5 through Amazon Bedrock; the Interviewer Lambda builds context from configuration without making a model call.
+- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke Claude Sonnet 4.6 through Amazon Bedrock; the Interviewer Lambda builds context from configuration without making a model call.
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration deployment. AgentCore deployment remains a separate container workflow.
 
-This is the target deployment plan, not the current end-to-end state. The frontend now reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, the mock is opt-in, and the relay translates the browser contract to and from Nova events. That adapter has focused unit coverage but no live browser/Nova verification yet. Amplify Hosting and authentication are not provisioned, AgentCore has no authorizer/OAuth configuration, and the four Lambda Function URLs are currently public. Those gaps must be closed and tested before the application is shared publicly.
+This is the target deployment plan, not the current end-to-end state. The frontend now reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, the mock is opt-in, and the relay translates the browser contract to and from Nova events. That adapter has focused unit coverage but no live browser/Nova verification yet. Amplify Hosting and authentication are not provisioned, no production AgentCore authorizer/OAuth configuration exists, and the four Lambda Function URLs are currently public. Those gaps must be closed and tested before the application is shared publicly.
 
-No database or permanent interview history is currently implemented. Practice Mode hints exist in the UI design, but the complete guide behavior remains unfinished.
+No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.

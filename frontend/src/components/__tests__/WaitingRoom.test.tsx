@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, fireEvent } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { WaitingRoom } from '@/components/WaitingRoom';
 import type { SessionState } from '@/types/session';
 import { initialState } from '@/reducers/sessionReducer';
@@ -86,8 +87,8 @@ describe('WaitingRoom', () => {
     });
   });
 
-  describe('30-second Timeout', () => {
-    it('dispatches TIMEOUT after 30 seconds if not both ready', () => {
+  describe('Dependency timeouts', () => {
+    it('dispatches a WebSocket failure after 30 seconds if the socket is not connected', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
@@ -101,7 +102,10 @@ describe('WaitingRoom', () => {
         vi.advanceTimersByTime(30000);
       });
 
-      expect(mockDispatch).toHaveBeenCalledWith({ type: 'TIMEOUT' });
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'WS_CONNECT_FAILED',
+        payload: { message: 'Server connection timed out. Please try again.' },
+      });
     });
 
     it('does not dispatch TIMEOUT if both are ready before 30s', () => {
@@ -121,6 +125,51 @@ describe('WaitingRoom', () => {
       // Should dispatch INTERVIEW_READY instead of TIMEOUT
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'INTERVIEW_READY' });
       expect(mockDispatch).not.toHaveBeenCalledWith({ type: 'TIMEOUT' });
+    });
+
+    it('allows a connected socket to wait for a slow Agent 1 response', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        agent1Ready: false,
+        wsConnectionState: 'connected',
+        uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
+      };
+      mockedCallAgent1.mockReturnValue(new Promise(() => {}));
+
+      render(<WaitingRoom />);
+      act(() => vi.advanceTimersByTime(30000));
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'AGENT1_FAILED' })
+      );
+
+      act(() => vi.advanceTimersByTime(300000));
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'AGENT1_FAILED',
+        payload: { message: 'Resume analysis timed out. Please try again.' },
+      });
+    });
+
+    it('ignores an Agent 1 response after the waiting room unmounts', async () => {
+      let resolveAgent1!: (value: Awaited<ReturnType<typeof callAgent1>>) => void;
+      mockedCallAgent1.mockReturnValue(new Promise((resolve) => {
+        resolveAgent1 = resolve;
+      }));
+      const { unmount } = render(<WaitingRoom />);
+      unmount();
+      mockDispatch.mockClear();
+
+      await act(async () => {
+        resolveAgent1({
+          nova_sonic_context: 'stale-context',
+          competency_guides: [],
+          analyst_output: { stale: true },
+        });
+      });
+
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'AGENT1_SUCCESS' })
+      );
     });
   });
 
@@ -222,6 +271,31 @@ describe('WaitingRoom', () => {
       expect(mockedCallAgent1).toHaveBeenCalled();
     });
 
+    it('does not start a stale WebSocket timeout when retrying Agent 1', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        agent1Ready: false,
+        wsReady: false,
+        wsConnectionState: 'connected',
+        uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
+        error: {
+          code: 'AGENT1_FAILED',
+          message: 'Agent 1 failed',
+          retryable: true,
+        },
+      };
+      mockedCallAgent1.mockReturnValue(new Promise(() => {}));
+
+      render(<WaitingRoom />);
+      fireEvent.click(screen.getByText('Retry'));
+      act(() => vi.advanceTimersByTime(30000));
+
+      expect(mockDispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'WS_CONNECT_FAILED' })
+      );
+    });
+
     it('only retries WS when Agent 1 already succeeded', () => {
       mockState = {
         ...initialState,
@@ -246,6 +320,51 @@ describe('WaitingRoom', () => {
       expect(mockedCallAgent1).not.toHaveBeenCalled();
       // WS should attempt a new connection
       expect(MockedWebSocketClient).toHaveBeenCalled();
+    });
+  });
+
+  describe('stale WebSocket callbacks', () => {
+    it('ignores the first mount callbacks under React Strict Mode', async () => {
+      render(
+        <StrictMode>
+          <WaitingRoom />
+        </StrictMode>
+      );
+
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockDispatch.mock.calls.filter(([action]) => action.type === 'WS_CONNECTED')).toHaveLength(1);
+      expect(mockDispatch.mock.calls.filter(([action]) => action.type === 'AGENT1_SUCCESS')).toHaveLength(1);
+    });
+
+    it('ignores a WebSocket connection that resolves after unmount', async () => {
+      let resolveConnection!: () => void;
+      const staleClient = {
+        connect: vi.fn().mockReturnValue(new Promise<void>((resolve) => {
+          resolveConnection = resolve;
+        })),
+        disconnect: vi.fn(),
+        getState: vi.fn().mockReturnValue('connecting'),
+        sendSessionStart: vi.fn(),
+        onMessage: vi.fn(),
+        onDisconnect: vi.fn(),
+        onReconnectAttempt: vi.fn(),
+        onReconnectSuccess: vi.fn(),
+        onReconnectFailed: vi.fn(),
+        onSessionInvalid: vi.fn(),
+      };
+      MockedWebSocketClient.mockImplementationOnce(
+        () => staleClient as unknown as InstanceType<typeof WebSocketClient>
+      );
+
+      const { unmount } = render(<WaitingRoom />);
+      unmount();
+      mockDispatch.mockClear();
+      await act(async () => resolveConnection());
+
+      expect(mockDispatch).not.toHaveBeenCalledWith({ type: 'WS_CONNECTED' });
     });
   });
 
@@ -289,10 +408,10 @@ describe('WaitingRoom', () => {
      * Feature: frontend-interview, Property 3: waiting-room timeout
      * Validates: Requirements 2.5
      *
-     * For any Waiting Room entry, if 30s passes without both agent1Ready
-     * AND wsReady being true → timeout error is shown.
+     * A disconnected voice relay has its own 30-second timeout. Agent 1 has a
+     * longer timeout because its Bedrock analysis can legitimately take minutes.
      */
-    it('PBT: timeout always dispatched when 30s elapses without both ready', () => {
+    it('PBT: a disconnected WebSocket always times out after 30 seconds', () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -300,8 +419,7 @@ describe('WaitingRoom', () => {
             wsReady: fc.boolean(),
           }),
           ({ agent1Ready, wsReady }) => {
-            // Only test cases where NOT both are ready
-            fc.pre(!agent1Ready || !wsReady);
+            fc.pre(!wsReady);
 
             mockDispatch.mockClear();
             mockState = {
@@ -309,7 +427,7 @@ describe('WaitingRoom', () => {
               phase: 'waiting',
               agent1Ready,
               wsReady,
-              wsConnectionState: agent1Ready ? 'connected' : 'disconnected',
+              wsConnectionState: 'disconnected',
             };
 
             const { unmount } = render(<WaitingRoom />);
@@ -318,7 +436,9 @@ describe('WaitingRoom', () => {
               vi.advanceTimersByTime(30000);
             });
 
-            expect(mockDispatch).toHaveBeenCalledWith({ type: 'TIMEOUT' });
+            expect(mockDispatch).toHaveBeenCalledWith(
+              expect.objectContaining({ type: 'WS_CONNECT_FAILED' })
+            );
             unmount();
           }
         ),

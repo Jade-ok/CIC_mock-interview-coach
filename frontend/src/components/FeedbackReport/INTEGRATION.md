@@ -1,36 +1,33 @@
 # FeedbackReport Integration Status
 
-> Partially integrated. Last verified: 2026-08-07.
+> Integrated, with transcript viewing still pending. Last verified: 2026-08-07.
 
-The `FeedbackReport` component and its section components are implemented and tested, but the application does not currently render them. `FeedbackScreen.tsx` displays `feedbackResult` as formatted JSON.
+`FeedbackScreen.tsx` renders successful, runtime-validated Evaluator results through `FeedbackReport`. Practice Again resets the session. View Full Transcript controls remain hidden until a transcript view and callback are implemented.
 
 Hosting the React build on AWS Amplify does not change this component contract. The feedback data still comes from the Evaluator Lambda HTTP path; AgentCore and Nova 2 Sonic handle the live voice session, not report rendering or evaluation.
 
-## Required Integration
+## Integration Checklist
 
 1. [x] Align `agent3Client.ts` with `schemas/interviewer_output.json`.
 2. [x] Retain the complete Analyst output in session state.
 3. [x] Map the interview transcript to Evaluator conversation turns and metadata.
-4. Type a successful Evaluator response as `EvaluatorOutput`.
-5. Render `FeedbackReport` from `FeedbackScreen` when `feedbackResult` is present.
+4. [x] Render successful results as `EvaluatorOutput` in `FeedbackScreen`.
+5. [x] Render `FeedbackReport` when `feedbackResult` is present.
+6. [ ] Implement the full transcript view.
 
-Example target usage:
+Current usage:
 
 ```tsx
 import { FeedbackReport } from './FeedbackReport';
-import type { EvaluatorOutput } from '../types/evaluator';
 
 if (feedbackResult) {
   return (
     <FeedbackReport
-      data={feedbackResult as EvaluatorOutput}
+      data={feedbackResult}
       onPracticeAgain={onNewSession}
-      onViewTranscript={() => {
-        // Pending: open the transcript view.
-      }}
     />
   );
 }
 ```
 
-The request and response envelopes now match the backend. `feedbackResult` and `AGENT3_SUCCESS` remain intentionally untyped until the Evaluator output type and report rendering steps above are completed.
+The request and response envelopes match the backend. `agent3Client` validates successful HTTP responses before returning them, and session state retains the narrowed `EvaluatorOutput` type through rendering.

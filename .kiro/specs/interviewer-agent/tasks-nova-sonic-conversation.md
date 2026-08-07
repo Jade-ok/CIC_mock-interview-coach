@@ -9,7 +9,8 @@
 - [x] Add bidirectional session management and audio-queue primitives in `s2s_session_manager.py`.
 - [x] Add the FastAPI health endpoint and WebSocket relay in `server.py`.
 - [x] Configure `amazon.nova-2-sonic-v1:0` in `us-east-1`.
-- [x] Add the Dockerfile, Python dependencies, and `.bedrock_agentcore.yaml`.
+- [x] Add the Dockerfile and Python dependencies for the relay.
+- [ ] Migrate deployment from the temporary legacy `.bedrock_agentcore.yaml` workflow to the current AgentCore CLI/configuration before production deployment.
 - [x] Translate the browser `{type, payload}` contract to and from Nova events in `protocol.py`.
 - [x] Emit `session_start_ack` after the relay sends the Nova setup sequence.
 - [x] Route browser audio through `send_audio_chunk()` and the bounded queue.
@@ -30,6 +31,7 @@
 
 ## Deployment Verification
 
+- [ ] Migrate the legacy Starter Toolkit layout to AWS's current `@aws/agentcore` project format.
 - [ ] Build the container from `backend/voice_agent/`.
 - [ ] Deploy with the AgentCore CLI from `backend/voice_agent/`.
 - [ ] Configure authentication for browser-to-AgentCore access and document the chosen token/identity flow.
@@ -39,6 +41,6 @@
 
 ## Evaluator Handoff
 
-- [ ] Retain the complete `analyst_output` in frontend state.
-- [ ] Map transcript entries to `schemas/interviewer_output.json` conversation turns.
-- [ ] Populate interview metadata and submit the canonical Evaluator request.
+- [x] Retain the complete `analyst_output` in frontend state.
+- [x] Map transcript entries to `schemas/interviewer_output.json` conversation turns.
+- [x] Populate interview metadata and submit the canonical Evaluator request.

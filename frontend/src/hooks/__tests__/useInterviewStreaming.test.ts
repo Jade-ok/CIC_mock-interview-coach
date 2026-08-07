@@ -397,6 +397,195 @@ describe('useInterviewStreaming', () => {
     });
   });
 
+  describe('interview WebSocket lifecycle ownership', () => {
+    it('dispatches disconnect and reconnect lifecycle events after handoff', async () => {
+      renderHook(() =>
+        useInterviewStreaming({
+          phase: 'interview',
+          wsClient: mockWs,
+          dispatch,
+          audioManagerFactory: () => mockAm,
+        })
+      );
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+
+      act(() => {
+        mockWs.onDisconnect('network lost');
+        mockWs.onReconnectSuccess();
+        mockWs.onReconnectFailed();
+      });
+
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'WS_DISCONNECTED',
+        payload: { reason: 'network lost' },
+      });
+      expect(dispatch).toHaveBeenCalledWith({ type: 'WS_RECONNECT_SUCCESS' });
+      expect(dispatch).toHaveBeenCalledWith({ type: 'WS_RECONNECT_FAILED' });
+    });
+  });
+
+  describe('end_interview tool handling', () => {
+    it('waits for playback, closes the socket, and starts evaluation', async () => {
+      let releasePlayback!: () => void;
+      mockAm.waitForPlaybackEnd = vi.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          releasePlayback = resolve;
+        })
+      );
+      const onAutoEnd = vi.fn();
+
+      renderHook(() =>
+        useInterviewStreaming({
+          phase: 'interview',
+          wsClient: mockWs,
+          dispatch,
+          audioManagerFactory: () => mockAm,
+          onAutoEnd,
+        })
+      );
+
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+      act(() => {
+        (mockWs as unknown as { onMessage: (e: NovaSonicOutputEvent) => void }).onMessage({
+          type: 'tool_use',
+          payload: { toolName: 'end_interview', toolUseId: 'tool-1', content: '{}' },
+        });
+      });
+
+      expect(mockAm.waitForPlaybackEnd).toHaveBeenCalled();
+      expect(mockWs.send).not.toHaveBeenCalled();
+
+      await act(async () => releasePlayback());
+
+      expect(mockWs.send).toHaveBeenCalledWith({
+        type: 'session_end',
+        payload: { promptName: 'default' },
+      });
+      expect(mockWs.disconnect).toHaveBeenCalled();
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'END_INTERVIEW',
+        payload: { reason: 'auto' },
+      });
+      expect(onAutoEnd).toHaveBeenCalledOnce();
+    });
+
+    it('handles duplicate end_interview tool events only once', async () => {
+      let releasePlayback!: () => void;
+      mockAm.waitForPlaybackEnd = vi.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          releasePlayback = resolve;
+        })
+      );
+      const onAutoEnd = vi.fn();
+
+      renderHook(() =>
+        useInterviewStreaming({
+          phase: 'interview',
+          wsClient: mockWs,
+          dispatch,
+          audioManagerFactory: () => mockAm,
+          onAutoEnd,
+        })
+      );
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+
+      const event: NovaSonicOutputEvent = {
+        type: 'tool_use',
+        payload: { toolName: 'end_interview', toolUseId: 'tool-1', content: '{}' },
+      };
+      act(() => {
+        mockWs.onMessage(event);
+        mockWs.onMessage({
+          ...event,
+          payload: { ...event.payload, toolUseId: 'tool-2' },
+        });
+      });
+
+      expect(mockAm.waitForPlaybackEnd).toHaveBeenCalledOnce();
+      await act(async () => releasePlayback());
+      expect(mockWs.send).toHaveBeenCalledOnce();
+      expect(mockWs.disconnect).toHaveBeenCalledOnce();
+      expect(onAutoEnd).toHaveBeenCalledOnce();
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'END_INTERVIEW',
+        payload: { reason: 'auto' },
+      });
+    });
+
+    it('cancels automatic ending if the interview phase ends during playback', async () => {
+      let releasePlayback!: () => void;
+      mockAm.waitForPlaybackEnd = vi.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          releasePlayback = resolve;
+        })
+      );
+      const onAutoEnd = vi.fn();
+      const { rerender } = renderHook(
+        ({ phase }) =>
+          useInterviewStreaming({
+            phase,
+            wsClient: mockWs,
+            dispatch,
+            audioManagerFactory: () => mockAm,
+            onAutoEnd,
+          }),
+        { initialProps: { phase: 'interview' } }
+      );
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+
+      act(() => {
+        mockWs.onMessage({
+          type: 'tool_use',
+          payload: { toolName: 'end_interview', toolUseId: 'tool-1', content: '{}' },
+        });
+      });
+      rerender({ phase: 'feedback' });
+      await act(async () => releasePlayback());
+
+      expect(mockWs.send).not.toHaveBeenCalled();
+      expect(mockWs.disconnect).not.toHaveBeenCalled();
+      expect(onAutoEnd).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'END_INTERVIEW' })
+      );
+    });
+
+    it('does not duplicate a manual end that disconnects during playback', async () => {
+      let releasePlayback!: () => void;
+      mockAm.waitForPlaybackEnd = vi.fn().mockReturnValue(
+        new Promise<void>((resolve) => {
+          releasePlayback = resolve;
+        })
+      );
+      const onAutoEnd = vi.fn();
+      renderHook(() =>
+        useInterviewStreaming({
+          phase: 'interview',
+          wsClient: mockWs,
+          dispatch,
+          audioManagerFactory: () => mockAm,
+          onAutoEnd,
+        })
+      );
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+
+      act(() => {
+        mockWs.onMessage({
+          type: 'tool_use',
+          payload: { toolName: 'end_interview', toolUseId: 'tool-1', content: '{}' },
+        });
+      });
+      vi.mocked(mockWs.getState).mockReturnValue('disconnected');
+      await act(async () => releasePlayback());
+
+      expect(mockWs.send).not.toHaveBeenCalled();
+      expect(onAutoEnd).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'END_INTERVIEW' })
+      );
+    });
+  });
+
   describe('USER_TURN dispatch on playback end', () => {
     it('should dispatch USER_TURN when onPlaybackEnd fires', async () => {
       const factory = vi.fn().mockReturnValue(mockAm);

@@ -8,7 +8,7 @@ try:
 except ImportError:
     from evaluator.exceptions import EvaluationError
 
-MODEL_ID = "global.anthropic.claude-sonnet-5"
+MODEL_ID = "global.anthropic.claude-sonnet-4-6"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 
@@ -16,7 +16,11 @@ MAX_ATTEMPTS = 2
 _client = boto3.client(
     "bedrock-runtime",
     region_name=REGION,
-    config=Config(retries={"max_attempts": 0}),
+    config=Config(
+        read_timeout=120,
+        connect_timeout=10,
+        retries={"max_attempts": 0},
+    ),
 )
 
 

@@ -104,7 +104,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE Analyst SHALL target the `us-east-1` region for all Bedrock Converse API calls.
-2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-5` as the default model for Bedrock calls.
+2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-4-6` as the default model for Bedrock calls.
 3. THE Analyst SHALL allow the model ID to be swapped by changing only the model ID string, with no other code changes required.
 
 ### Requirement 8: Analyst Input Validation
@@ -124,11 +124,11 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 #### Acceptance Criteria
 
-1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL retry the call once (maximum 2 total attempts).
-2. IF the Converse_API call fails on both attempts, THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator.
-3. IF the Converse_API call returns an invalid or unparseable response, THEN THE Analyst SHALL treat it as a failure and retry once.
+1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator after the single transport attempt.
+2. IF the Converse_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh Bedrock call (maximum 2 total calls).
+3. The Bedrock client SHALL use a 120-second read timeout, a 10-second connect timeout, and no SDK retries so the 300-second Lambda budget remains predictable.
 
-**Current behavior:** transient retries occur inside `bedrock_client`, while a schema-invalid result can cause `orchestrator` to call that client again. In the worst case this can produce four Bedrock calls, so the implementation does not enforce one global two-attempt ceiling.
+**Current behavior:** transport errors are not retried. A schema-invalid model response receives one recovery call, for a maximum of two Bedrock calls.
 
 ### Requirement 10: Analysis Warnings
 

@@ -34,12 +34,16 @@ describe('callAgent1', () => {
         runtime_context: 'runtime context',
       }), { status: 200 }));
 
+    const abortController = new AbortController();
     const result = await callAgent1({
       pdf: new File(['resume'], 'resume.pdf', { type: 'application/pdf' }),
       jdText: 'job description',
-    });
+    }, abortController.signal);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    for (const [, options] of fetchMock.mock.calls) {
+      expect(options?.signal).toBe(abortController.signal);
+    }
     expect(result.analyst_output).toEqual(analystOutput);
     expect(result.nova_sonic_context).toBe('runtime context');
     expect(result.competency_guides[0]).toMatchObject({

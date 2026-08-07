@@ -20,9 +20,10 @@ This specification covers the React frontend and its use of existing HTTP and We
 2. The real WebSocket client must be the default; mock use must require explicit configuration.
 3. `session_start` must not be sent until Agent 1 context and a connected socket both exist.
 4. The interview must not begin until `session_start_ack` is received.
-5. If readiness is incomplete after 30 seconds, the UI must show a retryable timeout.
-6. Retry must preserve a successful dependency and retry only the failed dependency.
-7. Going back must disconnect the active socket and reset session state.
+5. If the voice relay is not connected after 30 seconds, the UI must show a retryable connection error.
+6. Agent 1 may run for up to 330 seconds so two sequential 120-second Bedrock calls plus pipeline overhead can complete.
+7. Retry must preserve a successful or still-running dependency and retry only the failed dependency.
+8. Going back must abort the active Agent 1 request, disconnect the active socket, and reset session state.
 
 ## 3. Voice Interview
 
@@ -98,13 +99,14 @@ Implemented and locally tested:
 - Audio and text streaming hooks.
 - Transcript accumulation and Evaluator request mapping.
 - Manual/automatic end UI behavior.
+- Guide Panel, Practice Mode bubbles, and competency highlighting.
+- Typed FeedbackReport integration with runtime response validation.
 - Reducer, service, component, and protocol tests.
 
 Still pending:
 
 - Decide whether to align the current 10 MB frontend limit with the backend's 4 MB limit.
 - Live Nova and AgentCore verification.
-- Full Guide Panel and practice-bubble UI.
-- Typed FeedbackReport integration.
+- Transcript viewing from the FeedbackReport.
 - Amplify hosting and authentication.
 - Protected Lambda access.

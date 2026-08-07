@@ -1,6 +1,6 @@
 # Tasks
 
-> Active tracker. Last verified: 2026-08-07. FeedbackReport components are implemented; integration with the existing FeedbackScreen is not. Amplify publishing and authenticated AgentCore WSS are separate pending deployment tasks.
+> Active tracker. Last verified: 2026-08-07. FeedbackReport is integrated with the existing FeedbackScreen. Amplify publishing and authenticated AgentCore WSS are separate pending deployment tasks.
 
 ## Task 1: Type Definitions and Utility Setup
 
@@ -82,8 +82,8 @@
 
 ## Task 10: Integration with Existing App
 
-- [ ] Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback'); it currently renders raw JSON
-- [ ] Map AGENT3_SUCCESS payload to EvaluatorOutput only after the frontend request matches the Evaluator contract
-- [ ] Wire onPracticeAgain to dispatch RESET action in the integrated screen
-- [ ] Wire onViewTranscript to open transcript view (or retain an explicitly labeled placeholder)
-- [ ] Verify the full flow: mock evaluator response → FeedbackReport renders correctly
+- [x] Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback')
+- [x] Render AGENT3_SUCCESS results through EvaluatorOutput after aligning the frontend request with the Evaluator contract
+- [x] Wire onPracticeAgain to dispatch RESET action in the integrated screen
+- [ ] Add a transcript view and then expose the currently hidden View Full Transcript controls
+- [x] Verify the full flow: mock evaluator response → FeedbackReport renders correctly

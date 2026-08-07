@@ -65,7 +65,7 @@ Source: `backend/voice_agent/`
 - `protocol.py` translates the browser contract to and from Nova events.
 - `s2s_session_manager.py` owns the Nova bidirectional stream and transient queues.
 - `s2s_events.py` builds Nova protocol events.
-- `.bedrock_agentcore.yaml` stores AgentCore deployment configuration.
+- `.bedrock_agentcore.yaml` is an ignored, account-specific file used only by the temporary legacy Starter Toolkit workflow. Production deployment requires migration to the current AgentCore CLI/configuration.
 - `Dockerfile` packages the relay.
 
 The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
@@ -89,7 +89,7 @@ The context builder instructs Nova to conduct three main questions with one adap
 - CDK deploys the four backend Lambdas (PDF Parser, Analyst, Interviewer context builder, and Evaluator) plus S3 configuration.
 - Run AgentCore deployment from `backend/voice_agent/`; this managed serverless runtime is separate from Amplify Hosting.
 - Configure the Amplify build with the deployed HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint should be hard-coded.
-- `scripts/deploy.sh` is a targeted/manual Interviewer + voice workflow, not the canonical deployment for all Lambdas.
+- `scripts/deploy.sh` runs the canonical full CDK backend deployment. Its separate legacy AgentCore step is opt-in and validates the local generated configuration against the active account and Region.
 
 ## Remaining Integration Gaps
 

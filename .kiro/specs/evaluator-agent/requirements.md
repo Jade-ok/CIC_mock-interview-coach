@@ -66,7 +66,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. THE Bedrock_Client SHALL call the Converse API using model ID global.anthropic.claude-sonnet-5 in region us-east-1
+1. THE Bedrock_Client SHALL call the Converse API using model ID global.anthropic.claude-sonnet-4-6 in region us-east-1
 2. THE Bedrock_Client SHALL use the tool_use pattern to force structured JSON output matching the defined evaluation schema
 3. IF the Bedrock API call fails or returns an invalid response, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
 4. IF both attempts fail, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message

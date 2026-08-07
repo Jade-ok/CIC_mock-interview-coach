@@ -6,11 +6,13 @@
  */
 
 import type { SessionError } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
+import { FeedbackReport } from './FeedbackReport';
 
 export interface FeedbackScreenProps {
   loading: boolean;
   error: SessionError | null;
-  feedbackResult: unknown;
+  feedbackResult: EvaluatorOutput | null;
   onRetry: () => void;
   onNewSession: () => void;
 }
@@ -61,18 +63,10 @@ export function FeedbackScreen({
 
       {!loading && !error && feedbackResult != null && (
         <div className="feedback-screen__result" data-testid="feedback-result">
-          <h2 className="feedback-screen__title">Interview Feedback</h2>
-          <pre className="feedback-screen__data">
-            {String(JSON.stringify(feedbackResult, null, 2))}
-          </pre>
-          <button
-            className="feedback-screen__btn feedback-screen__btn--new"
-            onClick={onNewSession}
-            type="button"
-            data-testid="feedback-new-session-btn"
-          >
-            Start New Session
-          </button>
+          <FeedbackReport
+            data={feedbackResult}
+            onPracticeAgain={onNewSession}
+          />
         </div>
       )}
 
@@ -131,27 +125,7 @@ export function FeedbackScreen({
         }
 
         .feedback-screen__result {
-          max-width: 600px;
           width: 100%;
-        }
-
-        .feedback-screen__title {
-          font-size: 24px;
-          font-weight: 600;
-          margin: 0 0 24px;
-          text-align: center;
-        }
-
-        .feedback-screen__data {
-          background-color: var(--color-tile-bg, #1C1C1E);
-          border-radius: 8px;
-          padding: 16px;
-          font-size: 13px;
-          color: var(--color-text-secondary, #A0A0A5);
-          overflow-x: auto;
-          white-space: pre-wrap;
-          word-break: break-word;
-          margin: 0 0 24px;
         }
 
         .feedback-screen__btn {

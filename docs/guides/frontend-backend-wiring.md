@@ -20,7 +20,7 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 ## What Exists Today
 
 - The CDK stack defines the four Lambda Function URLs and S3 configuration bucket.
-- The Python relay can run locally and has AgentCore deployment configuration.
+- The Python relay can run locally; account-specific AgentCore configuration is intentionally untracked, and migration from the legacy Starter Toolkit layout to AWS's current AgentCore CLI remains pending.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
 - The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
@@ -113,7 +113,7 @@ For deployment, the browser-to-AgentCore connection must be authenticated with s
 
 - Upload, waiting-room, interview, audio, text-input, reconnect, and feedback-state components exist.
 - The real relay is the default. Set `VITE_USE_MOCK_WEBSOCKET=true` to opt into `MockWebSocketClient`.
-- `FeedbackReport` components exist, but `FeedbackScreen` still renders raw feedback JSON.
+- `FeedbackScreen` renders successful Evaluator results through the typed `FeedbackReport` after runtime response validation.
 - The submitted PDF/JD and complete Analyst output are retained in active session state for downstream calls.
 
 Do not describe the flow as end-to-end complete until it passes a live browser/Nova session and the deployment/authentication work below is complete.

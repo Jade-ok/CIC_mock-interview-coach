@@ -18,7 +18,10 @@ const INTERVIEWER_URL = import.meta.env.VITE_INTERVIEWER_URL;
  * Calls the full pipeline: pdf_parser → analyst → interviewer.
  * Returns the complete Analyst output plus the derived runtime context and UI guides.
  */
-export async function callAgent1(request: Agent1Request): Promise<Agent1Response> {
+export async function callAgent1(
+  request: Agent1Request,
+  signal?: AbortSignal
+): Promise<Agent1Response> {
   // Step 1: Convert PDF to base64 and call pdf_parser
   const base64Pdf = await fileToBase64(request.pdf);
 
@@ -29,6 +32,7 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
       resume: { content: base64Pdf, format: 'pdf' },
       job_posting: { content: request.jdText, format: 'text' },
     }),
+    signal,
   });
 
   const parseResult = await parseResponse.json();
@@ -43,6 +47,7 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resume_text, job_posting_text }),
+    signal,
   });
 
   const analystResult = await analystResponse.json();
@@ -57,6 +62,7 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ analyst_output: analystOutput }),
+    signal,
   });
 
   const interviewerResult = await interviewerResponse.json();

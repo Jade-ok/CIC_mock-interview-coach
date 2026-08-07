@@ -1,153 +1,82 @@
-#!/bin/bash
-# Deploy script for the Mock Interview Coach
-# Run from the project root: ./scripts/deploy.sh
-#
-# Prerequisites:
-#   - AWS CLI configured with credentials
-#   - Docker running (for backend/voice_agent)
-#   - agentcore CLI installed (pip3 install bedrock-agentcore-starter-toolkit)
+#!/usr/bin/env bash
+# Deploy the CDK backend and, when configured locally, the AgentCore relay.
+# Run from the repository root: ./scripts/deploy.sh
 
-set -e
+set -euo pipefail
 
-REGION="us-east-1"
-ACCOUNT_ID="002859476624"
-S3_BUCKET="cic-mock-interview-configs-002859476624"
-LAMBDA_ROLE="mock-interview-lambda-role"
+DEPLOY_REGION="us-east-1"
+DEPLOY_PROFILE="${AWS_PROFILE:-mock-interview-dev}"
+DEPLOY_LEGACY_AGENTCORE="${DEPLOY_LEGACY_AGENTCORE:-false}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AGENTCORE_CONFIG="$REPO_ROOT/backend/voice_agent/.bedrock_agentcore.yaml"
 
-echo "=========================================="
-echo " Mock Interview Coach - Deployment Script"
-echo "=========================================="
-echo ""
+command -v aws >/dev/null || { echo "AWS CLI is required."; exit 1; }
+command -v npm >/dev/null || { echo "npm is required."; exit 1; }
 
-# Check AWS credentials
-echo "[1/6] Checking AWS credentials..."
-aws sts get-caller-identity --region $REGION > /dev/null 2>&1 || {
-    echo "ERROR: No AWS credentials found. Run 'aws configure' or export credentials."
+echo "Checking AWS identity for profile '$DEPLOY_PROFILE'..."
+DEPLOY_ACCOUNT="$(aws sts get-caller-identity \
+  --profile "$DEPLOY_PROFILE" \
+  --query Account \
+  --output text)"
+echo "Deploying to account $DEPLOY_ACCOUNT in $DEPLOY_REGION."
+
+# Validate every requested deployment boundary before mutating AWS state. This
+# avoids successfully deploying CDK and then failing an optional AgentCore step.
+if [[ "$DEPLOY_LEGACY_AGENTCORE" == "true" ]]; then
+  if ! command -v agentcore >/dev/null; then
+    echo "AgentCore CLI is not installed; cannot deploy the requested legacy voice relay."
     exit 1
-}
-echo "  ✓ Credentials OK ($(aws sts get-caller-identity --query 'Arn' --output text))"
-echo ""
+  fi
+  # Let grep consume the full help output. With pipefail, grep -q can close the
+  # pipe early and make a matching CLI look invalid when agentcore gets SIGPIPE.
+  if ! agentcore --help 2>&1 | grep "Configuration management" >/dev/null; then
+    echo "The installed AgentCore CLI does not match the legacy Starter Toolkit expected by this script."
+    echo "Follow backend/voice_agent/README.md to migrate instead of mixing CLI formats."
+    exit 1
+  fi
+  if [[ ! -f "$AGENTCORE_CONFIG" ]]; then
+    echo "Missing $AGENTCORE_CONFIG. Run the legacy AgentCore configure step for this account first."
+    exit 1
+  fi
 
-# Upload S3 configs
-echo "[2/6] Uploading S3 interview configs..."
-aws s3 cp backend/config/interview_structure.json \
-    s3://$S3_BUCKET/interview_structure.json --region $REGION
-aws s3 cp backend/config/student_interview_profile.json \
-    s3://$S3_BUCKET/student_interview_profile.json --region $REGION
-echo "  ✓ S3 configs uploaded to s3://$S3_BUCKET/"
-echo ""
+  CONFIG_ACCOUNT="$(awk '$1 == "account:" { print $2; exit }' "$AGENTCORE_CONFIG")"
+  CONFIG_REGION="$(awk '$1 == "region:" { print $2; exit }' "$AGENTCORE_CONFIG")"
+  if [[ -z "$CONFIG_ACCOUNT" || -z "$CONFIG_REGION" ]]; then
+    echo "AgentCore config is missing its account or region; refusing deployment."
+    exit 1
+  fi
+  if [[ "$CONFIG_ACCOUNT" != "$DEPLOY_ACCOUNT" || "$CONFIG_REGION" != "$DEPLOY_REGION" ]]; then
+    echo "AgentCore config targets $CONFIG_ACCOUNT/$CONFIG_REGION, not $DEPLOY_ACCOUNT/$DEPLOY_REGION."
+    echo "Re-run legacy AgentCore configuration with profile '$DEPLOY_PROFILE' before deploying."
+    exit 1
+  fi
+fi
 
-# Deploy Interviewer Lambda
-echo "[3/6] Deploying Interviewer Lambda..."
-rm -f interviewer.zip
+echo "Deploying the Lambda and S3 backend with CDK..."
 (
-    cd backend/functions/interviewer
-    zip -r ../../../interviewer.zip . \
-        -x ".env" "tests/*" "__pycache__/*" "*.pyc" > /dev/null
+  cd "$REPO_ROOT/infrastructure"
+  npm ci
+  npm run build
+  npx cdk deploy \
+    --profile "$DEPLOY_PROFILE" \
+    --require-approval never
 )
 
-# Check if function exists
-if aws lambda get-function --function-name mock-interview-interviewer --region $REGION > /dev/null 2>&1; then
-    echo "  Function exists, updating code..."
-    aws lambda update-function-code \
-        --function-name mock-interview-interviewer \
-        --zip-file fileb://interviewer.zip \
-        --region $REGION > /dev/null
-    aws lambda wait function-updated \
-        --function-name mock-interview-interviewer \
-        --region $REGION
-    aws lambda update-function-configuration \
-        --function-name mock-interview-interviewer \
-        --handler handler.lambda_handler \
-        --region $REGION > /dev/null
-    aws lambda wait function-updated \
-        --function-name mock-interview-interviewer \
-        --region $REGION
+if [[ "$DEPLOY_LEGACY_AGENTCORE" != "true" ]]; then
+  echo "Skipping the legacy AgentCore deployment (opt in with DEPLOY_LEGACY_AGENTCORE=true)."
+  echo "See backend/voice_agent/README.md before choosing or migrating AgentCore CLI formats."
 else
-    echo "  Creating new function..."
-    aws lambda create-function \
-        --function-name mock-interview-interviewer \
-        --runtime python3.12 \
-        --handler handler.lambda_handler \
-        --zip-file fileb://interviewer.zip \
-        --role "arn:aws:iam::${ACCOUNT_ID}:role/${LAMBDA_ROLE}" \
-        --region $REGION \
-        --timeout 30 \
-        --environment "Variables={S3_BUCKET=$S3_BUCKET,INTERVIEW_STRUCTURE_KEY=interview_structure.json,INTERVIEW_PROFILE_KEY=student_interview_profile.json,AWS_REGION=$REGION}" \
-        > /dev/null
-
-    # Enable Function URL
-    aws lambda create-function-url-config \
-        --function-name mock-interview-interviewer \
-        --auth-type NONE \
-        --cors "AllowOrigins=*,AllowMethods=POST,AllowHeaders=content-type" \
-        --region $REGION > /dev/null
-
-    # Allow public access
-    aws lambda add-permission \
-        --function-name mock-interview-interviewer \
-        --statement-id FunctionURLAllowPublicAccess \
-        --action lambda:InvokeFunctionUrl \
-        --principal "*" \
-        --function-url-auth-type NONE \
-        --region $REGION > /dev/null 2>&1 || true
-fi
-
-LAMBDA_URL=$(aws lambda get-function-url-config --function-name mock-interview-interviewer --region $REGION --query 'FunctionUrl' --output text)
-echo "  ✓ Interviewer Lambda deployed"
-echo "  URL: $LAMBDA_URL"
-rm -f interviewer.zip
-echo ""
-
-# Test Interviewer Lambda
-echo "[4/6] Testing Interviewer Lambda (direct invoke)..."
-aws lambda invoke \
-    --function-name mock-interview-interviewer \
-    --region $REGION \
-    --cli-binary-format raw-in-base64-out \
-    --payload '{"analyst_output":{"schema_version":"1.0","candidate_profile":{"candidate_level":"student_intern","education_summary":"CS","experience_summary":"intern","relevant_skills":["Python"],"experience_types_available":["internship"]},"target_role":{"title":"Intern","company":"Co","seniority":"intern","role_summary":"Build","required_skills":["Python"],"preferred_skills":[],"key_responsibilities":["Code"],"evaluation_priorities":["ownership"]},"resume_job_alignment":{"strong_matches":[],"partial_matches":[],"areas_to_explore":[]},"interview_plan":[],"selected_experiences":[],"analysis_warnings":[]}}' \
-    /tmp/interviewer_test.json > /dev/null 2>&1
-
-if grep -q '"success": true' /tmp/interviewer_test.json; then
-    echo "  ✓ Lambda test passed (success: true)"
-else
-    echo "  ✗ Lambda test FAILED"
-    cat /tmp/interviewer_test.json
-    echo ""
-fi
-echo ""
-
-# Deploy Voice Agent Server to AgentCore
-echo "[5/6] Deploying Voice Agent Server to AgentCore Runtime..."
-if command -v agentcore > /dev/null 2>&1; then
-    cd backend/voice_agent
-    AGENTCORE_SUPPRESS_RECOMMENDATION=1 agentcore deploy \
+  echo "Deploying the AgentCore voice relay..."
+  (
+    cd "$REPO_ROOT/backend/voice_agent"
+    AWS_PROFILE="$DEPLOY_PROFILE" \
+    AWS_REGION="$DEPLOY_REGION" \
+    AGENTCORE_SUPPRESS_RECOMMENDATION=1 \
+      agentcore deploy \
         -a mock-interview-voice-agent \
-        --env AWS_REGION=$REGION \
-        --env MODEL_ID=amazon.nova-2-sonic-v1:0 || {
-        echo "  ✗ AgentCore deploy failed (check permissions)"
-        echo "  You may need: bedrock-agentcore:CreateAgentRuntime permission"
-    }
-    cd ..
-else
-    echo "  ⚠ agentcore CLI not installed. Skipping voice agent deploy."
-    echo "  Install: pip3 install --break-system-packages bedrock-agentcore-starter-toolkit"
+        --env AWS_REGION="$DEPLOY_REGION" \
+        --env MODEL_ID=amazon.nova-2-sonic-v1:0
+  )
 fi
-echo ""
 
-# Summary
-echo "[6/6] Deployment Summary"
-echo "=========================================="
-echo "  Region:           $REGION"
-echo "  S3 Bucket:        s3://$S3_BUCKET/"
-echo "  Interviewer URL:  $LAMBDA_URL"
-echo "  Voice Agent:      (check agentcore status)"
-echo ""
-echo "  To test locally:"
-echo "    aws lambda invoke --function-name mock-interview-interviewer \\"
-echo "      --region $REGION --cli-binary-format raw-in-base64-out \\"
-echo "      --payload '{\"analyst_output\":{...}}' /dev/stdout"
-echo ""
-echo "  To check voice agent status:"
-echo "    cd backend/voice_agent && agentcore status"
-echo "=========================================="
+echo "Deployment step complete. Amplify Hosting and production authentication are separate setup steps."

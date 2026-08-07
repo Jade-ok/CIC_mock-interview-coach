@@ -25,8 +25,8 @@ See `../../../schemas/evaluator_output.json` for the current output shape.
 
 - **Runtime**: Python 3.12
 - **Region**: us-east-1
-- **Model**: global.anthropic.claude-sonnet-5
-- **Timeout**: 60 seconds
+- **Model**: global.anthropic.claude-sonnet-4-6
+- **Timeout**: 300 seconds (allows two 120-second application attempts plus overhead)
 
 ## IAM Permissions
 
@@ -37,9 +37,9 @@ The standalone SAM template uses the scoped policy below. The current CDK stack 
   "Effect": "Allow",
   "Action": ["bedrock:InvokeModel"],
   "Resource": [
-    "arn:aws:bedrock:us-east-1:<account-id>:inference-profile/global.anthropic.claude-sonnet-5",
-    "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-5",
-    "arn:aws:bedrock:::foundation-model/anthropic.claude-sonnet-5"
+    "arn:aws:bedrock:us-east-1:<account-id>:inference-profile/global.anthropic.claude-sonnet-4-6",
+    "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-6",
+    "arn:aws:bedrock:::foundation-model/anthropic.claude-sonnet-4-6"
   ]
 }
 ```

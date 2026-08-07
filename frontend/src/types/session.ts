@@ -1,3 +1,5 @@
+import type { EvaluatorOutput } from './evaluator';
+
 export type InterviewPhase = 'upload' | 'waiting' | 'interview' | 'feedback';
 export type TurnState = 'ai_speaking' | 'user_turn' | 'idle';
 export type InputMode = 'voice' | 'text_only';
@@ -20,7 +22,7 @@ export interface SessionState {
   wsReady: boolean;
   error: SessionError | null;
   agent3Loading: boolean;
-  feedbackResult: unknown;
+  feedbackResult: EvaluatorOutput | null;
   endReason: 'auto' | 'manual' | null;
 }
 
@@ -80,8 +82,8 @@ export type SessionAction =
   | { type: 'TEXT_INPUT_CLEAR' }
   | { type: 'END_INTERVIEW'; payload: { reason: 'auto' | 'manual' } }
   | { type: 'AGENT3_LOADING' }
-  | { type: 'AGENT3_SUCCESS'; payload: unknown }
-  | { type: 'AGENT3_FAILED'; payload: { message: string } }
+  | { type: 'AGENT3_SUCCESS'; payload: EvaluatorOutput }
+  | { type: 'AGENT3_FAILED'; payload: { message: string; retryable?: boolean } }
   | { type: 'TIMEOUT' }
   | { type: 'MIC_DENIED' }
   | { type: 'TICK' }

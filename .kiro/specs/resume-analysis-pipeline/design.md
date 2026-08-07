@@ -15,7 +15,7 @@ The React browser client orchestrates the pipeline: it calls pdf_parser first, t
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
 - tool_use pattern — we define the analyst_output schema as a "tool" in the Bedrock Converse API call, forcing Claude to produce valid JSON. This eliminates brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
-- Layered retry — each Bedrock client call permits up to two transient attempts, and the orchestrator may repeat the client call once after schema-invalid output. This currently permits up to four Bedrock calls; a global two-attempt ceiling remains a design goal rather than implemented behavior.
+- Bounded retry — each Bedrock client call makes one transport attempt. The orchestrator makes one additional call only when the first response fails schema validation, for a maximum of two Bedrock calls within the 300-second Lambda budget.
 
 ## Architecture
 
@@ -172,7 +172,7 @@ def analyze(payload: dict) -> dict:
     Orchestrates the analysis pipeline:
     1. Validate inputs
     2. Build prompt
-    3. Call Bedrock (with retry)
+    3. Call Bedrock (one transport attempt)
     4. Parse and validate response
     5. Check for analysis warnings
     
@@ -202,7 +202,7 @@ def detect_invocation_mode(event: dict) -> dict:
 #### prompt_builder.py — Claude Prompt Construction
 
 ```python
-MODEL_ID = "global.anthropic.claude-sonnet-5"  # swappable
+MODEL_ID = "global.anthropic.claude-sonnet-4-6"  # swappable
 
 def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     """
@@ -224,17 +224,14 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
 
 ```python
 REGION = "us-east-1"
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 1
 
 def call_converse(request: dict) -> dict:
     """
-    Calls Bedrock Converse API with retry logic.
+    Calls Bedrock Converse API with a bounded transport-attempt limit.
     
-    Retry triggers:
-    - Timeout / network error
-    - Throttling (429)
-    - Server error (5xx)
-    - Invalid/unparseable response
+    Transport failures are surfaced after one attempt. The orchestrator owns
+    the only retry: one fresh call after schema-invalid model output.
     
     Args:
         request: Converse API request dict from prompt_builder.
@@ -394,7 +391,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
 
 ```python
 {
-    "modelId": "global.anthropic.claude-sonnet-5",
+    "modelId": "global.anthropic.claude-sonnet-4-6",
     "messages": [
         {
             "role": "user",
@@ -439,8 +436,8 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 | Constant | Value | Location |
 |----------|-------|----------|
 | REGION | `"us-east-1"` | `bedrock_client.py` |
-| MODEL_ID | `"global.anthropic.claude-sonnet-5"` | `prompt_builder.py` |
-| MAX_ATTEMPTS | `2` | `bedrock_client.py` |
+| MODEL_ID | `"global.anthropic.claude-sonnet-4-6"` | `prompt_builder.py` |
+| MAX_ATTEMPTS | `1` | `bedrock_client.py` |
 | MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
 | MIN_JOB_POSTING_WORDS | `30` | `parser.py` (analyst) |
@@ -501,9 +498,9 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 
 **Validates: Requirements 5.5, 5.6, 6.1, 6.2, 6.3**
 
-### Property 9: Bedrock Client Retries Exactly Once on Failure
+### Property 9: Bedrock Call Budget Is Bounded
 
-*For any* Bedrock call that fails on the first attempt (transient error, invalid response, or timeout), the bedrock_client SHALL make exactly one retry. If the retry succeeds, the result is returned. If the retry fails, an error is raised (max 2 total attempts).
+*For any* transport/API failure, the Bedrock client SHALL surface the failure after its single configured attempt. If a successful response fails schema validation, the orchestrator SHALL make exactly one fresh recovery call (maximum two Bedrock calls total).
 
 **Validates: Requirements 6.5, 9.1, 9.3**
 
@@ -557,24 +554,24 @@ Validation failures use the error envelope/status indicators below. Extraction f
 | Missing/empty job_posting_text | `{"status": "error", "error": "Missing or empty fields: job_posting_text"}` | 400 |
 | Both fields missing/empty | `{"status": "error", "error": "Missing or empty fields: resume_text, job_posting_text"}` | 400 |
 | Malformed JSON in event['body'] | `{"status": "error", "error": "Failed to parse request body as JSON"}` | 400 |
-| Bedrock transient failure (after retry) | `{"status": "error", "error": "Bedrock API call failed after 2 attempts: <reason>"}` | 502 |
-| Bedrock response not parseable (after retry) | `{"status": "error", "error": "Bedrock returned invalid response after 2 attempts"}` | 502 |
-| Schema validation failure (after retry) | `{"status": "error", "error": "Analyst output does not conform to schema after 2 attempts: <detail>"}` | 502 |
+| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock API call failed after 1 attempt: <reason>"}` | 502 |
+| Bedrock response not parseable on the recovery call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
+| Schema validation failure on the recovery call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
 | Unexpected exception | `{"status": "error", "error": "Internal error: <brief description>"}` | 500 |
 
 ### Retry Strategy (analyst)
 
 ```text
 orchestrator attempt 1
-  └─ bedrock_client: up to 2 calls for transient failures
+  └─ bedrock_client: 1 transport attempt
   └─ parse and validate
 if schema validation fails:
   orchestrator attempt 2
-    └─ bedrock_client: again up to 2 transient attempts
+    └─ bedrock_client: 1 fresh transport attempt
     └─ parse and validate
 ```
 
-Transient errors include `ReadTimeoutError`, throttling, and Bedrock 5xx responses. Because transport and schema retries are nested, the maximum is currently four service calls, not two.
+`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Schema-invalid model output receives one recovery call, so the maximum is two service calls.
 
 ## Testing Strategy: Current and Planned
 
@@ -582,8 +579,9 @@ Transient errors include `ReadTimeoutError`, throttling, and Bedrock 5xx respons
 
 - `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
 - `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
+- Analyst operational tests cover the Bedrock timeout/retry configuration, Sonnet 4.6 model, 8,192-token budget, and one schema-recovery call.
 - Evaluator and Interviewer have their own unit suites under their function directories.
-- There is currently no dedicated Analyst unit-test directory, PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
+- There is currently no PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
 
 The sections below are the planned expansion, not a description of tests that already exist.
 
@@ -616,7 +614,7 @@ Property-based testing (PBT) is appropriate for this feature because:
 | 6: pdf_parser Validation | `backend/functions/pdf_parser/validation.py` | Payloads with missing/oversized fields |
 | 7: Analyst Validation | `backend/functions/analyst/validation.py` | Payloads with missing/empty text fields |
 | 8: Schema Validator | `backend/functions/analyst/parser.py` | Dicts with random mutations (remove keys, bad values) |
-| 9: Retry Logic | `backend/functions/analyst/bedrock_client.py` | Mock failures with various error types |
+| 9: Call Budget | `backend/functions/analyst/bedrock_client.py`, `backend/functions/analyst/orchestrator.py` | Mock transport and schema-validation failures |
 | 10: Analysis Warnings | `backend/functions/analyst/parser.py` | Strings of varying word counts, lists of varying length |
 | 11: Response Envelope | `*/handler.py` | Any inputs (valid and invalid) |
 | 12: Partial Success | `backend/functions/pdf_parser/orchestrator.py` | One valid + one invalid document |
@@ -633,8 +631,8 @@ Unit tests complement property tests for specific scenarios:
 
 - **analyst**:
   - Successful end-to-end with mocked Bedrock (golden path)
-  - Bedrock fails twice → 502 error response
-  - First call fails, retry succeeds → success returned
+  - Bedrock transport/API failure → 502 error response after one client attempt
+  - First schema-invalid response, second valid response → success returned
   - Direct mode invocation
 
 ### Planned External Integration Tests

@@ -11,6 +11,34 @@ import type {
   SessionAction,
   TranscriptEntry,
 } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
+
+const evaluatorOutput: EvaluatorOutput = {
+  per_question_scores: [],
+  overall_scores: {
+    dimensions: {
+      concrete_example: 3,
+      situation_action_result: 3,
+      link_to_job: 3,
+      quantifiable_outcome: 3,
+    },
+    total: 3,
+  },
+  question_count: 0,
+  readiness_label: 'Developing well',
+  strengths: [],
+  improvements: [],
+  contextual_advice: [],
+  interview_metadata: {
+    candidate_level: 'student_intern',
+    target_role: 'Software Engineer Intern',
+    status: 'ended_early',
+    completion_reason: 'user_ended_early',
+    main_questions_completed: 0,
+    follow_ups_completed: 0,
+    ended_early: true,
+  },
+};
 
 // ---------- Unit Tests ----------
 
@@ -229,7 +257,7 @@ describe('sessionReducer', () => {
   describe('AGENT3_SUCCESS', () => {
     it('returns state (feedback result stored externally)', () => {
       const state: SessionState = { ...initialState, phase: 'feedback' };
-      const result = sessionReducer(state, { type: 'AGENT3_SUCCESS', payload: { score: 85 } });
+      const result = sessionReducer(state, { type: 'AGENT3_SUCCESS', payload: evaluatorOutput });
       expect(result.phase).toBe('feedback');
     });
   });

@@ -30,11 +30,25 @@
 
 .footer-cta__button--primary {
   background: var(--text-primary);
-  color: #0A0A0A;
+  color: var(--bg-canvas);
 }
 
 .footer-cta__button--secondary {
   background: transparent;
   color: var(--text-primary);
   border: 2px solid var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .footer-cta {
+    padding: 32px 16px;
+  }
+
+  .footer-cta__actions {
+    flex-direction: column;
+  }
+
+  .footer-cta__button {
+    width: 100%;
+  }
 }

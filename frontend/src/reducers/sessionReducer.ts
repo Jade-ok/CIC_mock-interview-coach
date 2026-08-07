@@ -196,7 +196,7 @@ export function sessionReducer(
         error: {
           code: 'AGENT3_FAILED',
           message: action.payload.message,
-          retryable: true,
+          retryable: action.payload.retryable ?? true,
         },
       };
 

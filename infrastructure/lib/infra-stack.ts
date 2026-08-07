@@ -53,7 +53,9 @@ export class InfraStack extends cdk.Stack {
         { exclude: functionAssetExcludes }
       ),
       handler: 'handler.lambda_handler',
-      timeout: cdk.Duration.seconds(60),
+      // One initial Bedrock call plus one schema-recovery call may each use
+      // the Analyst client's 120-second read timeout.
+      timeout: cdk.Duration.seconds(300),
       memorySize: 512,
     });
 
@@ -86,7 +88,8 @@ export class InfraStack extends cdk.Stack {
         }
       ),
       handler: 'lambda_handler.handler',
-      timeout: cdk.Duration.seconds(60),
+      // The Evaluator performs at most two 120-second Bedrock attempts.
+      timeout: cdk.Duration.seconds(300),
       memorySize: 512,
     });
 

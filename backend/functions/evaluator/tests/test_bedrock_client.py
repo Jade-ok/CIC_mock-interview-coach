@@ -3,7 +3,13 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
-from evaluator.bedrock_client import invoke, _extract_tool_input, MAX_ATTEMPTS
+from evaluator.bedrock_client import (
+    MODEL_ID,
+    MAX_ATTEMPTS,
+    _client,
+    _extract_tool_input,
+    invoke,
+)
 from evaluator.exceptions import EvaluationError
 
 
@@ -44,6 +50,13 @@ class TestExtractToolInput:
 
 
 class TestInvoke:
+    def test_uses_shared_sonnet_4_6_model(self):
+        assert MODEL_ID == "global.anthropic.claude-sonnet-4-6"
+
+    def test_client_timeouts_fit_the_lambda_budget(self):
+        assert _client.meta.config.read_timeout == 120
+        assert _client.meta.config.connect_timeout == 10
+
     @patch("evaluator.bedrock_client._client")
     def test_success_on_first_attempt(self, mock_client):
         tool_input = {"per_question_scores": [], "strengths": [], "improvements": [], "contextual_advice": []}

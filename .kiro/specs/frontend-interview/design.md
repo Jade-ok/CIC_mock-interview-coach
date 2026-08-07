@@ -13,10 +13,10 @@ The target production deployment uses AWS Amplify Hosting for the static fronten
 ```text
 Amplify-hosted React/Vite browser
   ├─ HTTPS → PDF Parser Lambda
-  │           → Analyst Lambda (Claude Sonnet 5)
+  │           → Analyst Lambda (Claude Sonnet 4.6)
   │           → Interviewer Lambda + S3 configuration
   ├─ authenticated WSS → AgentCore voice relay → Nova 2 Sonic
-  └─ HTTPS → Evaluator Lambda (Claude Sonnet 5)
+  └─ HTTPS → Evaluator Lambda (Claude Sonnet 4.6)
 ```
 
 Current deployment gaps:
@@ -56,7 +56,7 @@ Upload → Waiting Room → Interview → Feedback
 - Use `VITE_USE_MOCK_WEBSOCKET=true` only for intentional development mocking.
 - Send `session_start` once both HTTP context and socket connection are ready.
 - Transition after `session_start_ack`.
-- Retry only the failed side and enforce a 30-second readiness timeout.
+- Retry only the failed side. Enforce a 30-second relay timeout and a 330-second Agent 1 timeout, aborting stale Agent 1 HTTP work before retry.
 
 ### InterviewScreen
 
@@ -73,7 +73,8 @@ Upload → Waiting Room → Interview → Feedback
 
 - Show Evaluator loading and retry states.
 - Store the direct Evaluator response object.
-- Currently renders raw JSON; typed `FeedbackReport` rendering remains pending.
+- Render successful results through the typed `FeedbackReport` components.
+- Keep transcript viewing explicitly pending; Practice Again resets the session.
 
 ## State Model
 
@@ -97,7 +98,7 @@ interface SessionState {
   wsReady: boolean;
   error: SessionError | null;
   agent3Loading: boolean;
-  feedbackResult: unknown;
+  feedbackResult: EvaluatorOutput | null;
   endReason: 'auto' | 'manual' | null;
 }
 ```
@@ -188,9 +189,9 @@ Relay output events:
 
 Automatic end:
 
-1. Receive `tool_use` with `toolName === 'end_interview'`.
-2. Wait for final audio playback.
-3. Send `session_end`, disconnect, and enter Feedback.
+1. Nova emits `end_interview`; the relay immediately returns Nova's required `toolResult`.
+2. The relay holds the browser-facing `tool_use` until Nova emits `completionEnd`, preventing early audio shutdown.
+3. The browser receives `tool_use`, waits for final audio playback, sends `session_end`, disconnects, and enters Feedback.
 4. Invoke the Evaluator.
 
 Manual end:
@@ -232,8 +233,7 @@ Never place long-lived AWS credentials in a `VITE_*` variable because Vite bundl
 
 ## Remaining Work
 
-- Render the typed `FeedbackReport` rather than raw JSON.
-- Implement the complete Guide Panel and practice bubbles.
+- Implement the FeedbackReport transcript view.
 - Verify reconnection with real AgentCore session behavior and history restoration.
 - Run a live Nova browser test.
 - Add Amplify Hosting, user authentication, and AgentCore authorization.

@@ -11,7 +11,7 @@ import './FeedbackReport.css';
 interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
-  onViewTranscript: () => void;
+  onViewTranscript?: () => void;
 }
 
 export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: FeedbackReportProps) {
@@ -20,10 +20,12 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: Feed
       <header className="feedback-report__header">
         <span className="feedback-report__brand">CIC Mock Interview Coach</span>
         <nav className="feedback-report__nav">
-          <button className="feedback-report__nav-link" onClick={onViewTranscript}>
-            View full transcript
-          </button>
-          <button className="feedback-report__nav-link feedback-report__nav-link--primary" onClick={onPracticeAgain}>
+          {onViewTranscript && (
+            <button type="button" className="feedback-report__nav-link" onClick={onViewTranscript}>
+              View full transcript
+            </button>
+          )}
+          <button type="button" className="feedback-report__nav-link feedback-report__nav-link--primary" onClick={onPracticeAgain}>
             Practice again
           </button>
         </nav>
