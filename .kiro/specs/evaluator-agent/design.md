@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
+The Evaluator Agent is a stateless AWS Lambda function in the CDK-managed backend. It receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report for the React client (target host: AWS Amplify). It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly. This Lambda does not host the live WebSocket; that persistent stream is handled by the AgentCore serverless voice relay.
 
 All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The system handles variable-length conversations (1-6 question-answer pairs) without penalizing incomplete interviews. Each turn in the conversation (whether main_question or follow_up) is scored independently.
 

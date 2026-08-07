@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-07. Component implementation exists; integration into the current `FeedbackScreen` is still pending.
+> Maintained requirements. Last verified: 2026-08-07. Component implementation exists; integration into the current `FeedbackScreen` and deployment with the React app on Amplify Hosting are still pending.
 
 ## Introduction
 

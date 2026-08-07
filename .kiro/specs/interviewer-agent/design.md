@@ -1,32 +1,32 @@
 # Design: Interviewer and Voice Runtime
 
-> Maintained design. Last verified: 2026-08-07. This replaces the retired Cognito/direct-Bedrock and signing-Lambda designs.
+> Maintained design. Last verified: 2026-08-07. This replaces the retired direct browser-to-Bedrock and signing-Lambda designs. Amplify hosting and authenticated browser-to-AgentCore WSS are the target deployment and remain unimplemented.
 
 ## Overview
 
 The interview capability has two backend components:
 
 1. The Interviewer Lambda builds a Nova runtime-context string from Analyst output and two S3 configuration objects.
-2. The AgentCore-hosted voice relay owns the transient bidirectional connection to Amazon Nova 2 Sonic.
+2. The AgentCore-hosted voice relay owns the transient bidirectional connection to Amazon Nova 2 Sonic. AgentCore is an AWS-managed serverless container runtime; it is not an application server or EC2 instance that the project operates.
 
 The browser retains UI state and transcript data. No persistent interview session database is used.
 
-## Current Architecture
+## Target Architecture and Current Status
 
 ```text
-Browser
+React browser client (target: Amplify Hosting)
   ├─ POST analyst_output ──> Interviewer Function URL
   │                           └─ reads interview configs from S3
   │<─ {success, runtime_context}
   │
-  ├─ WebSocket ─────────────> AgentCore voice relay
+  ├─ authenticated WSS ─────> AgentCore serverless voice relay
   │                            └─ bidirectional stream to Nova 2 Sonic
   │<─ audio/text Nova events
   │
   └─ POST evaluator input ──> Evaluator Function URL
 ```
 
-There is no signing Lambda, Cognito identity pool, or direct browser-to-Bedrock connection in the current repository.
+There is no signing Lambda or direct browser-to-Bedrock connection in the current repository. The React client, relay container, Lambdas, S3 configuration, and CDK backend stack exist; Amplify resources, authentication integration, deployment environment values, and a verified authenticated WSS connection do not yet exist. The final identity provider may use Amplify Auth/Cognito, but this document does not claim that choice is implemented.
 
 ## Interviewer Lambda
 
@@ -69,6 +69,8 @@ Source: `backend/voice_agent/`
 
 The relay currently forwards raw Nova event JSON. It does not translate the wire format into the frontend's `{type, payload}` abstraction and does not create a synthetic `session_start_ack`.
 
+The production boundary is browser → authenticated `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
+
 ## Nova Configuration
 
 | Setting | Value |
@@ -82,8 +84,10 @@ The context builder instructs Nova to conduct three main questions with one adap
 
 ## Deployment
 
-- CDK deploys the Interviewer Lambda and S3 configuration.
-- Run AgentCore deployment from `backend/voice_agent/`.
+- Amplify Hosting will publish the React/Vite static frontend; this deployment is planned.
+- CDK deploys the four backend Lambdas (PDF Parser, Analyst, Interviewer context builder, and Evaluator) plus S3 configuration.
+- Run AgentCore deployment from `backend/voice_agent/`; this managed serverless runtime is separate from Amplify Hosting.
+- Configure the Amplify build with the deployed HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint should be hard-coded.
 - `scripts/deploy.sh` is a targeted/manual Interviewer + voice workflow, not the canonical deployment for all Lambdas.
 
 ## Known Integration Gap

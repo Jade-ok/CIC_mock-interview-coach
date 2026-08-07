@@ -33,8 +33,10 @@
 
 - [ ] Build the container from `backend/voice_agent/`.
 - [ ] Deploy with the AgentCore CLI from `backend/voice_agent/`.
-- [ ] Record the relay endpoint in the frontend environment configuration.
-- [ ] Verify `/health` and a WebSocket connection in the target AWS environment.
+- [ ] Configure authentication for browser-to-AgentCore access and document the chosen token/identity flow.
+- [ ] Record the authenticated `wss://` relay endpoint in the Amplify frontend environment configuration.
+- [ ] Verify `/health` and an authenticated WebSocket connection in the target AWS environment.
+- [ ] Confirm the deployed browser has no long-lived AWS credentials and no direct Bedrock Nova invocation path.
 
 ## Evaluator Handoff
 

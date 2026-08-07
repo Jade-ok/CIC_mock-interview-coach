@@ -1,5 +1,7 @@
 # Implementation Plan: Resume Analysis Pipeline
 
+> These completed tasks cover the Lambda implementation. Amplify frontend hosting and authenticated AgentCore voice deployment are tracked in the frontend/interviewer specs and must not be inferred as complete from this file.
+
 > Historical implementation record. Last reconciled with the refactored paths on 2026-08-07.
 
 ## Overview

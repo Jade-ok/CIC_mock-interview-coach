@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-07.
+> Maintained requirements. Last verified: 2026-08-07. In the target deployment, an Amplify-hosted React client invokes this CDK-managed Lambda pipeline; live voice uses authenticated WSS to AgentCore rather than direct browser-to-Bedrock access.
 
 ## Introduction
 

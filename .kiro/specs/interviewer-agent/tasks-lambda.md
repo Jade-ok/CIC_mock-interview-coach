@@ -1,6 +1,6 @@
 # Tasks: Interviewer Lambda (1 person)
 
-> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work.
+> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not imply that the current AWS account, Amplify hosting, or authenticated AgentCore WSS is deployed.
 
 ## What You're Building
 
@@ -151,4 +151,4 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
 
 ## Done Criteria
 
-The Lambda is deployed, returns a valid runtime_context when called with analyst_output, and the Function URL is accessible. The other person can now use this runtime_context as the system instruction for their Voice Agent Server on AgentCore Runtime.
+At the time of this historical task record, the Lambda was deployed, returned a valid runtime_context when called with analyst_output, and its Function URL was accessible. The runtime context is intended for the serverless voice relay on AgentCore Runtime; current deployment status must be verified separately.

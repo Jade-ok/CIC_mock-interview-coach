@@ -1,6 +1,6 @@
 # Requirements: Interviewer and Voice Runtime
 
-> Maintained requirements. Last verified: 2026-08-07. Cognito, a signing Lambda, and direct browser-to-Bedrock access are out of scope for the current architecture.
+> Maintained requirements. Last verified: 2026-08-07. A signing Lambda and direct browser-to-Bedrock access are retired. Amplify hosting and authenticated browser-to-AgentCore WSS are target requirements, but their implementation is still pending.
 
 ## Interviewer Lambda
 
@@ -40,6 +40,7 @@
 2. Open the Nova bidirectional stream with `amazon.nova-2-sonic-v1:0` in `us-east-1`.
 3. Hold only transient connection/session state.
 4. Close Nova resources when the browser disconnects or ends the session.
+5. Run on the AWS-managed serverless AgentCore Runtime; no project-managed EC2 instance or always-on application server is required.
 
 ### R6. Streaming
 
@@ -55,6 +56,14 @@ Current gap: the queue primitives exist, but `server.py` forwards audio through 
 1. One canonical WebSocket wire protocol must be shared by frontend and relay.
 2. The current relay protocol is raw Nova `{"event": ...}` JSON.
 3. The current frontend `{type, payload}` abstraction is not yet adapted to that protocol; this remains an open integration requirement.
+
+### R8. Production Access Boundary
+
+1. Host the production React/Vite client on AWS Amplify Hosting.
+2. Require an authenticated `wss://` connection from the browser to AgentCore.
+3. Do not expose long-lived AWS credentials or direct Bedrock Nova invocation permissions to browser code.
+4. Supply the AgentCore endpoint and Lambda endpoints through deployment environment configuration.
+5. Treat Amplify/Auth provisioning, relay-side authentication validation, and production connection verification as pending until implemented and tested.
 
 ## Evaluator Handoff
 

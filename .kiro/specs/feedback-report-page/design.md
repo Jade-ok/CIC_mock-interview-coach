@@ -1,6 +1,6 @@
 # Design Document — Feedback Report Page
 
-> Maintained component design. Last verified: 2026-08-07. The component exists, but application-level integration into `FeedbackScreen` remains pending.
+> Maintained component design. Last verified: 2026-08-07. The component exists, but application-level integration into `FeedbackScreen` and deployment with the React/Vite app on Amplify Hosting remain pending. The Evaluator is a CDK-managed Lambda; live voice runs separately in the AgentCore serverless relay.
 
 ## Overview
 

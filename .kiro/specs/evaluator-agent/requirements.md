@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-07.
+> Maintained requirements. Last verified: 2026-08-07. This Lambda is part of the CDK-managed backend consumed by the target Amplify-hosted React client; Amplify/Auth deployment is not implied complete.
 
 ## Introduction
 
