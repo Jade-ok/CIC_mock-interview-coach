@@ -11,7 +11,6 @@ frontend/        → Browser UI (holds state)
 analyst/         → Resume analysis (Claude Sonnet 5)
 interviewer/     → Interview context builder (Nova Sonic via frontend WebSocket)
 evaluator/       → Answer evaluation (Claude Sonnet 5)
-polly/           → TTS synthesis (Amazon Polly)
 pdf_parser/      → PDF text extraction (pypdf)
 ```
 
@@ -20,7 +19,6 @@ pdf_parser/      → PDF text extraction (pypdf)
 - **Runtime**: Python 3.12 (AWS Lambda)
 - **LLM**: Amazon Bedrock Converse API (`tool_use` pattern)
 - **Speech**: Amazon Nova Sonic (WebSocket, frontend-direct)
-- **TTS**: Amazon Polly
 - **PDF**: pypdf
 - **Region**: us-east-1
 
@@ -57,7 +55,6 @@ interviewer/
 | analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
 | interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) |
 | evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
-| polly | Amazon Polly only |
 | pdf_parser | pypdf only |
 
 ## Schemas

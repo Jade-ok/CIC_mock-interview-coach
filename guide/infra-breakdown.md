@@ -48,7 +48,6 @@ One stack provisions everything the app needs:
 | Evaluator Lambda | `mock-interview-evaluator` | Calls Bedrock (Claude) to score the candidate's interview transcript |
 | Interviewer Lambda | `mock-interview-interviewer` | Reads config from S3, builds runtime context for Nova Sonic (no LLM call) |
 | PDF Parser Lambda | `mock-interview-pdf-parser` | Extracts text from uploaded resumes using pypdf |
-| Polly Lambda | `mock-interview-polly` | Converts text to speech via Amazon Polly |
 
 Every Lambda gets a **Function URL** (public, no auth) — these are the HTTP endpoints the frontend calls directly.
 
@@ -57,7 +56,7 @@ Every Lambda gets a **Function URL** (public, no auth) — these are the HTTP en
 - **No API Gateway.** Function URLs provide the HTTP surface. CORS is configured on the URL resource itself (`allowedOrigins: ['*']`), not in Python code.
 - **No VPC.** Lambdas run in the default VPC-less mode for simplicity.
 - **Docker bundling for pypdf.** The PDF Parser uses CDK's `bundling` option to `pip install pypdf` into the deployment package at synth time.
-- **IAM permissions are inline.** `bedrock:InvokeModel` for Analyst/Evaluator, `polly:SynthesizeSpeech` for Polly, `s3:GetObject` (via `grantRead`) for Interviewer.
+- **IAM permissions are inline.** `bedrock:InvokeModel` for Analyst/Evaluator and `s3:GetObject` (via `grantRead`) for Interviewer.
 
 ---
 
@@ -70,7 +69,6 @@ lambda.Code.fromAsset('../analyst')       →  /analyst/
 lambda.Code.fromAsset('../evaluator')     →  /evaluator/
 lambda.Code.fromAsset('../interviewer')   →  /interviewer/
 lambda.Code.fromAsset('../pdf_parser')    →  /pdf_parser/
-lambda.Code.fromAsset('../polly')         →  /polly/
 ```
 
 Each `fromAsset` call zips the entire folder at deploy time and uploads it to S3 for Lambda. The `handler` property tells Lambda which Python function to invoke:
@@ -81,7 +79,6 @@ Each `fromAsset` call zips the entire folder at deploy time and uploads it to S3
 | Evaluator | `evaluator.handler.lambda_handler` | `evaluator/handler.py` → function `lambda_handler` |
 | Interviewer | `interviewer.handler.lambda_handler` | `interviewer/handler.py` → function `lambda_handler` |
 | PDF Parser | `pdf_parser.handler.lambda_handler` | `pdf_parser/handler.py` → function `lambda_handler` |
-| Polly | `polly.handler.lambda_handler` | `polly/handler.py` → function `lambda_handler` |
 
 > **Note:** The evaluator currently has `lambda_handler.py` as the file name but the CDK expects `handler.py`. If you see an import error on deploy, rename the file or update the CDK handler string to match.
 
@@ -101,7 +98,6 @@ MockInterviewStack.AnalystUrl = https://xxxx.lambda-url.us-east-1.on.aws/
 MockInterviewStack.EvaluatorUrl = https://xxxx.lambda-url.us-east-1.on.aws/
 MockInterviewStack.InterviewerUrl = https://xxxx.lambda-url.us-east-1.on.aws/
 MockInterviewStack.PdfParserUrl = https://xxxx.lambda-url.us-east-1.on.aws/
-MockInterviewStack.PollyUrl = https://xxxx.lambda-url.us-east-1.on.aws/
 MockInterviewStack.ConfigBucketName = mockinterviewstack-interviewconfigbucket-xxxxx
 ```
 
