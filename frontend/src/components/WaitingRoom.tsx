@@ -4,7 +4,7 @@ import { callAgent1 } from '@/services/agent1Client';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 120000;
 const WS_URL = 'ws://localhost:8080';
 
 // Use mock in dev mode so the demo transitions without a real backend

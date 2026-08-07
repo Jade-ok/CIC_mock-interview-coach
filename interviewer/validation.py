@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def validate_input(payload: dict) -> tuple[dict | None, str | None]:
     """
     Check that the payload contains a non-empty analyst_output.
