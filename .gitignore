@@ -1,16 +1,27 @@
-# python
-__pycache__/
-*.pyc
-venv/
-*.zip
-
-# node / frontend
+# Dependencies
 node_modules/
+
+# Virtual environments
+.venv/
+
+# Environment variables
+.env*
+
+# Build and generated files
+.aws-sam/
 dist/
+*.zip
+scripts/test_runtime_context.js
 
-# env — but see note below
-.env
-frontend/.env
+# Test and coverage files
+.pytest_cache/
 
-# personal resume (PII)
+# Cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Operating system files
+.DS_Store
+
+# Private and local files
 samples/resume-coop-jenachang-july31.pdf
