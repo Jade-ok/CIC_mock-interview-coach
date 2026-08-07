@@ -3,7 +3,10 @@
 import boto3
 from botocore.config import Config
 
-from evaluator.exceptions import EvaluationError
+try:
+    from exceptions import EvaluationError
+except ImportError:
+    from evaluator.exceptions import EvaluationError
 
 MODEL_ID = "global.anthropic.claude-sonnet-5"
 REGION = "us-east-1"

@@ -12,7 +12,7 @@ Resources:
   EvaluatorFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: evaluator.lambda_handler.handler
+      Handler: lambda_handler.handler
       CodeUri: .
       Description: Evaluates mock interview performance for co-op students
       FunctionUrlConfig:
