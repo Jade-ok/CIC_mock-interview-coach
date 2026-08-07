@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nova Sonic Direct Test (Presigned URL)</title>
+    <style>
+        body { font-family: system-ui; max-width: 800px; margin: 40px auto; padding: 20px; }
+        button { padding: 12px 24px; margin: 8px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; }
+        #startBtn { background: #4CAF50; color: white; }
+        #stopBtn { background: #f44336; color: white; }
+        #status { margin: 20px 0; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+        #transcript { white-space: pre-wrap; background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 6px; min-height: 200px; overflow-y: auto; max-height: 400px; }
+        .interviewer { color: #4FC3F7; }
+        .candidate { color: #81C784; }
+        .system { color: #FFB74D; }
+        select, input { padding: 8px; font-size: 14px; margin: 4px; }
+        label { font-weight: bold; }
+        .config { background: #f9f9f9; padding: 16px; border-radius: 8px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>Nova Sonic Direct Voice Test</h1>
+    <p>Connects directly to Nova Sonic using a presigned WebSocket URL. No proxy server needed.</p>
+
+    <div class="config">
+        <p><label>Presigned URL:</label><br>
+        <small>Get this by invoking the signing Lambda, or paste one here for testing:</small><br>
+        <input type="text" id="wsUrl" style="width:100%" placeholder="wss://bedrock-runtime.us-east-1.amazonaws.com/model/...?X-Amz-...">
+        <br><br>
+        <small>Or use the local relay server (if running):</small><br>
+        <button onclick="document.getElementById('wsUrl').value='ws://localhost:8080/'" style="background:#666;color:white;padding:6px 12px;font-size:12px">Use localhost:8080</button>
+        </p>
+
+        <p>
+        <label>Voice: </label>
+        <select id="voiceSelect">
+            <option value="matthew">Matthew (male)</option>
+            <option value="tiffany">Tiffany (female)</option>
+            <option value="amy">Amy (female, British)</option>
+        </select>
+        </p>
+    </div>
+
+    <div>
+        <button id="startBtn" onclick="startInterview()">Start Interview</button>
+        <button id="stopBtn" onclick="stopInterview()" disabled>Stop</button>
+    </div>
+
+    <div id="status">Ready. Paste a presigned URL or use localhost, then click Start.</div>
+    <div id="transcript"></div>
+
+    <script>
+    let ws = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let micContext = null;
+    let scriptProcessor = null;
+    let promptName = crypto.randomUUID();
+    let audioContentName = crypto.randomUUID();
+    let isStreaming = false;
+    let nextStartTime = 0;
+    let currentRole = null;
+
+    function log(msg, cls = 'system') {
+        const el = document.getElementById('transcript');
+        el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(msg) {
+        document.getElementById('status').textContent = msg;
+    }
+
+    async function startInterview() {
+        const url = document.getElementById('wsUrl').value.trim();
+        if (!url) {
+            setStatus('ERROR: Enter a WebSocket URL first');
+            return;
+        }
+
+        const voiceId = document.getElementById('voiceSelect').value;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        document.getElementById('transcript').innerHTML = '';
+
+        try {
+            audioContext = new AudioContext({ sampleRate: 24000 });
+            nextStartTime = 0;
+
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+            });
+            setStatus('Microphone active. Connecting to Nova Sonic...');
+
+            ws = new WebSocket(url);
+            ws.onopen = () => onConnected(voiceId);
+            ws.onmessage = (e) => onMessage(e);
+            ws.onerror = (e) => { log(`WebSocket error`, 'system'); setStatus('Connection error'); };
+            ws.onclose = (e) => { log(`Connection closed (code: ${e.code})`, 'system'); setStatus('Disconnected'); cleanup(); };
+
+        } catch (err) {
+            log(`Error: ${err.message}`, 'system');
+            setStatus('Error: ' + err.message);
+            cleanup();
+        }
+    }
+
+    function onConnected(voiceId) {
+        setStatus('Connected! Setting up interview...');
+        log('Connected to Nova Sonic');
+        promptName = crypto.randomUUID();
+
+        // 1. Session start
+        send({ event: { sessionStart: {
+            inferenceConfiguration: { maxTokens: 1024, topP: 0.9, temperature: 0.7 },
+            turnDetectionConfiguration: { endpointingSensitivity: "HIGH" }
+        }}});
+
+        // 2. Prompt start
+        send({ event: { promptStart: {
+            promptName,
+            textOutputConfiguration: { mediaType: "text/plain" },
+            audioOutputConfiguration: {
+                mediaType: "audio/lpcm", sampleRateHertz: 24000,
+                sampleSizeBits: 16, channelCount: 1,
+                voiceId, encoding: "base64", audioType: "SPEECH"
+            }
+        }}});
+
+        // 3. System instruction
+        const sysContentName = crypto.randomUUID();
+        send({ event: { contentStart: {
+            promptName, contentName: sysContentName, type: "TEXT",
+            interactive: true, role: "SYSTEM",
+            textInputConfiguration: { mediaType: "text/plain" }
+        }}});
+
+        // Simulate what the real Interviewer Lambda would produce
+        const fakeAnalystOutput = {
+          selected_experiences: [
+            {
+              experience_id: "exp_1",
+              title: "Software Developer Intern",
+              experience_type: "internship",
+              organization: "a mid-size tech company",
+              summary: "Built backend features and wrote tests for a production service.",
+              candidate_claims: ["Improved API performance", "Wrote integration tests"],
+              skills_demonstrated: ["backend development", "testing", "teamwork"],
+              relevance_score: 0.9,
+              details_to_clarify: ["What did you personally own?", "How did you measure improvement?"]
+            },
+            {
+              experience_id: "exp_2",
+              title: "Hackathon Project",
+              experience_type: "hackathon",
+              organization: "a university hackathon",
+              summary: "Built a mobile app in 24 hours with a small team. Won a prize.",
+              candidate_claims: ["Won a category prize", "Built in 24 hours"],
+              skills_demonstrated: ["rapid prototyping", "mobile development", "collaboration"],
+              relevance_score: 0.7,
+              details_to_clarify: ["What was your specific role?", "What was the hardest technical problem?"]
+            },
+            {
+              experience_id: "exp_3",
+              title: "Course Team Project",
+              experience_type: "academic_project",
+              organization: "a software engineering course",
+              summary: "Led a small team to build a full-stack web application. Managed sprints and did code reviews.",
+              candidate_claims: ["Led the team", "Managed sprints"],
+              skills_demonstrated: ["leadership", "full-stack", "agile", "code reviews"],
+              relevance_score: 0.65,
+              details_to_clarify: ["How did you handle disagreements?", "What would you do differently?"]
+            }
+          ],
+          interview_plan: [
+            { topic: "Personal contribution and ownership", priority: 1, target_skill: "ownership", source_experience_id: "exp_1" },
+            { topic: "Technical problem-solving", priority: 2, target_skill: "problem-solving", source_experience_id: "exp_2" },
+            { topic: "Teamwork and collaboration", priority: 3, target_skill: "teamwork", source_experience_id: "exp_3" }
+          ]
+        };
+
+        const systemPrompt = `[CANDIDATE DATA]
+${JSON.stringify(fakeAnalystOutput, null, 2)}
+
+[INTERVIEW FLOW — FOLLOW THIS EXACT TURN SEQUENCE]
+You will have exactly 7 speaking turns. Each main question targets a DIFFERENT experience.
+
+YOUR TURN 1: Greet the candidate. Ask about their internship experience — focus on what they personally built or owned.
+  (candidate answers)
+YOUR TURN 2: Ask ONE follow-up referencing something specific from their answer. Then STOP talking.
+  (candidate answers)
+YOUR TURN 3: Transition to their hackathon project. Ask about a technical challenge they faced.
+  (candidate answers)
+YOUR TURN 4: Ask ONE follow-up about their decision-making. Then STOP talking.
+  (candidate answers)
+YOUR TURN 5: Transition to their course team project. Ask about how they coordinated with teammates.
+  (candidate answers)
+YOUR TURN 6: Ask ONE follow-up about what they learned or would change. Then STOP talking.
+  (candidate answers)
+YOUR TURN 7: Thank them warmly and STOP. Say nothing else.
+
+[BEHAVIORAL INSTRUCTIONS]
+- Generate natural questions — do NOT read verbatim
+- Always mention the experience by name when transitioning
+- 1-2 sentences max per response
+- Speak first — greet and ask immediately
+- Never ask about the same experience twice
+- Never say "that project or another experience"
+- Each follow-up must reference something the candidate actually said
+- MAXIMUM ONE FOLLOW-UP PER EXPERIENCE. After the candidate answers your follow-up, you MUST say a transition phrase and ask about the NEXT experience. Do NOT ask a second follow-up. Do NOT probe deeper on the same topic. MOVE ON.`;
+
+        send({ event: { textInput: { promptName, contentName: sysContentName, content: systemPrompt } }});
+        send({ event: { contentEnd: { promptName, contentName: sysContentName } }});
+
+        log('System instruction sent', 'system');
+
+        // 4. Send a silence turn to trigger Nova to speak first
+        const triggerName = crypto.randomUUID();
+        send({ event: { contentStart: {
+            promptName, contentName: triggerName,
+            type: "AUDIO", interactive: true, role: "USER",
+            audioInputConfiguration: {
+                mediaType: "audio/lpcm", sampleRateHertz: 16000,
+                sampleSizeBits: 16, channelCount: 1,
+                audioType: "SPEECH", encoding: "base64"
+            }
+        }}});
+
+        // 500ms silence (16000 samples/sec * 0.5sec * 2 bytes = 16000 bytes)
+        const silenceBytes = new Uint8Array(16000);
+        const silence = btoa(String.fromCharCode(...silenceBytes));
+        send({ event: { audioInput: { promptName, contentName: triggerName, content: silence } }});
+
+        // End the trigger turn after a short delay
+        setTimeout(() => {
+            send({ event: { contentEnd: { promptName, contentName: triggerName } }});
+            setStatus('Waiting for Nova to speak first...');
+            log('Sent silence trigger. Nova should speak now...', 'system');
+
+            // Start mic streaming after a delay to let Nova respond
+            setTimeout(() => startMicStreaming(), 2000);
+        }, 500);
+    }
+
+    function startMicStreaming() {
+        audioContentName = crypto.randomUUID();
+        send({ event: { contentStart: {
+            promptName, contentName: audioContentName,
+            type: "AUDIO", interactive: true, role: "USER",
+            audioInputConfiguration: {
+                mediaType: "audio/lpcm", sampleRateHertz: 16000,
+                sampleSizeBits: 16, channelCount: 1,
+                audioType: "SPEECH", encoding: "base64"
+            }
+        }}});
+
+        micContext = new AudioContext({ sampleRate: 16000 });
+        const source = micContext.createMediaStreamSource(mediaStream);
+        scriptProcessor = micContext.createScriptProcessor(1024, 1, 1);
+
+        scriptProcessor.onaudioprocess = (e) => {
+            if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
+            const pcm = e.inputBuffer.getChannelData(0);
+            const int16 = new Int16Array(pcm.length);
+            for (let i = 0; i < pcm.length; i++) {
+                int16[i] = Math.max(-32768, Math.min(32767, pcm[i] * 32768));
+            }
+            const base64 = arrayBufferToBase64(int16.buffer);
+            send({ event: { audioInput: { promptName, contentName: audioContentName, content: base64 } }});
+        };
+
+        source.connect(scriptProcessor);
+        scriptProcessor.connect(micContext.destination);
+        isStreaming = true;
+        setStatus('Your turn — speak now!');
+    }
+
+    function onMessage(event) {
+        const data = JSON.parse(event.data);
+        const evt = data.event || {};
+
+        if (evt.textOutput) {
+            const text = evt.textOutput.content;
+            if (currentRole === 'ASSISTANT') {
+                log(`Interviewer: ${text}`, 'interviewer');
+            } else if (currentRole === 'USER') {
+                log(`You: ${text}`, 'candidate');
+            }
+        } else if (evt.audioOutput) {
+            playAudio(evt.audioOutput.content);
+        } else if (evt.contentStart) {
+            currentRole = evt.contentStart.role;
+            if (currentRole === 'ASSISTANT') {
+                setStatus('Nova is speaking...');
+            }
+        } else if (evt.contentEnd) {
+            if (currentRole === 'ASSISTANT') {
+                setStatus('Your turn — speak now!');
+            }
+            currentRole = null;
+        }
+    }
+
+    function playAudio(base64Content) {
+        const bytes = base64ToArrayBuffer(base64Content);
+        const int16 = new Int16Array(bytes);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+            float32[i] = int16[i] / 32768.0;
+        }
+
+        const buffer = audioContext.createBuffer(1, float32.length, 24000);
+        buffer.getChannelData(0).set(float32);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+
+        const now = audioContext.currentTime;
+        if (nextStartTime < now) nextStartTime = now;
+        source.start(nextStartTime);
+        nextStartTime += buffer.duration;
+    }
+
+    function stopInterview() {
+        isStreaming = false;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            send({ event: { contentEnd: { promptName, contentName: audioContentName } }});
+            send({ event: { promptEnd: { promptName } }});
+            send({ event: { sessionEnd: {} }});
+            ws.close();
+        }
+        cleanup();
+        setStatus('Stopped.');
+        log('Interview ended.', 'system');
+    }
+
+    function cleanup() {
+        isStreaming = false;
+        if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+        if (micContext) micContext.close();
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+    }
+
+    function send(obj) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(obj));
+        }
+    }
+
+    function arrayBufferToBase64(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+
+    function base64ToArrayBuffer(base64) {
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+    }
+    </script>
+</body>
+</html>

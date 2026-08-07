@@ -253,9 +253,9 @@ describe('InterviewScreen', () => {
 
   // --- Property-Based Tests ---
 
-  describe('Property 15: beforeunload 활성 조건', () => {
+  describe('Property 15: beforeunload Active Condition', () => {
     /**
-     * Feature: frontend-interview, Property 15: beforeunload 활성 조건
+     * Feature: frontend-interview, Property 15: beforeunload Active Condition
      * Validates: Requirements 3.15
      *
      * For any phase === 'interview', the beforeunload event listener must be
@@ -301,9 +301,9 @@ describe('InterviewScreen', () => {
     });
   });
 
-  describe('Property 16: 종료 버튼 항상 활성', () => {
+  describe('Property 16: End Button Always Enabled', () => {
     /**
-     * Feature: frontend-interview, Property 16: 종료 버튼 항상 활성
+     * Feature: frontend-interview, Property 16: End Button Always Enabled
      * Validates: Requirements 4.8
      *
      * For any interview screen state, the end button is always enabled

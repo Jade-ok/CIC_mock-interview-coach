@@ -4,7 +4,7 @@ import { callAgent1 } from '@/services/agent1Client';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
-const TIMEOUT_MS = 30000;
+const TIMEOUT_MS = 120000;
 const WS_URL = 'ws://localhost:8080';
 
 // Use mock in dev mode so the demo transitions without a real backend
@@ -18,11 +18,17 @@ export function WaitingRoom() {
   const agent1CalledRef = useRef(false);
   const wsCalledRef = useRef(false);
 
-  // Track cached upload data for retries
-  const uploadDataRef = useRef<{ pdf: File; jdText: string } | null>(null);
+  // Guard: if no PDF was uploaded (e.g. direct navigation / refresh), redirect back
+  useEffect(() => {
+    if (!state.uploadedPdf) {
+      dispatch({ type: 'RESET' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Start parallel requests on mount
   useEffect(() => {
+    if (!state.uploadedPdf) return; // Don't start requests without upload data
     startRequests();
     startTimeout();
 
@@ -70,9 +76,19 @@ export function WaitingRoom() {
   const startAgent1 = useCallback(async () => {
     agent1CalledRef.current = true;
     try {
-      // Get upload data from the stored ref or create a placeholder
-      const data = uploadDataRef.current || { pdf: new File([], 'resume.pdf'), jdText: '' };
-      const response = await callAgent1(data);
+      const pdf = state.uploadedPdf;
+      const jdText = state.uploadedJdText;
+
+      // This should not happen if the guard effect works, but defend anyway
+      if (!pdf) {
+        dispatch({
+          type: 'AGENT1_FAILED',
+          payload: { message: 'No resume file found. Please upload again.' },
+        });
+        return;
+      }
+
+      const response = await callAgent1({ pdf, jdText });
       dispatch({ type: 'AGENT1_SUCCESS', payload: response });
     } catch (err) {
       agent1CalledRef.current = false;
@@ -82,7 +98,7 @@ export function WaitingRoom() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch]);
+  }, [dispatch, state.uploadedPdf, state.uploadedJdText]);
 
   const startWebSocket = useCallback(async () => {
     wsCalledRef.current = true;

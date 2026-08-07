@@ -4,10 +4,16 @@ import { UploadScreen } from '@/components/UploadScreen';
 import { WaitingRoom } from '@/components/WaitingRoom';
 import { InterviewScreen } from '@/components/InterviewScreen';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
+import { FeedbackPreview } from '@/pages/FeedbackPreview';
 import { callAgent3 } from '@/services/agent3Client';
 
 function AppContent() {
   const { state, dispatch } = useSession();
+
+  // Dev-only: /feedback-preview shows FeedbackReport with mock data
+  if (window.location.pathname === '/feedback-preview') {
+    return <FeedbackPreview />;
+  }
 
   const handleUploadSubmit = useCallback(
     (pdf: File, jdText: string) => {
@@ -22,13 +28,14 @@ function AppContent() {
       const result = await callAgent3({
         transcript: state.transcript,
         competency_guides: state.competencyGuides,
+        analyst_output: state.analystOutput ?? undefined,
       });
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides]);
+  }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
 
   const handleNewSession = useCallback(() => {
     dispatch({ type: 'RESET' });

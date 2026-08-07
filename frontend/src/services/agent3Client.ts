@@ -1,10 +1,11 @@
 /**
- * Agent 3 HTTP POST client (stub/mock).
- * In production, this would call the evaluator backend to get
- * feedback based on the interview transcript and competency guides.
+ * Agent 3 client — calls the evaluator Lambda to get feedback
+ * based on the interview transcript and competency guides.
  */
 
-import type { Agent3Request } from '@/types/session';
+import type { Agent3Request, TranscriptEntry } from '@/types/session';
+
+const EVALUATOR_URL = import.meta.env.VITE_EVALUATOR_URL;
 
 /** Controls whether the stub should simulate failure (for testing) */
 let simulateFailure = false;
@@ -18,45 +19,106 @@ export function setAgent3SimulateFailure(fail: boolean): void {
 }
 
 /**
- * Calls Agent 3 API with the interview transcript and competency guides.
- * Returns feedback data (schema TBD).
+ * Converts the flat transcript (role/text pairs) into the conversation format
+ * expected by the evaluator backend:
+ * [{ point_id, turn_type, question, answer }]
  *
- * This is a stub — it simulates a successful API response with a delay.
- * Replace with real HTTP POST when backend is available.
+ * Pairs consecutive interviewer→user messages as question→answer.
+ */
+function buildConversation(
+  transcript: TranscriptEntry[]
+): Array<{ point_id: string; turn_type: string; question: string; answer: string }> {
+  const conversation: Array<{
+    point_id: string;
+    turn_type: string;
+    question: string;
+    answer: string;
+  }> = [];
+
+  let questionIndex = 0;
+
+  for (let i = 0; i < transcript.length; i++) {
+    const entry = transcript[i];
+    if (entry.role === 'interviewer') {
+      // Look ahead for the user's answer
+      const nextEntry = transcript[i + 1];
+      const answer = nextEntry && nextEntry.role === 'user' ? nextEntry.text : '';
+
+      questionIndex++;
+      // Interview pattern: main → follow_up → main → follow_up → ...
+      // Odd-numbered questions (1,3,5) are main_question, even (2,4,6) are follow_up
+      const pointIndex = Math.ceil(questionIndex / 2);
+      conversation.push({
+        point_id: `point_${pointIndex}`,
+        turn_type: questionIndex % 2 === 1 ? 'main_question' : 'follow_up',
+        question: entry.text,
+        answer,
+      });
+
+      // Skip the paired user entry
+      if (nextEntry && nextEntry.role === 'user') {
+        i++;
+      }
+    }
+  }
+
+  return conversation;
+}
+
+/**
+ * Calls the evaluator Lambda with the interview transcript and competency guides.
+ * Transforms data to match the evaluator's expected input schema.
+ * Returns feedback data.
  */
 export async function callAgent3(request: Agent3Request): Promise<unknown> {
-  // Stub: simulate network delay (1-2 seconds)
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
   if (simulateFailure) {
     throw new Error('Agent 3 request failed: Internal Server Error (500)');
   }
 
-  return {
-    overallScore: 78,
-    summary: 'You showed strong overall interview performance. Your answers demonstrated solid technical depth and clear communication.',
-    competencyScores: request.competency_guides.map((guide) => ({
-      id: guide.id,
-      title: guide.title,
-      score: Math.floor(Math.random() * 30) + 70,
-      feedback: `You provided relevant examples for ${guide.title}. Consider adding more quantitative impact to strengthen your responses.`,
-      suggestedExperience: getSuggestedExperience(guide.title),
-    })),
-    transcriptLength: request.transcript.length,
-  };
-}
+  // Transform transcript to evaluator's expected conversation format
+  const conversation = buildConversation(request.transcript);
 
-/** Mock suggested experience text keyed by competency title */
-function getSuggestedExperience(title: string): string {
-  const suggestions: Record<string, string> = {
-    'Leadership':
-      'Your resume mentions leading a 5-person team on the migration project — using that specific example with a measurable outcome (e.g. reduced deployment time by X%) would have strengthened this answer.',
-    'Problem Solving':
-      "Your algorithm competition experience wasn't mentioned — walking through your approach to a specific hard problem would have been a strong example here.",
-    'Technical Depth':
-      'You could have referenced your work on the microservices architecture in more technical detail — specific trade-offs you considered would show deeper expertise.',
-    'Communication & Collaboration':
-      'Your resume shows cross-team coordination experience — citing a specific instance of resolving a disagreement would have added weight to this answer.',
+  if (conversation.length === 0) {
+    throw new Error('Evaluation failed: No question-answer pairs found in transcript');
+  }
+
+  // Build the request body matching evaluator validator expectations
+  const mainQuestions = conversation.filter(c => c.turn_type === 'main_question').length;
+  const followUps = conversation.filter(c => c.turn_type === 'follow_up').length;
+
+  const requestBody = {
+    conversation,
+    interview_metadata: {
+      candidate_level: (request.analyst_output?.candidate_profile as Record<string, unknown>)?.candidate_level as string || 'student_intern',
+      target_role: (request.analyst_output?.target_role as Record<string, unknown>)?.title as string || 'Unknown',
+      status: 'completed' as const,
+      completion_reason: conversation.length >= 6 ? 'all_questions_completed' : 'user_ended_early',
+      main_questions_completed: mainQuestions,
+      follow_ups_completed: followUps,
+      ended_early: conversation.length < 6,
+    },
+    analyst_output: request.analyst_output || {},
   };
-  return suggestions[title] ?? 'Consider referencing a specific project from your resume with measurable outcomes to strengthen your answer.';
+
+  const response = await fetch(EVALUATOR_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    const errorMessage = errorData?.message || errorData?.error || `HTTP ${response.status}`;
+    throw new Error(`Evaluation failed: ${errorMessage}`);
+  }
+
+  const result = await response.json();
+
+  // The evaluator returns the result directly (no { status, data } wrapper)
+  // Check if it has an error field (error responses)
+  if (result.error) {
+    throw new Error(`Evaluation failed: ${result.message || result.error}`);
+  }
+
+  return result;
 }

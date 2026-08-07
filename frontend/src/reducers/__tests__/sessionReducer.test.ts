@@ -28,6 +28,33 @@ describe('sessionReducer', () => {
       expect(result.phase).toBe('waiting');
       expect(result.error).toBeNull();
     });
+
+    it('stores uploaded pdf and jdText in state', () => {
+      const pdf = new File(['%PDF-1.4'], 'resume.pdf', { type: 'application/pdf' });
+      const jdText = 'Software Engineer at Acme Corp';
+      const result = sessionReducer(initialState, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf, jdText },
+      });
+      expect(result.uploadedPdf).toBe(pdf);
+      expect(result.uploadedJdText).toBe(jdText);
+    });
+
+    it('overwrites previously stored upload data on re-submit', () => {
+      const pdf1 = new File(['first'], 'first.pdf');
+      const pdf2 = new File(['second'], 'second.pdf');
+      let state = sessionReducer(initialState, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf: pdf1, jdText: 'first jd' },
+      });
+      // Simulate going back and re-submitting
+      state = sessionReducer({ ...state, phase: 'upload' }, {
+        type: 'SUBMIT_UPLOAD',
+        payload: { pdf: pdf2, jdText: 'second jd' },
+      });
+      expect(state.uploadedPdf).toBe(pdf2);
+      expect(state.uploadedJdText).toBe('second jd');
+    });
   });
 
   describe('AGENT1_SUCCESS', () => {
@@ -375,15 +402,68 @@ describe('maybeStartSession', () => {
   });
 });
 
+// ---------- analystOutput Unit Tests ----------
+
+describe('AGENT1_SUCCESS — analystOutput', () => {
+  it('stores analystOutput when analyst_output is present in payload', () => {
+    const analystData = {
+      interview_plan: [
+        { topic: 'React', priority: 1, question_type: 'technical', target_skill: 'React', source_experience_id: null },
+      ],
+    };
+
+    const result = sessionReducer(initialState, {
+      type: 'AGENT1_SUCCESS',
+      payload: {
+        nova_sonic_context: 'ctx',
+        competency_guides: [],
+        analyst_output: analystData,
+      },
+    });
+
+    expect(result.analystOutput).toEqual(analystData);
+  });
+
+  it('stores null when analyst_output is undefined in payload', () => {
+    const result = sessionReducer(initialState, {
+      type: 'AGENT1_SUCCESS',
+      payload: {
+        nova_sonic_context: 'ctx',
+        competency_guides: [],
+      },
+    });
+
+    expect(result.analystOutput).toBeNull();
+  });
+});
+
+describe('initialState — analystOutput', () => {
+  it('has analystOutput set to null', () => {
+    expect(initialState.analystOutput).toBeNull();
+  });
+});
+
+describe('RESET — analystOutput', () => {
+  it('clears analystOutput to null', () => {
+    const stateWithAnalyst: SessionState = {
+      ...initialState,
+      analystOutput: { interview_plan: [] },
+    };
+
+    const result = sessionReducer(stateWithAnalyst, { type: 'RESET' });
+    expect(result.analystOutput).toBeNull();
+  });
+});
+
 // ---------- Property-Based Tests ----------
 
-describe('PBT: Property 8 — Practice Mode 격리', () => {
+describe('PBT: Property 8 — Practice Mode Isolation', () => {
   /**
-   * Feature: frontend-interview, Property 8: Practice Mode 격리
+   * Feature: frontend-interview, Property 8: Practice Mode Isolation
    * **Validates: Requirements 5.2**
    *
-   * For any Practice Mode toggle state change, WebSocket으로 전송되는 메시지나
-   * Nova Sonic 세션에 어떤 영향도 없어야 한다 (프론트엔드 렌더링에만 영향).
+   * For any Practice Mode toggle state change, there must be no impact on
+   * messages sent via WebSocket or the Nova Sonic session (only affects frontend rendering).
    *
    * TOGGLE_PRACTICE_MODE should only change the `practiceMode` field and nothing else
    * that is relevant to WS/backend state.
@@ -422,6 +502,9 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
       error: fc.constant(null),
       agent3Loading: fc.boolean(),
       feedbackResult: fc.constant(null),
+      analystOutput: fc.constant(null),
+      uploadedPdf: fc.constant(null),
+      uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
     });
 
     fc.assert(
@@ -450,14 +533,14 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
   });
 });
 
-describe('PBT: Property 13 — Transcript 누적 무손실', () => {
+describe('PBT: Property 13 — Transcript Accumulation Lossless', () => {
   /**
-   * Feature: frontend-interview, Property 13: Transcript 누적 무손실
+   * Feature: frontend-interview, Property 13: Transcript Accumulation Lossless
    * **Validates: Requirements 7.1**
    *
-   * For any 인터뷰 세션에서 수신된 text_output 이벤트(FINAL generationStage)
-   * 시퀀스에 대해, 세션 종료 시점의 transcript 배열은 모든 FINAL 이벤트를
-   * 수신 순서대로 포함해야 한다.
+   * For any sequence of text_output events (FINAL generationStage) received
+   * during an interview session, the transcript array at session end must contain
+   * all FINAL events in the order they were received.
    *
    * Dispatching N APPEND_TRANSCRIPT actions results in exactly N entries in
    * the transcript array, in order, with no data loss.

@@ -46,11 +46,16 @@ const mockedCallAgent1 = vi.mocked(callAgent1);
 const MockedWebSocketClient = vi.mocked(WebSocketClient);
 
 describe('WaitingRoom', () => {
+  const testPdf = new File(['%PDF-1.4 test content'], 'resume.pdf', { type: 'application/pdf' });
+  const testJdText = 'Software Engineer at Acme Corp';
+
   beforeEach(() => {
     vi.useFakeTimers();
     mockState = {
       ...initialState,
       phase: 'waiting',
+      uploadedPdf: testPdf,
+      uploadedJdText: testJdText,
     };
     mockDispatch.mockClear();
     mockSetWebSocketClient.mockClear();
@@ -72,15 +77,59 @@ describe('WaitingRoom', () => {
     it('displays loading spinner and waiting message', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByLabelText('로딩 중')).toBeInTheDocument();
-      expect(screen.getByText('호스트가 들여보내주길 기다리는 중입니다')).toBeInTheDocument();
+      expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+      expect(screen.getByText('Waiting for the host to let you in')).toBeInTheDocument();
     });
 
     it('shows status items for Agent and WebSocket', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByText('Agent 분석')).toBeInTheDocument();
-      expect(screen.getByText('서버 연결')).toBeInTheDocument();
+      expect(screen.getByText('Agent Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Server Connection')).toBeInTheDocument();
+    });
+  });
+
+  describe('Guard: missing upload data', () => {
+    it('dispatches RESET when uploadedPdf is null (e.g. page refresh)', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        uploadedPdf: null,
+        uploadedJdText: '',
+      };
+
+      render(<WaitingRoom />);
+
+      expect(mockDispatch).toHaveBeenCalledWith({ type: 'RESET' });
+    });
+
+    it('does not call agent1 when uploadedPdf is null', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        uploadedPdf: null,
+        uploadedJdText: '',
+      };
+
+      render(<WaitingRoom />);
+
+      expect(mockedCallAgent1).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Upload data passed to agent1', () => {
+    it('calls callAgent1 with the actual pdf and jdText from state', async () => {
+      render(<WaitingRoom />);
+
+      // Wait for the async callAgent1 to be invoked
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(mockedCallAgent1).toHaveBeenCalledWith({
+        pdf: testPdf,
+        jdText: testJdText,
+      });
     });
   });
 
@@ -89,6 +138,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: false,
         wsReady: false,
       };
@@ -106,6 +157,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: true,
       };
@@ -127,6 +180,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'AGENT1_FAILED',
           message: 'Agent 1 요청에 실패했습니다.',
@@ -137,14 +192,16 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 요청에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
-      expect(screen.getByText('돌아가기')).toBeInTheDocument();
+      expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByText('Go Back')).toBeInTheDocument();
     });
 
     it('shows error message when WS connection fails', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'WS_CONNECT_FAILED',
           message: 'WebSocket 연결에 실패했습니다.',
@@ -155,13 +212,15 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByRole('alert')).toHaveTextContent('WebSocket 연결에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
 
     it('shows timeout error with retry button', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'TIMEOUT',
           message: 'Connection timed out. Please try again.',
@@ -172,7 +231,7 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByRole('alert')).toHaveTextContent('Connection timed out. Please try again.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
   });
 
@@ -181,6 +240,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: false,
         wsReady: false,
         wsConnectionState: 'connected',
@@ -193,7 +254,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should be called since it wasn't ready
       expect(mockedCallAgent1).toHaveBeenCalled();
@@ -203,6 +264,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: false,
         wsConnectionState: 'disconnected',
@@ -217,7 +280,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should NOT be called again since agent1Ready is true
       expect(mockedCallAgent1).not.toHaveBeenCalled();
@@ -231,6 +294,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         agent1Ready: true,
         wsReady: true,
       };
@@ -246,6 +311,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        uploadedPdf: testPdf,
+        uploadedJdText: testJdText,
         error: {
           code: 'TIMEOUT',
           message: 'Timeout',
@@ -255,7 +322,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('돌아가기'));
+      fireEvent.click(screen.getByText('Go Back'));
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'RESET' });
     });
@@ -284,6 +351,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready,
               wsReady,
               wsConnectionState: agent1Ready ? 'connected' : 'disconnected',
@@ -312,6 +381,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready: true,
               wsReady: true,
             };
@@ -358,6 +429,8 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              uploadedPdf: testPdf,
+              uploadedJdText: testJdText,
               agent1Ready: agent1Succeeded,
               wsReady: false,
               wsConnectionState: wsConnected ? 'connected' : 'disconnected',
@@ -371,7 +444,7 @@ describe('WaitingRoom', () => {
             const { unmount } = render(<WaitingRoom />);
 
             // Click retry
-            const retryBtn = screen.getByText('재시도');
+            const retryBtn = screen.getByText('Retry');
             fireEvent.click(retryBtn);
 
             if (agent1Succeeded) {

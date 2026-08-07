@@ -4,9 +4,20 @@ __pycache__/
 venv/
 *.zip
 
+# OS
+.DS_Store
+
 # node / frontend
 node_modules/
 dist/
 
+# CDK / SAM build artifacts
+cdk.out/
+.aws-sam/
+
 # env — but see note below
+.env
 frontend/.env
+
+# personal resume (PII)
+samples/resume-coop-jenachang-july31.pdf

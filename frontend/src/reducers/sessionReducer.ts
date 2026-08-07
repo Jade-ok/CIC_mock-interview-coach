@@ -19,6 +19,9 @@ export const initialState: SessionState = {
   error: null,
   agent3Loading: false,
   feedbackResult: null,
+  analystOutput: null,
+  uploadedPdf: null,
+  uploadedJdText: '',
 };
 
 export function sessionReducer(
@@ -31,6 +34,8 @@ export function sessionReducer(
         ...state,
         phase: 'waiting',
         error: null,
+        uploadedPdf: action.payload.pdf,
+        uploadedJdText: action.payload.jdText,
       };
 
     case 'AGENT1_SUCCESS':
@@ -39,6 +44,7 @@ export function sessionReducer(
         agent1Ready: true,
         novaSonicContext: action.payload.nova_sonic_context,
         competencyGuides: action.payload.competency_guides,
+        analystOutput: action.payload.analyst_output ?? null,
         error: null,
       };
 

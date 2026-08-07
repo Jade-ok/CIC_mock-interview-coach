@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
+import { PracticeBubbles } from '@/components/PracticeBubbles';
+import { GuidePanel } from '@/components/GuidePanel';
 import { callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
 
@@ -14,15 +16,6 @@ function AITile({ isActive }: { isActive: boolean }) {
       data-testid="ai-tile"
     >
       <div className="participant-tile__content">
-        <div className="participant-tile__icon-wrapper">
-          {isActive && (
-            <>
-              <span className="pulse-ring pulse-ring--1" />
-              <span className="pulse-ring pulse-ring--2" />
-            </>
-          )}
-          <div className="participant-tile__icon" aria-hidden="true">🤖</div>
-        </div>
         {isActive && (
           <div className="waveform" data-testid="ai-waveform" aria-label="AI speaking waveform">
             <span className="waveform__bar" />
@@ -31,6 +24,9 @@ function AITile({ isActive }: { isActive: boolean }) {
             <span className="waveform__bar" />
             <span className="waveform__bar" />
           </div>
+        )}
+        {!isActive && (
+          <div className="participant-tile__icon" aria-hidden="true">🤖</div>
         )}
       </div>
       <span className="participant-tile__label">AI Interviewer</span>
@@ -45,17 +41,6 @@ function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean
       data-testid="user-tile"
     >
       <div className="participant-tile__content">
-        <div className="participant-tile__icon-wrapper">
-          {isActive && !textOnly && (
-            <>
-              <span className="pulse-ring pulse-ring--1 pulse-ring--user" />
-              <span className="pulse-ring pulse-ring--2 pulse-ring--user" />
-            </>
-          )}
-          <div className="participant-tile__icon" aria-hidden="true" data-testid={textOnly ? 'text-mode-icon' : undefined}>
-            {textOnly ? '⌨️' : '👤'}
-          </div>
-        </div>
         {isActive && !textOnly && (
           <div className="waveform" data-testid="user-waveform" aria-label="User speaking waveform">
             <span className="waveform__bar" />
@@ -64,6 +49,12 @@ function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean
             <span className="waveform__bar" />
             <span className="waveform__bar" />
           </div>
+        )}
+        {textOnly && (
+          <div className="participant-tile__icon" aria-hidden="true" data-testid="text-mode-icon">⌨️</div>
+        )}
+        {!isActive && !textOnly && (
+          <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
       </div>
       <span className="participant-tile__label">You{textOnly ? ' (Text Mode)' : ''}</span>
@@ -209,84 +200,12 @@ function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => vo
   );
 }
 
-function MicButton({
-  disabled,
-  onPressStart,
-  onPressEnd,
-  statusText,
-}: {
-  disabled: boolean;
-  onPressStart: () => void;
-  onPressEnd: () => void;
-  statusText: string | null;
-}) {
-  const [pressing, setPressing] = useState(false);
-
-  const handleDown = useCallback(() => {
-    if (disabled) return;
-    setPressing(true);
-    onPressStart();
-  }, [disabled, onPressStart]);
-
-  const handleUp = useCallback(() => {
-    if (!pressing) return;
-    setPressing(false);
-    onPressEnd();
-  }, [pressing, onPressEnd]);
-
-  // Handle mouse leaving button while pressed
-  const handleLeave = useCallback(() => {
-    if (pressing) {
-      setPressing(false);
-      onPressEnd();
-    }
-  }, [pressing, onPressEnd]);
-
-  return (
-    <div className="mic-button-wrapper" data-testid="mic-button-wrapper">
-      {statusText && (
-        <span className="mic-button__status">{statusText}</span>
-      )}
-      <div className={`mic-button-container ${pressing ? 'mic-button-container--active' : ''}`}>
-        {pressing && (
-          <>
-            <span className="mic-pulse mic-pulse--1" />
-            <span className="mic-pulse mic-pulse--2" />
-          </>
-        )}
-        <button
-          className={`mic-button ${pressing ? 'mic-button--pressing' : ''} ${disabled ? 'mic-button--disabled' : ''}`}
-          onMouseDown={handleDown}
-          onMouseUp={handleUp}
-          onMouseLeave={handleLeave}
-          onTouchStart={handleDown}
-          onTouchEnd={handleUp}
-          disabled={disabled}
-          type="button"
-          aria-label="Hold to speak"
-          data-testid="mic-button"
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="1" width="6" height="11" rx="3" />
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-            <line x1="12" y1="19" x2="12" y2="23" />
-            <line x1="8" y1="23" x2="16" y2="23" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // --- Main Component ---
 
 export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
-  const [guideLoading, setGuideLoading] = useState(true);
-  const [visibleGuideCount, setVisibleGuideCount] = useState(0);
-  const [micStatus, setMicStatus] = useState<string | null>(null);
 
   /** Trigger Agent 3 with current transcript */
   const triggerAgent3 = useCallback(async () => {
@@ -295,33 +214,14 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       const result = await callAgent3({
         transcript: state.transcript,
         competency_guides: state.competencyGuides,
+        analyst_output: state.analystOutput ?? undefined,
       });
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides]);
-
-  // "Analyzing your resume..." loading effect → then reveal guides one by one
-  useEffect(() => {
-    if (state.phase !== 'interview') return;
-
-    // Show loading for 1.5s
-    const loadingTimer = setTimeout(() => {
-      setGuideLoading(false);
-
-      // Reveal guide items one by one (300ms stagger)
-      const guides = state.competencyGuides;
-      guides.forEach((_, idx) => {
-        setTimeout(() => {
-          setVisibleGuideCount((prev) => Math.max(prev, idx + 1));
-        }, idx * 300);
-      });
-    }, 1500);
-
-    return () => clearTimeout(loadingTimer);
-  }, [state.phase, state.competencyGuides]);
+  }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
 
   // Audio streaming integration
   const { audioManagerRef } = useInterviewStreaming({
@@ -428,25 +328,15 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     [dispatch, audioManagerRef, state.inputMode]
   );
 
-  // --- Mic button demo handlers ---
-  const handleMicPressStart = useCallback(() => {
-    setMicStatus('Listening...');
-    dispatch({ type: 'USER_TURN' });
-  }, [dispatch]);
-
-  const handleMicPressEnd = useCallback(() => {
-    setMicStatus('Got it, thinking...');
-    dispatch({ type: 'AI_SPEAKING' });
-
-    // After 1s, clear status and trigger next mock question via WS
-    setTimeout(() => {
-      setMicStatus(null);
-      // Send a dummy text input to trigger the mock WS follow-up question
-      if (wsClient && wsClient.getState() === 'connected') {
-        wsClient.sendTextInput('[voice input]', 'default', 'mic-input');
+  // Derive the latest interviewer text from transcript (FINAL only)
+  const latestInterviewerText = useMemo(() => {
+    for (let i = state.transcript.length - 1; i >= 0; i--) {
+      if (state.transcript[i].role === 'interviewer') {
+        return state.transcript[i].text;
       }
-    }, 1000);
-  }, [dispatch, wsClient]);
+    }
+    return null;
+  }, [state.transcript]);
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
@@ -458,58 +348,18 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       )}
 
       <div className="interview-screen__main">
-        <div className={`interview-screen__left ${!state.practiceMode ? 'interview-screen__left--full' : ''}`}>
+        <div className="interview-screen__left">
           <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
-          {/* Practice Bubbles placeholder */}
-          <div className="practice-bubbles" data-testid="practice-bubbles" />
-          {/* Mic button for demo voice interaction */}
-          <MicButton
-            disabled={state.turnState === 'ai_speaking'}
-            onPressStart={handleMicPressStart}
-            onPressEnd={handleMicPressEnd}
-            statusText={micStatus}
-          />
-          {/* Text input hidden for demo (voice-only mode) — component preserved for future use */}
-          <div className="text-input--hidden">
-            <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
-          </div>
+          <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
+          <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
         </div>
-        {state.practiceMode && (
         <div className="interview-screen__right">
-          {/* Guide Panel with loading + fade-in */}
-          <div className="guide-panel" data-testid="guide-panel">
-            <span className="guide-panel__title">Interview Guide</span>
-            {guideLoading ? (
-              <div className="guide-panel__loading" data-testid="guide-loading">
-                <div className="guide-panel__loading-spinner" />
-                <span className="guide-panel__loading-text">Analyzing your resume...</span>
-              </div>
-            ) : (
-              <div className="guide-panel__items">
-                {state.competencyGuides.slice(0, visibleGuideCount).map((guide, idx) => (
-                  <div
-                    key={guide.id}
-                    className={`guide-panel__item ${guide.highlighted ? 'guide-panel__item--highlighted' : ''}`}
-                    style={{ animationDelay: `${idx * 100}ms` }}
-                    data-testid={`guide-item-${guide.id}`}
-                  >
-                    <div className="guide-panel__item-header">
-                      <span className="guide-panel__item-title">{guide.title}</span>
-                      {guide.highlighted && <span className="guide-panel__item-badge">Key Match</span>}
-                    </div>
-                    <p className="guide-panel__item-desc">{guide.description}</p>
-                    <div className="guide-panel__item-tags">
-                      {guide.keywords.slice(0, 3).map((kw) => (
-                        <span key={kw} className="guide-panel__tag">{kw}</span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <GuidePanel
+            guides={state.competencyGuides}
+            practiceMode={state.practiceMode}
+            currentInterviewerText={latestInterviewerText}
+          />
         </div>
-        )}
       </div>
       <ControlBar
         elapsedSeconds={state.elapsedSeconds}
@@ -557,11 +407,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           display: flex;
           flex-direction: column;
           gap: 12px;
-          transition: flex 0.3s ease;
-        }
-
-        .interview-screen__left--full {
-          flex: 1;
         }
 
         .interview-screen__right {
@@ -596,58 +441,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
         .participant-tile__content {
           display: flex;
-          flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 12px;
           min-height: 80px;
-        }
-
-        .participant-tile__icon-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
         }
 
         .participant-tile__icon {
           font-size: 48px;
-          position: relative;
-          z-index: 1;
-        }
-
-        /* Pulse ring animation for active speakers */
-        .pulse-ring {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 72px;
-          height: 72px;
-          margin-top: -36px;
-          margin-left: -36px;
-          border-radius: 50%;
-          border: 2px solid var(--color-accent, #9AE05C);
-          opacity: 0;
-          animation: pulse-expand 1.8s ease-out infinite;
-        }
-
-        .pulse-ring--2 {
-          animation-delay: 0.6s;
-        }
-
-        .pulse-ring--user {
-          border-color: var(--color-highlight, #4A9EFF);
-        }
-
-        @keyframes pulse-expand {
-          0% {
-            transform: scale(0.6);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(1.5);
-            opacity: 0;
-          }
         }
 
         .participant-tile__label {
@@ -695,213 +495,20 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           border-radius: 8px;
           height: 100%;
           padding: 16px;
-          overflow-y: auto;
         }
 
         .guide-panel__title {
           font-size: 14px;
-          font-weight: 600;
-          color: var(--color-text-primary, #FFFFFF);
-          display: block;
-          margin-bottom: 16px;
-        }
-
-        /* Loading state */
-        .guide-panel__loading {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          padding: 32px 0;
-        }
-
-        .guide-panel__loading-spinner {
-          width: 24px;
-          height: 24px;
-          border: 2px solid var(--color-tile-bg, #2C2C2E);
-          border-top-color: var(--color-accent, #9AE05C);
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-
-        .guide-panel__loading-text {
-          font-size: 13px;
-          color: var(--color-accent, #9AE05C);
-          animation: pulse-text 1.2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-text {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-
-        /* Guide Items */
-        .guide-panel__items {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .guide-panel__item {
-          background-color: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 8px;
-          padding: 12px;
-          animation: guide-fade-in 0.4s ease-out forwards;
-          opacity: 0;
-          transform: translateY(8px);
-        }
-
-        .guide-panel__item--highlighted {
-          border-color: var(--color-accent, #9AE05C);
-          background-color: rgba(154, 224, 92, 0.06);
-        }
-
-        @keyframes guide-fade-in {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .guide-panel__item-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 6px;
-        }
-
-        .guide-panel__item-title {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--color-text-primary, #FFFFFF);
-        }
-
-        .guide-panel__item-badge {
-          font-size: 10px;
-          font-weight: 600;
-          color: var(--color-accent, #9AE05C);
-          background-color: rgba(154, 224, 92, 0.15);
-          padding: 2px 6px;
-          border-radius: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .guide-panel__item-desc {
-          font-size: 12px;
+          font-weight: 500;
           color: var(--color-text-secondary, #A0A0A5);
-          line-height: 1.5;
-          margin: 0 0 8px;
-        }
-
-        .guide-panel__item-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-
-        .guide-panel__tag {
-          font-size: 10px;
-          color: var(--color-text-secondary, #A0A0A5);
-          background-color: rgba(255, 255, 255, 0.06);
-          padding: 2px 6px;
-          border-radius: 3px;
         }
 
         /* Practice Bubbles */
         .practice-bubbles {
-          min-height: 20px;
+          min-height: 40px;
         }
 
-        /* Mic Button */
-        .mic-button-wrapper {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 10px;
-          padding: 16px 0;
-        }
-
-        .mic-button__status {
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--color-accent, #9AE05C);
-          animation: pulse-text 1.2s ease-in-out infinite;
-        }
-
-        .mic-button-container {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .mic-pulse {
-          position: absolute;
-          width: 72px;
-          height: 72px;
-          border-radius: 50%;
-          border: 2px solid var(--color-error, #FF5C5C);
-          opacity: 0;
-          animation: mic-pulse-expand 1.4s ease-out infinite;
-        }
-
-        .mic-pulse--2 {
-          animation-delay: 0.5s;
-        }
-
-        @keyframes mic-pulse-expand {
-          0% {
-            transform: scale(0.8);
-            opacity: 0.5;
-          }
-          100% {
-            transform: scale(1.6);
-            opacity: 0;
-          }
-        }
-
-        .mic-button {
-          width: 64px;
-          height: 64px;
-          border-radius: 50%;
-          border: none;
-          background-color: var(--color-tile-bg, #1C1C1E);
-          border: 2px solid var(--color-accent, #9AE05C);
-          color: var(--color-accent, #9AE05C);
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-          position: relative;
-          z-index: 1;
-        }
-
-        .mic-button:hover:not(:disabled) {
-          background-color: rgba(154, 224, 92, 0.1);
-        }
-
-        .mic-button--pressing {
-          transform: scale(1.15);
-          background-color: var(--color-error, #FF5C5C);
-          border-color: var(--color-error, #FF5C5C);
-          color: #FFFFFF;
-        }
-
-        .mic-button--disabled {
-          opacity: 0.35;
-          cursor: not-allowed;
-          border-color: var(--color-text-secondary, #A0A0A5);
-          color: var(--color-text-secondary, #A0A0A5);
-        }
-
-        /* Text Input — hidden for demo (voice-only) */
-        .text-input--hidden {
-          display: none;
-        }
-
+        /* Text Input */
         .text-input {
           display: flex;
           gap: 8px;
