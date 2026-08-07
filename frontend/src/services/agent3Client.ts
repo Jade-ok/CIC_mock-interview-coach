@@ -45,9 +45,12 @@ function buildConversation(
       const answer = nextEntry && nextEntry.role === 'user' ? nextEntry.text : '';
 
       questionIndex++;
+      // Interview pattern: main → follow_up → main → follow_up → ...
+      // Odd-numbered questions (1,3,5) are main_question, even (2,4,6) are follow_up
+      const pointIndex = Math.ceil(questionIndex / 2);
       conversation.push({
-        point_id: `q${questionIndex}`,
-        turn_type: questionIndex === 1 ? 'main_question' : 'follow_up',
+        point_id: `point_${pointIndex}`,
+        turn_type: questionIndex % 2 === 1 ? 'main_question' : 'follow_up',
         question: entry.text,
         answer,
       });
@@ -80,11 +83,19 @@ export async function callAgent3(request: Agent3Request): Promise<unknown> {
   }
 
   // Build the request body matching evaluator validator expectations
+  const mainQuestions = conversation.filter(c => c.turn_type === 'main_question').length;
+  const followUps = conversation.filter(c => c.turn_type === 'follow_up').length;
+
   const requestBody = {
     conversation,
     interview_metadata: {
-      question_count: conversation.length,
-      timestamp: new Date().toISOString(),
+      candidate_level: (request.analyst_output?.candidate_profile as Record<string, unknown>)?.candidate_level as string || 'student_intern',
+      target_role: (request.analyst_output?.target_role as Record<string, unknown>)?.title as string || 'Unknown',
+      status: 'completed' as const,
+      completion_reason: conversation.length >= 6 ? 'all_questions_completed' : 'user_ended_early',
+      main_questions_completed: mainQuestions,
+      follow_ups_completed: followUps,
+      ended_early: conversation.length < 6,
     },
     analyst_output: request.analyst_output || {},
   };

@@ -353,6 +353,8 @@ describe('Preservation: RESET always clears all state back to initialState', () 
         fc.constant(null),
         fc.record({ interview_plan: fc.array(fc.record({ topic: fc.string({ minLength: 1, maxLength: 20 }) }), { minLength: 0, maxLength: 3 }) })
       ) as fc.Arbitrary<Record<string, unknown> | null>,
+      uploadedPdf: fc.constant(null) as fc.Arbitrary<File | null>,
+      uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
     });
 
     fc.assert(
@@ -395,6 +397,8 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       agent3Loading: true,
       feedbackResult: { score: 85, dimensions: [] },
       analystOutput: { interview_plan: [{ topic: 'React' }] },
+      uploadedPdf: null,
+      uploadedJdText: 'Some JD text',
     };
 
     const result = sessionReducer(mutatedState, { type: 'RESET' });
