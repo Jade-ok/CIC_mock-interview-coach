@@ -136,7 +136,7 @@ The sequence is:
 - follow-up answer
 - move to the next interview point
 
-The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The current frontend mapping is not yet compatible with the Evaluator request schema.
+The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The frontend now maps final transcript entries to `schemas/interviewer_output.json`; live end-to-end verification remains pending.
 
 Once that handoff is implemented, an early-ended interview should be scored only on what was covered, without penalizing areas with insufficient evidence.
 
@@ -151,6 +151,6 @@ The agreed deployment architecture is:
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration deployment. AgentCore deployment remains a separate container workflow.
 
-This is the target deployment plan, not the current end-to-end state. Today the frontend uses a mock WebSocket client during Vite development and otherwise points to `ws://localhost:8080`; its message envelope does not match the relay's raw Nova event protocol. Amplify Hosting and authentication are not provisioned, AgentCore has no authorizer/OAuth configuration, and the four Lambda Function URLs are currently public. Those gaps must be closed and tested before the application is shared publicly.
+This is the target deployment plan, not the current end-to-end state. The frontend now reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, the mock is opt-in, and the relay translates the browser contract to and from Nova events. That adapter has focused unit coverage but no live browser/Nova verification yet. Amplify Hosting and authentication are not provisioned, AgentCore has no authorizer/OAuth configuration, and the four Lambda Function URLs are currently public. Those gaps must be closed and tested before the application is shared publicly.
 
 No database or permanent interview history is currently implemented. Practice Mode hints exist in the UI design, but the complete guide behavior remains unfinished.

@@ -18,13 +18,24 @@ import type { SessionAction, TranscriptEntry } from '@/types/session';
 
 export interface UseInterviewStreamingOptions {
   phase: string;
-  wsClient: WebSocketClient | null;
+  wsClient: InterviewWebSocketClient | null;
   dispatch: React.Dispatch<SessionAction>;
   /** Allows injection of a custom AudioManager factory (for testing) */
   audioManagerFactory?: () => AudioManager;
   /** Callback triggered when auto-end (end_interview tool_use) completes */
   onAutoEnd?: () => void;
 }
+
+/** Public socket surface shared by the real and development clients. */
+export type InterviewWebSocketClient = Pick<
+  WebSocketClient,
+  | 'onMessage'
+  | 'getState'
+  | 'send'
+  | 'sendAudioChunk'
+  | 'sendTextInput'
+  | 'disconnect'
+>;
 
 export function useInterviewStreaming({
   phase,
@@ -137,6 +148,7 @@ export function useInterviewStreaming({
 
       // session_invalid → error + route to upload
       case 'session_invalid': {
+        wsClientRef.current?.disconnect();
         dispatchRef.current({ type: 'WS_SESSION_INVALID' });
         break;
       }

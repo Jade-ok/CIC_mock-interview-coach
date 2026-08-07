@@ -15,7 +15,7 @@ describe('FeedbackScreen', () => {
     it('shows loading spinner and message when loading', () => {
       render(<FeedbackScreen {...defaultProps} loading={true} />);
       expect(screen.getByTestId('feedback-loading')).toBeInTheDocument();
-      expect(screen.getByText('피드백을 생성하고 있습니다...')).toBeInTheDocument();
+      expect(screen.getByText('Generating your feedback...')).toBeInTheDocument();
     });
 
     it('does not show error or result when loading', () => {
@@ -30,7 +30,7 @@ describe('FeedbackScreen', () => {
       ...defaultProps,
       error: {
         code: 'AGENT3_FAILED' as const,
-        message: 'Agent 3 요청에 실패했습니다.',
+        message: 'Agent 3 request failed.',
         retryable: true,
       },
     };
@@ -38,7 +38,7 @@ describe('FeedbackScreen', () => {
     it('shows error message', () => {
       render(<FeedbackScreen {...errorProps} />);
       expect(screen.getByTestId('feedback-error')).toBeInTheDocument();
-      expect(screen.getByText('Agent 3 요청에 실패했습니다.')).toBeInTheDocument();
+      expect(screen.getByText('Agent 3 request failed.')).toBeInTheDocument();
     });
 
     it('shows retry button when retryable', () => {
@@ -79,13 +79,13 @@ describe('FeedbackScreen', () => {
   describe('Result state', () => {
     const resultProps = {
       ...defaultProps,
-      feedbackResult: { overallScore: 85, summary: '좋은 성과입니다.' },
+      feedbackResult: { overallScore: 85, summary: 'Good performance.' },
     };
 
     it('shows feedback result', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      expect(screen.getByText('인터뷰 피드백')).toBeInTheDocument();
+      expect(screen.getByText('Interview Feedback')).toBeInTheDocument();
     });
 
     it('displays result data as JSON', () => {

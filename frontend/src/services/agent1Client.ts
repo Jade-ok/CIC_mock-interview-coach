@@ -16,7 +16,7 @@ const INTERVIEWER_URL = import.meta.env.VITE_INTERVIEWER_URL;
 
 /**
  * Calls the full pipeline: pdf_parser → analyst → interviewer.
- * Returns nova_sonic_context and competency_guides.
+ * Returns the complete Analyst output plus the derived runtime context and UI guides.
  */
 export async function callAgent1(request: Agent1Request): Promise<Agent1Response> {
   // Step 1: Convert PDF to base64 and call pdf_parser
@@ -60,12 +60,13 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   });
 
   const interviewerResult = await interviewerResponse.json();
-  if (interviewerResult.status !== 'success') {
-    throw new Error(`Interviewer setup failed: ${interviewerResult.error}`);
+  if (!interviewerResponse.ok || interviewerResult.success !== true) {
+    throw new Error(
+      `Interviewer setup failed: ${interviewerResult.error_message || interviewerResponse.statusText}`
+    );
   }
 
-  const novaSonicContext = interviewerResult.data.runtime_context
-    || JSON.stringify(interviewerResult.data);
+  const novaSonicContext = interviewerResult.runtime_context;
 
   // Step 4: Map analyst output to competency_guides for the UI
   const competencyGuides: CompetencyGuide[] = mapToCompetencyGuides(analystOutput);
@@ -73,6 +74,7 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   return {
     nova_sonic_context: novaSonicContext,
     competency_guides: competencyGuides,
+    analyst_output: analystOutput,
   };
 }
 

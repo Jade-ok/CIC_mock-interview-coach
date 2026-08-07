@@ -64,7 +64,7 @@ describe('useInterviewStreaming', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Sub-task 1: 인터뷰 진입 시 AudioManager 초기화 + 캡처 시작', () => {
+  describe('Sub-task 1: initialize AudioManager and capture on interview entry', () => {
     it('should initialize AudioManager and start capture when phase is interview', async () => {
       const factory = vi.fn().mockReturnValue(mockAm);
 
@@ -153,7 +153,7 @@ describe('useInterviewStreaming', () => {
     });
   });
 
-  describe('Sub-task 2: audio_output 수신 → enqueueAudio + AI_SPEAKING', () => {
+  describe('Sub-task 2: audio_output reception → enqueueAudio + AI_SPEAKING', () => {
     it('should enqueue audio and dispatch AI_SPEAKING on audio_output event', async () => {
       const factory = vi.fn().mockReturnValue(mockAm);
 
@@ -185,7 +185,7 @@ describe('useInterviewStreaming', () => {
     });
   });
 
-  describe('Sub-task 3: interrupted 수신 → stopPlayback + BARGE_IN', () => {
+  describe('Sub-task 3: interrupted reception → stopPlayback + BARGE_IN', () => {
     it('should stop playback and dispatch BARGE_IN on interrupted event', async () => {
       const factory = vi.fn().mockReturnValue(mockAm);
 
@@ -216,7 +216,7 @@ describe('useInterviewStreaming', () => {
     });
   });
 
-  describe('Sub-task 4: text_output 수신 → FINAL만 transcript 누적', () => {
+  describe('Sub-task 4: text_output reception → store only FINAL transcript', () => {
     it('should dispatch APPEND_TRANSCRIPT for FINAL text_output events', async () => {
       const factory = vi.fn().mockReturnValue(mockAm);
 
@@ -291,7 +291,7 @@ describe('useInterviewStreaming', () => {
     });
   });
 
-  describe('Sub-task 5: 마이크 권한 거부 → 텍스트 전용 모드', () => {
+  describe('Sub-task 5: microphone denied → text-only mode', () => {
     it('should dispatch MIC_DENIED when AudioManager.initialize returns granted=false', async () => {
       const deniedAm = createMockAudioManager({ granted: false });
       const factory = vi.fn().mockReturnValue(deniedAm);
@@ -393,6 +393,7 @@ describe('useInterviewStreaming', () => {
       });
 
       expect(dispatch).toHaveBeenCalledWith({ type: 'WS_SESSION_INVALID' });
+      expect(mockWs.disconnect).toHaveBeenCalled();
     });
   });
 

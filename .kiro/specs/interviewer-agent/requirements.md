@@ -53,9 +53,9 @@ Current gap: the queue primitives exist, but `server.py` forwards audio through 
 
 ### R7. Integration Contract
 
-1. One canonical WebSocket wire protocol must be shared by frontend and relay.
-2. The current relay protocol is raw Nova `{"event": ...}` JSON.
-3. The current frontend `{type, payload}` abstraction is not yet adapted to that protocol; this remains an open integration requirement.
+1. The frontend and relay share the canonical application-level `{type, payload}` protocol.
+2. The relay must own Nova-specific prompt/content identifiers and event ordering rather than exposing them to the browser.
+3. The adapter must translate session, audio, text, transcript, tool-use, interruption, and completion events; live Nova behavior remains an end-to-end verification requirement.
 
 ### R8. Production Access Boundary
 

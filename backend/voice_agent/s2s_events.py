@@ -40,33 +40,40 @@ def prompt_start_event(
     prompt_name: str,
     voice_id: str = "matthew",
     output_sample_rate: int = 24000,
+    tools: list[dict] | None = None,
 ) -> str:
     """Begin a prompt with audio and text output configuration."""
-    return json.dumps({
-        "event": {
-            "promptStart": {
-                "promptName": prompt_name,
-                "textOutputConfiguration": {
-                    "mediaType": "text/plain",
-                },
-                "audioOutputConfiguration": {
-                    "mediaType": "audio/lpcm",
-                    "sampleRateHertz": output_sample_rate,
-                    "sampleSizeBits": 16,
-                    "channelCount": 1,
-                    "voiceId": voice_id,
-                    "encoding": "base64",
-                    "audioType": "SPEECH",
-                },
-            }
+    prompt_start = {
+        "promptName": prompt_name,
+        "textOutputConfiguration": {
+            "mediaType": "text/plain",
+        },
+        "audioOutputConfiguration": {
+            "mediaType": "audio/lpcm",
+            "sampleRateHertz": output_sample_rate,
+            "sampleSizeBits": 16,
+            "channelCount": 1,
+            "voiceId": voice_id,
+            "encoding": "base64",
+            "audioType": "SPEECH",
+        },
+    }
+    if tools:
+        prompt_start["toolUseOutputConfiguration"] = {
+            "mediaType": "application/json",
         }
-    })
+        prompt_start["toolConfiguration"] = {
+            "tools": tools,
+            "toolChoice": {"auto": {}},
+        }
+    return json.dumps({"event": {"promptStart": prompt_start}})
 
 
 def content_start_text_event(
     prompt_name: str,
     content_name: str,
     role: str = "SYSTEM",
+    interactive: bool = False,
 ) -> str:
     """Start a text content block (used for system prompt)."""
     return json.dumps({
@@ -75,7 +82,7 @@ def content_start_text_event(
                 "promptName": prompt_name,
                 "contentName": content_name,
                 "type": "TEXT",
-                "interactive": True,
+                "interactive": interactive,
                 "role": role,
                 "textInputConfiguration": {
                     "mediaType": "text/plain",
@@ -142,6 +149,23 @@ def audio_input_event(
                 "promptName": prompt_name,
                 "contentName": content_name,
                 "content": base64_audio,
+            }
+        }
+    })
+
+
+def tool_result_event(
+    prompt_name: str,
+    content_name: str,
+    content: str,
+) -> str:
+    """Return the required result for a Nova tool invocation."""
+    return json.dumps({
+        "event": {
+            "toolResult": {
+                "promptName": prompt_name,
+                "contentName": content_name,
+                "content": content,
             }
         }
     })

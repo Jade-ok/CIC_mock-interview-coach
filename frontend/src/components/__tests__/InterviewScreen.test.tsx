@@ -249,13 +249,39 @@ describe('InterviewScreen', () => {
       const sendBtn = screen.getByTestId('text-send-button');
       expect(sendBtn).not.toBeDisabled();
     });
+
+    it('sends and records an accepted typed answer', () => {
+      const wsClient = {
+        getState: vi.fn().mockReturnValue('connected'),
+        sendTextInput: vi.fn(),
+      };
+      render(<InterviewScreen wsClient={wsClient as never} />);
+
+      fireEvent.change(screen.getByLabelText('Text input fallback'), {
+        target: { value: 'I led the API migration.' },
+      });
+      fireEvent.click(screen.getByTestId('text-send-button'));
+
+      expect(wsClient.sendTextInput).toHaveBeenCalledWith(
+        'I led the API migration.',
+        'default',
+        'text-input'
+      );
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'APPEND_TRANSCRIPT',
+        payload: expect.objectContaining({
+          role: 'user',
+          text: 'I led the API migration.',
+        }),
+      });
+    });
   });
 
   // --- Property-Based Tests ---
 
-  describe('Property 15: beforeunload 활성 조건', () => {
+  describe('Property 15: beforeunload activation condition', () => {
     /**
-     * Feature: frontend-interview, Property 15: beforeunload 활성 조건
+     * Feature: frontend-interview, Property 15: beforeunload activation condition
      * Validates: Requirements 3.15
      *
      * For any phase === 'interview', the beforeunload event listener must be
@@ -301,9 +327,9 @@ describe('InterviewScreen', () => {
     });
   });
 
-  describe('Property 16: 종료 버튼 항상 활성', () => {
+  describe('Property 16: end button is always enabled', () => {
     /**
-     * Feature: frontend-interview, Property 16: 종료 버튼 항상 활성
+     * Feature: frontend-interview, Property 16: end button is always enabled
      * Validates: Requirements 4.8
      *
      * For any interview screen state, the end button is always enabled

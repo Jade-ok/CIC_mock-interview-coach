@@ -27,12 +27,13 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 
 ## Current Implementation
 
-- The React/Vite frontend owns navigation, UI state, and the interview transcript. It is intended to retain uploaded content and Analyst output, but the current reducer/client flow drops both before downstream use.
+- The React/Vite frontend owns navigation, UI state, uploaded content, the complete Analyst output, and the interview transcript for the active session.
 - There is no persistent application database or server-side session store.
 - Four Lambda Function URLs expose PDF Parser, Analyst, Interviewer, and Evaluator.
 - CDK uploads `backend/config/interview_structure.json` and `backend/config/student_interview_profile.json`; the Interviewer reads the resulting S3 object keys and returns a runtime-context string.
 - `backend/voice_agent/` contains a FastAPI/Python WebSocket relay and AgentCore container configuration. The relay opens the Nova 2 Sonic bidirectional stream and holds transient state and queues only for the lifetime of a voice connection.
-- The frontend still uses a development mock in Vite development mode and hard-codes `ws://localhost:8080` for the real client. Its app-level WebSocket protocol does not yet match the relay's raw Nova-event protocol.
+- The frontend uses the real relay by default and reads `VITE_VOICE_WS_URL`, falling back to `ws://localhost:8080/` for local work. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
+- `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter is unit-tested, but a live browser/Nova session remains unverified.
 - The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
 - AgentCore authentication is not configured: `.bedrock_agentcore.yaml` currently has no authorizer or OAuth configuration.
 - Frontend hosting and Amplify authentication are not provisioned in this repository. The Lambda Function URLs currently use public `NONE` authentication and permissive CORS.
@@ -46,7 +47,7 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - Keep PDF parsing, Analyst, Interviewer context building, and Evaluator work in the four Lambda functions. S3 remains the store for versioned interview configuration, and CDK remains the source of truth for backend infrastructure.
 - Add access control for the Lambda endpoints before a public launch; Amplify hosting alone does not secure their current public Function URLs.
 
-Do not describe the target architecture as deployed until Amplify hosting/authentication, an authenticated AgentCore endpoint, frontend endpoint configuration, protocol adaptation, and protected Lambda access are implemented and verified end to end.
+Do not describe the target architecture as deployed until Amplify hosting/authentication, an authenticated AgentCore endpoint, deployment environment configuration, protected Lambda access, and the complete flow are verified end to end.
 
 ## Contracts and Configuration
 
@@ -62,15 +63,12 @@ Runtime interview configuration lives in `backend/config/` and is uploaded to S3
 
 Known integration gaps must not be documented as working behavior:
 
-- The frontend and Interviewer currently expect different response envelopes.
-- The upload action is not persisted into waiting-room state, which currently falls back to an empty placeholder file and job description.
-- The frontend Evaluator request does not yet match `schemas/interviewer_output.json`.
-- The frontend app-level WebSocket messages do not yet match the relay's raw Nova-event protocol.
-- The frontend hard-codes `ws://localhost:8080` and has no AgentCore endpoint environment setting.
+- The browser/relay adapter is not yet verified against a live Nova 2 Sonic session.
+- The deployed AgentCore endpoint still needs to be supplied as `VITE_VOICE_WS_URL` in Amplify.
 - The AgentCore configuration does not yet define an authorizer or OAuth settings, so the planned authenticated browser connection is not implemented.
 - Amplify Hosting and its authentication configuration are not represented in the current CDK stack or frontend configuration.
 - All four Lambda Function URLs currently use unauthenticated public access and `*` CORS; they require an explicit protection plan before public deployment.
-- The frontend currently permits 10 MB PDFs while the backend rejects decoded payloads above 4 MB. Treat 4 MB as the backend limit until the application is aligned.
+- The frontend retains its existing 10 MB PDF limit while the backend rejects decoded PDFs above 4 MB. Do not change either limit without an explicit product decision.
 
 ## Function Layouts
 

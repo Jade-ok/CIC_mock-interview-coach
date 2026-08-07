@@ -463,10 +463,10 @@ describe('WebSocketClient', () => {
     });
   });
 
-  describe('Property 7: WebSocket 재연결 제한 (PBT)', () => {
+  describe('Property 7: WebSocket reconnection limit (PBT)', () => {
     /**
      * **Validates: Requirements 3.14**
-     * Feature: frontend-interview, Property 7: WebSocket 재연결 제한
+     * Feature: frontend-interview, Property 7: WebSocket reconnection limit
      *
      * For any WebSocket disconnect scenario, automatic reconnection attempts
      * must never exceed 2.

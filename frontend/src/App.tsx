@@ -4,10 +4,10 @@ import { UploadScreen } from '@/components/UploadScreen';
 import { WaitingRoom } from '@/components/WaitingRoom';
 import { InterviewScreen } from '@/components/InterviewScreen';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
-import { callAgent3 } from '@/services/agent3Client';
+import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 
 function AppContent() {
-  const { state, dispatch } = useSession();
+  const { state, dispatch, webSocketClient } = useSession();
 
   const handleUploadSubmit = useCallback(
     (pdf: File, jdText: string) => {
@@ -19,16 +19,13 @@ function AppContent() {
   const handleFeedbackRetry = useCallback(async () => {
     dispatch({ type: 'AGENT3_LOADING' });
     try {
-      const result = await callAgent3({
-        transcript: state.transcript,
-        competency_guides: state.competencyGuides,
-      });
+      const result = await callAgent3(buildAgent3Request(state));
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides]);
+  }, [dispatch, state]);
 
   const handleNewSession = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -40,7 +37,7 @@ function AppContent() {
     case 'waiting':
       return <WaitingRoom />;
     case 'interview':
-      return <InterviewScreen />;
+      return <InterviewScreen wsClient={webSocketClient} />;
     case 'feedback':
       return (
         <FeedbackScreen

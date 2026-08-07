@@ -14,8 +14,9 @@ import json
 import logging
 import os
 
+import boto3
 from aws_sdk_bedrock_runtime.client import (
-    BedrockRuntimeClient,
+    AsyncBedrockRuntimeClient,
     InvokeModelWithBidirectionalStreamOperationInput,
 )
 from aws_sdk_bedrock_runtime.models import (
@@ -27,13 +28,38 @@ from aws_sdk_bedrock_runtime.config import (
     HTTPAuthSchemeResolver,
     SigV4AuthScheme,
 )
-from smithy_aws_core.identity import EnvironmentCredentialsResolver
+from smithy_aws_core.identity import AWSCredentialsIdentity
+from smithy_core.aio.interfaces.identity import IdentityResolver
+from smithy_core.exceptions import SmithyIdentityError
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_ID = "amazon.nova-2-sonic-v1:0"
 DEFAULT_REGION = "us-east-1"
 MAX_AUDIO_QUEUE_SIZE = 100
+
+
+class Boto3CredentialsResolver(IdentityResolver):
+    """Bridge boto3's full credential chain into the Smithy Bedrock client.
+
+    This supports IAM Identity Center profiles locally and container/task-role
+    credentials in AgentCore without permanent access keys.
+    """
+
+    def __init__(self, session=None):
+        self.session = session or boto3.Session()
+
+    async def get_identity(self, *, properties) -> AWSCredentialsIdentity:
+        credentials = self.session.get_credentials()
+        if credentials is None:
+            raise SmithyIdentityError("No AWS credentials are available")
+
+        frozen = credentials.get_frozen_credentials()
+        return AWSCredentialsIdentity(
+            access_key_id=frozen.access_key,
+            secret_access_key=frozen.secret_key,
+            session_token=frozen.token,
+        )
 
 
 class S2sSessionManager:
@@ -46,7 +72,7 @@ class S2sSessionManager:
     ):
         self.model_id = model_id or os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
         self.region = region or os.environ.get("AWS_REGION", DEFAULT_REGION)
-        self.client: BedrockRuntimeClient | None = None
+        self.client: AsyncBedrockRuntimeClient | None = None
         self.stream = None
         self.is_active = False
         self.audio_queue: asyncio.Queue = asyncio.Queue(maxsize=MAX_AUDIO_QUEUE_SIZE)
@@ -56,11 +82,11 @@ class S2sSessionManager:
         config = Config(
             endpoint_uri=f"https://bedrock-runtime.{self.region}.amazonaws.com",
             region=self.region,
-            aws_credentials_identity_resolver=EnvironmentCredentialsResolver(),
+            aws_credentials_identity_resolver=Boto3CredentialsResolver(),
             auth_scheme_resolver=HTTPAuthSchemeResolver(),
             auth_schemes={"aws.auth#sigv4": SigV4AuthScheme(service="bedrock")},
         )
-        self.client = BedrockRuntimeClient(config=config)
+        self.client = AsyncBedrockRuntimeClient(config=config)
 
     async def start_session(self):
         """Open a bidirectional stream to Nova Sonic."""

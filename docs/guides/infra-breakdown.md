@@ -196,4 +196,4 @@ The S3 bucket has `RemovalPolicy.RETAIN`, so it will **not** be deleted — you 
 | Docker not running → synth fails for pdf_parser | Start Docker Desktop before running `cdk deploy` |
 | Handler not found on Lambda invocation | Verify the CDK handler path matches the file inside the selected function asset. |
 | Trailing whitespace in `.env` URLs | Trim the URLs after pasting |
-| Payload too large | Function URLs have a 6 MiB limit. The backend rejects decoded documents above 4 MB; the frontend currently permits 10 MB and must be aligned. |
+| Payload too large | Function URLs have a 6 MiB limit. The backend rejects decoded PDFs above 4 MB, while the frontend currently allows 10 MB. |

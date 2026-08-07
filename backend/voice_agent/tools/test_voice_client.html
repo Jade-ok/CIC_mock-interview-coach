@@ -58,8 +58,6 @@
     let audioContext = null;
     let mediaStream = null;
     let scriptProcessor = null;
-    let promptName = crypto.randomUUID();
-    let audioContentName = crypto.randomUUID();
     let isStreaming = false;
     let nextStartTime = 0;
 
@@ -108,101 +106,24 @@
         setStatus('Connected! Sending setup...');
         log('Connected to voice agent server');
 
-        // 1. Session start
         ws.send(JSON.stringify({
-            event: { sessionStart: {
-                inferenceConfiguration: { maxTokens: 1024, topP: 0.9, temperature: 0.7 },
-                turnDetectionConfiguration: { endpointingSensitivity: "HIGH" }
-            }}
-        }));
-
-        // 2. Prompt start
-        ws.send(JSON.stringify({
-            event: { promptStart: {
-                promptName,
-                textOutputConfiguration: { mediaType: "text/plain" },
-                audioOutputConfiguration: {
-                    mediaType: "audio/lpcm", sampleRateHertz: 24000,
-                    sampleSizeBits: 16, channelCount: 1,
-                    voiceId, encoding: "base64", audioType: "SPEECH"
+            type: 'session_start',
+            payload: {
+                novaSonicContext: document.getElementById('systemPromptArea').value
+                    || window.RUNTIME_CONTEXT
+                    || 'You are a mock interviewer. Greet the candidate and ask about their project.',
+                inferenceConfig: {
+                    maxTokens: 1024,
+                    topP: 0.9,
+                    temperature: 0.7,
+                    endpointingSensitivity: 'HIGH',
+                    voiceId
                 }
-            }}
+            }
         }));
-
-        // 3. System instruction
-        const contentName = crypto.randomUUID();
-        ws.send(JSON.stringify({
-            event: { contentStart: {
-                promptName, contentName, type: "TEXT",
-                interactive: true, role: "SYSTEM",
-                textInputConfiguration: { mediaType: "text/plain" }
-            }}
-        }));
-
-        const systemPrompt = document.getElementById('systemPromptArea').value || window.RUNTIME_CONTEXT || "You are a mock interviewer. Greet the candidate and ask about their project.";
-
-        ws.send(JSON.stringify({
-            event: { textInput: { promptName, contentName, content: systemPrompt } }
-        }));
-
-        ws.send(JSON.stringify({
-            event: { contentEnd: { promptName, contentName } }
-        }));
-
-        log('System instruction sent. Nova should start speaking...', 'system');
-
-        // 4. Start audio input then immediately send silence + end to trigger Nova to speak first
-        startTriggerTurn();
-    }
-
-    function startTriggerTurn() {
-        // Send a brief "empty turn" — silence + contentEnd — to make Nova speak first
-        const triggerContentName = crypto.randomUUID();
-        ws.send(JSON.stringify({
-            event: { contentStart: {
-                promptName, contentName: triggerContentName,
-                type: "AUDIO", interactive: true, role: "USER",
-                audioInputConfiguration: {
-                    mediaType: "audio/lpcm", sampleRateHertz: 16000,
-                    sampleSizeBits: 16, channelCount: 1,
-                    audioType: "SPEECH", encoding: "base64"
-                }
-            }}
-        }));
-
-        // Send 500ms of silence to give Nova something to "hear"
-        const silence = btoa(String.fromCharCode(...new Uint8Array(16000))); // 500ms at 16kHz 16-bit
-        ws.send(JSON.stringify({
-            event: { audioInput: { promptName, contentName: triggerContentName, content: silence } }
-        }));
-
-        // End the turn — this triggers Nova to respond
-        setTimeout(() => {
-            ws.send(JSON.stringify({
-                event: { contentEnd: { promptName, contentName: triggerContentName } }
-            }));
-            log('Sent trigger turn (silence). Waiting for Nova to speak...', 'system');
-            setStatus('Waiting for Nova to speak first...');
-
-            // After Nova responds, start real mic streaming
-            setTimeout(() => startMicStreaming(), 1000);
-        }, 300);
     }
 
     function startMicStreaming() {
-        audioContentName = crypto.randomUUID();
-        ws.send(JSON.stringify({
-            event: { contentStart: {
-                promptName, contentName: audioContentName,
-                type: "AUDIO", interactive: true, role: "USER",
-                audioInputConfiguration: {
-                    mediaType: "audio/lpcm", sampleRateHertz: 16000,
-                    sampleSizeBits: 16, channelCount: 1,
-                    audioType: "SPEECH", encoding: "base64"
-                }
-            }}
-        }));
-
         // Setup audio capture
         const micContext = new AudioContext({ sampleRate: 16000 });
         const source = micContext.createMediaStreamSource(mediaStream);
@@ -217,7 +138,8 @@
             }
             const base64 = btoa(String.fromCharCode(...new Uint8Array(int16.buffer)));
             ws.send(JSON.stringify({
-                event: { audioInput: { promptName, contentName: audioContentName, content: base64 } }
+                type: 'audio_chunk',
+                payload: { content: base64 }
             }));
         };
 
@@ -229,31 +151,30 @@
 
     function onMessage(event) {
         const data = JSON.parse(event.data);
-        const evt = data.event || {};
+        const payload = data.payload || {};
 
-        if (evt.textOutput) {
-            const text = evt.textOutput.content;
-            if (currentRole === 'ASSISTANT') {
+        if (data.type === 'session_start_ack') {
+            log('Session acknowledged; microphone streaming started.', 'system');
+            setStatus('Listening... Speak now!');
+            startMicStreaming();
+        } else if (data.type === 'text_output' && payload.generationStage === 'FINAL') {
+            if (payload.role === 'interviewer') {
+                const text = payload.content;
                 log(`Interviewer: ${text}`, 'interviewer');
-            } else if (currentRole === 'USER') {
+            } else if (payload.role === 'user') {
+                const text = payload.content;
                 log(`You: ${text}`, 'candidate');
             }
-        } else if (evt.audioOutput) {
-            playAudio(evt.audioOutput.content);
-        } else if (evt.contentStart) {
-            currentRole = evt.contentStart.role;
-            if (currentRole === 'ASSISTANT') {
-                setStatus('Nova is speaking...');
-            }
-        } else if (evt.contentEnd) {
-            if (currentRole === 'ASSISTANT') {
-                setStatus('Your turn — speak now!');
-            }
-            currentRole = null;
+        } else if (data.type === 'audio_output') {
+            setStatus('Nova is speaking...');
+            playAudio(payload.content);
+        } else if (data.type === 'interrupted') {
+            setStatus('Your turn — speak now!');
+        } else if (data.type === 'session_invalid') {
+            log(`Session error: ${payload.reason}`, 'system');
+            setStatus('Error');
         }
     }
-
-    let currentRole = null;
 
     function playAudio(base64Content) {
         const binaryString = atob(base64Content);
@@ -283,9 +204,7 @@
     function stopInterview() {
         isStreaming = false;
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ event: { contentEnd: { promptName, contentName: audioContentName } } }));
-            ws.send(JSON.stringify({ event: { promptEnd: { promptName } } }));
-            ws.send(JSON.stringify({ event: { sessionEnd: {} } } ));
+            ws.send(JSON.stringify({ type: 'session_end', payload: {} }));
             ws.close();
         }
         if (mediaStream) {

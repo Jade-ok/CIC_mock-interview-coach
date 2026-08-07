@@ -1,10 +1,10 @@
 """
 FastAPI WebSocket server for the Voice Agent.
 
-Acts as a thin relay between the browser (via AgentCore Runtime) and Nova Sonic.
-- Receives Nova Sonic protocol events from the client WebSocket
-- Forwards them to Nova Sonic via S2sSessionManager
-- Relays Nova Sonic responses back to the client
+Acts as an adapter between the browser (via AgentCore Runtime) and Nova Sonic.
+- Receives the application WebSocket protocol from the browser
+- Translates browser messages to Nova Sonic protocol events
+- Translates Nova Sonic responses back to application events
 - Splits large events (>10KB) at base64 boundaries before forwarding
 """
 
@@ -15,6 +15,7 @@ import math
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from protocol import BrowserProtocolError, BrowserSessionProtocol
 from s2s_session_manager import S2sSessionManager
 
 logging.basicConfig(level=logging.INFO)
@@ -50,11 +51,15 @@ def split_large_event(event_json: str) -> list[str]:
 
     event = data.get("event", {})
 
-    # Only split audioOutput events
-    if "audioOutput" not in event:
+    # Support both raw Nova events and translated browser audio events.
+    if "audioOutput" in event:
+        audio_output = event["audioOutput"]
+        browser_event = False
+    elif data.get("type") == "audio_output" and isinstance(data.get("payload"), dict):
+        audio_output = data["payload"]
+        browser_event = True
+    else:
         return [event_json]
-
-    audio_output = event["audioOutput"]
     content = audio_output.get("content", "")
 
     if not content:
@@ -78,14 +83,20 @@ def split_large_event(event_json: str) -> list[str]:
         chunk_content = content[start:end]
 
         # Rebuild the event with the chunked content
-        chunk_event = {
-            "event": {
-                "audioOutput": {
-                    **audio_output,
-                    "content": chunk_content,
+        if browser_event:
+            chunk_event = {
+                "type": "audio_output",
+                "payload": {**audio_output, "content": chunk_content},
+            }
+        else:
+            chunk_event = {
+                "event": {
+                    "audioOutput": {
+                        **audio_output,
+                        "content": chunk_content,
+                    }
                 }
             }
-        }
         chunks.append(json.dumps(chunk_event))
 
     logger.debug("Split large event (%d bytes) into %d chunks", len(event_json), len(chunks))
@@ -95,6 +106,7 @@ def split_large_event(event_json: str) -> list[str]:
 async def forward_responses(
     session_manager: S2sSessionManager,
     websocket: WebSocket,
+    protocol: BrowserSessionProtocol,
 ):
     """
     Background task: read responses from Nova Sonic and forward to the client.
@@ -103,11 +115,21 @@ async def forward_responses(
     """
     try:
         async for response in session_manager.process_responses():
-            response_json = json.dumps(response)
-            chunks = split_large_event(response_json)
+            tool_result = protocol.build_tool_result(response)
+            if tool_result is not None:
+                await session_manager.send_event(tool_result)
 
-            for chunk in chunks:
-                await websocket.send_text(chunk)
+            browser_event = protocol.translate_nova_event(response)
+            browser_events = [] if browser_event is None else [browser_event]
+            if "completionEnd" in response.get("event", {}):
+                pending_end = protocol.take_pending_end_tool()
+                if pending_end is not None:
+                    browser_events.append(pending_end)
+
+            for item in browser_events:
+                response_json = json.dumps(item)
+                for chunk in split_large_event(response_json):
+                    await websocket.send_text(chunk)
     except WebSocketDisconnect:
         logger.info("Client disconnected during response forwarding")
     except Exception as e:
@@ -116,6 +138,7 @@ async def forward_responses(
         session_manager.is_active = False
 
 
+@app.websocket("/ws")
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
     """
@@ -132,48 +155,46 @@ async def websocket_endpoint(websocket: WebSocket):
     logger.info("Client WebSocket connected")
 
     session_manager = S2sSessionManager()
+    protocol = BrowserSessionProtocol()
+    response_task = None
+    audio_drain_task = None
 
     try:
-        # Open stream to Nova Sonic
-        await session_manager.start_session()
-
-        # Start background tasks
-        response_task = asyncio.create_task(
-            forward_responses(session_manager, websocket)
-        )
-        audio_drain_task = asyncio.create_task(
-            session_manager.drain_audio_queue()
-        )
-
-        # Main loop: receive events from client, forward to Nova Sonic
-        while session_manager.is_active:
+        # Wait for session_start before opening the paid Nova stream.
+        while True:
             try:
                 message = await websocket.receive_text()
             except WebSocketDisconnect:
                 logger.info("Client disconnected")
                 break
 
-            # Determine if this is an audio input event (use queue for backpressure)
             try:
-                event_data = json.loads(message)
-                is_audio_input = "audioInput" in event_data.get("event", {})
-            except (json.JSONDecodeError, AttributeError):
-                is_audio_input = False
+                result = protocol.handle_client_message(message)
+            except BrowserProtocolError as exc:
+                await websocket.send_json(
+                    {"type": "session_invalid", "payload": {"reason": str(exc)}}
+                )
+                continue
 
-            if is_audio_input:
-                await session_manager.send_event(message)
-            else:
-                await session_manager.send_event(message)
-                logger.info("Sent non-audio event to Nova Sonic")
+            if protocol.started and not session_manager.is_active:
+                await session_manager.start_session()
+                response_task = asyncio.create_task(
+                    forward_responses(session_manager, websocket, protocol)
+                )
+                audio_drain_task = asyncio.create_task(
+                    session_manager.drain_audio_queue()
+                )
 
-                # Check if client sent sessionEnd
-                try:
-                    event_data = json.loads(message)
-                    if "sessionEnd" in event_data.get("event", {}):
-                        logger.info("Client sent sessionEnd")
-                        break
-                except (json.JSONDecodeError, AttributeError):
-                    pass
+            for event_json in result.nova_events:
+                await session_manager.send_event(event_json)
+            for event_json in result.audio_events:
+                await session_manager.send_audio_chunk(event_json)
+            for browser_event in result.browser_events:
+                await websocket.send_json(browser_event)
+
+            if result.should_close:
+                logger.info("Client ended browser session")
+                break
 
     except Exception as e:
         logger.error("WebSocket session error: %s", e)
@@ -187,7 +208,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
         # Cancel background tasks
         for task in [response_task, audio_drain_task]:
-            if not task.done():
+            if task is not None and not task.done():
                 task.cancel()
                 try:
                     await task

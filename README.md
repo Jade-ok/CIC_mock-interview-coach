@@ -91,5 +91,5 @@ sam build && sam deploy --guided
 - Function URL calls: parse JSON from `event['body']`
 - CORS is configured on the Function URL settings, not in Python code
 - Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
-- PDF upload limit: 4 MB client-side / 6 MiB Lambda payload
+- PDF upload limits are not yet aligned: the frontend permits 10 MB, while the PDF Parser rejects decoded files over 4 MB; Lambda Function URL payloads are capped at 6 MiB
 - Trailing whitespace after URLs in `.env` causes 403 errors

@@ -62,12 +62,13 @@ Do not document or depend on a generated physical bucket name.
 Source: `backend/voice_agent/`
 
 - `server.py` exposes the FastAPI/AgentCore entry point and WebSocket relay.
+- `protocol.py` translates the browser contract to and from Nova events.
 - `s2s_session_manager.py` owns the Nova bidirectional stream and transient queues.
 - `s2s_events.py` builds Nova protocol events.
 - `.bedrock_agentcore.yaml` stores AgentCore deployment configuration.
 - `Dockerfile` packages the relay.
 
-The relay currently forwards raw Nova event JSON. It does not translate the wire format into the frontend's `{type, payload}` abstraction and does not create a synthetic `session_start_ack`.
+The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
 
 The production boundary is browser → authenticated `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
@@ -90,6 +91,6 @@ The context builder instructs Nova to conduct three main questions with one adap
 - Configure the Amplify build with the deployed HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint should be hard-coded.
 - `scripts/deploy.sh` is a targeted/manual Interviewer + voice workflow, not the canonical deployment for all Lambdas.
 
-## Known Integration Gap
+## Remaining Integration Gaps
 
-The current frontend WebSocket client emits and expects app-level `{type, payload}` messages, while the relay accepts and returns raw Nova `{event: ...}` messages. End-to-end voice integration requires one side to implement an adapter. This document describes the implemented relay behavior, not a claim that the full browser flow is complete.
+The production AgentCore endpoint and authentication flow are not configured, and the adapter has not completed a live browser/Nova session. The frontend now reads `VITE_VOICE_WS_URL` and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.

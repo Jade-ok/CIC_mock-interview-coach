@@ -51,6 +51,7 @@ describe('WaitingRoom', () => {
     mockState = {
       ...initialState,
       phase: 'waiting',
+      uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
     };
     mockDispatch.mockClear();
     mockSetWebSocketClient.mockClear();
@@ -61,6 +62,7 @@ describe('WaitingRoom', () => {
     mockedCallAgent1.mockResolvedValue({
       nova_sonic_context: 'test-context',
       competency_guides: [],
+      analyst_output: {},
     });
   });
 
@@ -72,15 +74,15 @@ describe('WaitingRoom', () => {
     it('displays loading spinner and waiting message', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByLabelText('로딩 중')).toBeInTheDocument();
-      expect(screen.getByText('호스트가 들여보내주길 기다리는 중입니다')).toBeInTheDocument();
+      expect(screen.getByLabelText('Loading')).toBeInTheDocument();
+      expect(screen.getByText('Waiting for the host to let you in')).toBeInTheDocument();
     });
 
     it('shows status items for Agent and WebSocket', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByText('Agent 분석')).toBeInTheDocument();
-      expect(screen.getByText('서버 연결')).toBeInTheDocument();
+      expect(screen.getByText('Agent Analysis')).toBeInTheDocument();
+      expect(screen.getByText('Server Connection')).toBeInTheDocument();
     });
   });
 
@@ -129,16 +131,16 @@ describe('WaitingRoom', () => {
         phase: 'waiting',
         error: {
           code: 'AGENT1_FAILED',
-          message: 'Agent 1 요청에 실패했습니다.',
+          message: 'Agent 1 request failed.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 요청에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
-      expect(screen.getByText('돌아가기')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Agent 1 request failed.');
+      expect(screen.getByText('Retry')).toBeInTheDocument();
+      expect(screen.getByText('Go Back')).toBeInTheDocument();
     });
 
     it('shows error message when WS connection fails', () => {
@@ -147,15 +149,15 @@ describe('WaitingRoom', () => {
         phase: 'waiting',
         error: {
           code: 'WS_CONNECT_FAILED',
-          message: 'WebSocket 연결에 실패했습니다.',
+          message: 'WebSocket connection failed.',
           retryable: true,
         },
       };
 
       render(<WaitingRoom />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket 연결에 실패했습니다.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('WebSocket connection failed.');
+      expect(screen.getByText('Retry')).toBeInTheDocument();
     });
 
     it('shows timeout error with retry button', () => {
@@ -172,7 +174,27 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByRole('alert')).toHaveTextContent('Connection timed out. Please try again.');
-      expect(screen.getByText('재시도')).toBeInTheDocument();
+      expect(screen.getByText('Retry')).toBeInTheDocument();
+    });
+
+    it('shows an invalid-session recovery screen without starting new requests', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        error: {
+          code: 'WS_SESSION_INVALID',
+          message: 'Session is no longer valid. Please start a new session.',
+          retryable: false,
+        },
+      };
+
+      render(<WaitingRoom />);
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Session is no longer valid');
+      expect(screen.getByText('Go Back')).toBeInTheDocument();
+      expect(screen.queryByText('Retry')).not.toBeInTheDocument();
+      expect(mockedCallAgent1).not.toHaveBeenCalled();
+      expect(MockedWebSocketClient).not.toHaveBeenCalled();
     });
   });
 
@@ -184,6 +206,7 @@ describe('WaitingRoom', () => {
         agent1Ready: false,
         wsReady: false,
         wsConnectionState: 'connected',
+        uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
         error: {
           code: 'AGENT1_FAILED',
           message: 'Agent 1 failed',
@@ -193,7 +216,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should be called since it wasn't ready
       expect(mockedCallAgent1).toHaveBeenCalled();
@@ -217,7 +240,7 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('재시도'));
+      fireEvent.click(screen.getByText('Retry'));
 
       // Agent1 should NOT be called again since agent1Ready is true
       expect(mockedCallAgent1).not.toHaveBeenCalled();
@@ -255,15 +278,15 @@ describe('WaitingRoom', () => {
 
       render(<WaitingRoom />);
 
-      fireEvent.click(screen.getByText('돌아가기'));
+      fireEvent.click(screen.getByText('Go Back'));
 
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'RESET' });
     });
   });
 
-  describe('Property 3: 대기실 타임아웃', () => {
+  describe('Property 3: waiting-room timeout', () => {
     /**
-     * Feature: frontend-interview, Property 3: 대기실 타임아웃
+     * Feature: frontend-interview, Property 3: waiting-room timeout
      * Validates: Requirements 2.5
      *
      * For any Waiting Room entry, if 30s passes without both agent1Ready
@@ -332,9 +355,9 @@ describe('WaitingRoom', () => {
     });
   });
 
-  describe('Property 4: 대기실 부분 재시도', () => {
+  describe('Property 4: partial waiting-room retry', () => {
     /**
-     * Feature: frontend-interview, Property 4: 대기실 부분 재시도
+     * Feature: frontend-interview, Property 4: partial waiting-room retry
      * Validates: Requirements 2.4
      *
      * For any partial failure scenario (one of agent1/ws succeeds, other fails),
@@ -361,6 +384,7 @@ describe('WaitingRoom', () => {
               agent1Ready: agent1Succeeded,
               wsReady: false,
               wsConnectionState: wsConnected ? 'connected' : 'disconnected',
+              uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
               error: {
                 code: agent1Succeeded ? 'WS_CONNECT_FAILED' : 'AGENT1_FAILED',
                 message: 'Something failed',
@@ -371,7 +395,7 @@ describe('WaitingRoom', () => {
             const { unmount } = render(<WaitingRoom />);
 
             // Click retry
-            const retryBtn = screen.getByText('재시도');
+            const retryBtn = screen.getByText('Retry');
             fireEvent.click(retryBtn);
 
             if (agent1Succeeded) {

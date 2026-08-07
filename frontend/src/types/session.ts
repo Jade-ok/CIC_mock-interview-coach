@@ -9,6 +9,8 @@ export interface SessionState {
   inputMode: InputMode;
   textInputState: TextInputState;
   practiceMode: boolean;
+  uploadData: UploadData | null;
+  analystOutput: AnalystOutput | null;
   transcript: TranscriptEntry[];
   competencyGuides: CompetencyGuide[];
   novaSonicContext: string;
@@ -19,7 +21,15 @@ export interface SessionState {
   error: SessionError | null;
   agent3Loading: boolean;
   feedbackResult: unknown;
+  endReason: 'auto' | 'manual' | null;
 }
+
+export interface UploadData {
+  pdf: File;
+  jdText: string;
+}
+
+export type AnalystOutput = Record<string, unknown>;
 
 export interface TranscriptEntry {
   role: 'interviewer' | 'user';
@@ -54,6 +64,7 @@ export type SessionAction =
   | { type: 'AGENT1_SUCCESS'; payload: Agent1Response }
   | { type: 'AGENT1_FAILED'; payload: { message: string } }
   | { type: 'WS_CONNECTED' }
+  | { type: 'WS_CONNECT_FAILED'; payload: { message: string } }
   | { type: 'SESSION_START_ACKED' }
   | { type: 'WS_DISCONNECTED'; payload: { reason: string } }
   | { type: 'WS_RECONNECT_SUCCESS' }
@@ -79,9 +90,24 @@ export type SessionAction =
 export interface Agent1Response {
   nova_sonic_context: string;
   competency_guides: CompetencyGuide[];
+  analyst_output: AnalystOutput;
 }
 
 export interface Agent3Request {
-  transcript: TranscriptEntry[];
-  competency_guides: CompetencyGuide[];
+  conversation: Array<{
+    point_id: string;
+    turn_type: 'main_question' | 'follow_up';
+    question: string;
+    answer: string;
+  }>;
+  interview_metadata: {
+    candidate_level: string;
+    target_role: string;
+    status: 'completed' | 'ended_early';
+    completion_reason: 'all_questions_completed' | 'user_ended_early';
+    main_questions_completed: number;
+    follow_ups_completed: number;
+    ended_early: boolean;
+  };
+  analyst_output: AnalystOutput;
 }

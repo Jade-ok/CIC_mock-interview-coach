@@ -71,7 +71,7 @@ export function FeedbackScreen({
             type="button"
             data-testid="feedback-new-session-btn"
           >
-            새 세션 시작
+            Start New Session
           </button>
         </div>
       )}

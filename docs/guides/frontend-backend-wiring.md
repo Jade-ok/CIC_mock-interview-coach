@@ -24,7 +24,7 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
 - The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
-- The frontend/relay wire protocols remain incompatible, as detailed below.
+- The frontend/relay wire protocol is aligned and unit-tested; a live Nova session remains unverified.
 
 ## Frontend Environment
 
@@ -37,7 +37,7 @@ VITE_INTERVIEWER_URL=https://...
 VITE_EVALUATOR_URL=https://...
 ```
 
-CDK prints the corresponding `PdfParserUrl`, `AnalystUrl`, `InterviewerUrl`, and `EvaluatorUrl` outputs. Trim copied values. The voice endpoint is not currently environment-driven: `WaitingRoom.tsx` uses `ws://localhost:8080`, and development mode selects a mock WebSocket client.
+CDK prints the corresponding `PdfParserUrl`, `AnalystUrl`, `InterviewerUrl`, and `EvaluatorUrl` outputs. Trim copied values. `WaitingRoom.tsx` reads the voice endpoint from `VITE_VOICE_WS_URL` and falls back to `ws://localhost:8080/`; set `VITE_USE_MOCK_WEBSOCKET=true` only when the mock is intentional.
 
 The target Amplify build also needs an environment-driven secure WebSocket URL and authentication configuration. Exact variable names should be documented once the implementation selects its Amplify Auth/Cognito and AgentCore authorization flow; do not put permanent AWS credentials in Vite variables because `VITE_*` values are bundled into browser code.
 
@@ -58,7 +58,7 @@ Request:
 
 Response envelope: `{"status": "success", "data": {...}}` or `{"status": "error", "error": "..."}`.
 
-The backend decoded-content limit is 4 MB. The frontend currently allows 10 MB, so client-side validation is not yet aligned.
+The backend enforces a 4 MB decoded PDF limit while the frontend retains its existing 10 MB limit. This mismatch is unresolved.
 
 ### Analyst
 
@@ -72,7 +72,7 @@ Request: `{"analyst_output": {...}}`.
 
 Actual response body: `{"success": true, "runtime_context": "..."}` or `{"success": false, "error_message": "..."}`.
 
-The current frontend incorrectly expects the Analyst-style `{status, data}` envelope here. That mismatch must be fixed before the real waiting-room pipeline can complete.
+The frontend parses this Interviewer-specific envelope and retains the returned runtime context.
 
 ### Evaluator
 
@@ -95,7 +95,7 @@ Canonical completed-interview request shape (`schemas/interviewer_output.json`):
 
 The Evaluator returns the feedback object directly in the Function URL body; it does not wrap success as `{status, data}`.
 
-The current `agent3Client.ts` instead sends `transcript` and `competency_guides`, expects `{status, data}`, and the current session state does not retain full Analyst output. These are open integration tasks.
+The frontend retains the full Analyst output, pairs the final transcript into question-answer turns, sends this canonical request, and consumes the direct feedback body.
 
 ## Voice Integration and Authentication
 
@@ -105,36 +105,29 @@ The implemented backend voice path is:
 Browser WebSocket → AgentCore FastAPI relay → Nova 2 Sonic
 ```
 
-The relay forwards raw Nova `{"event": ...}` JSON. The frontend WebSocket client currently sends and expects application messages shaped as `{type, payload}` and waits for a synthetic `session_start_ack` that the relay does not send.
-
-Before connecting the real endpoint, choose one adapter direction:
-
-1. translate app-level messages to/from Nova events in the relay; or
-2. change the frontend client to speak raw Nova events.
-
-Then add a contract test covering session start, context injection, one audio turn, transcript output, and session end.
+The frontend and relay share application messages shaped as `{type, payload}`. `backend/voice_agent/protocol.py` expands those messages into the Nova event lifecycle, owns Nova identifiers, emits `session_start_ack`, and translates Nova responses back into browser audio/text/tool/interruption events. Focused contract tests cover setup, audio, text, shutdown, transcript stages, output audio, interruption, credential resolution, and the FastAPI endpoint with a fake Nova manager. A live browser/Nova session remains pending.
 
 For deployment, the browser-to-AgentCore connection must be authenticated with short-lived user credentials or tokens. Amplify Hosting only serves the frontend build; it does not make the WebSocket authenticated by itself. Add Amplify Auth/Cognito (or another AgentCore-supported authorization configuration), validate authorization at the runtime boundary, and never expose long-lived AWS access keys in the browser.
 
 ## Current Frontend Flow
 
 - Upload, waiting-room, interview, audio, text-input, reconnect, and feedback-state components exist.
-- Development mode uses `MockWebSocketClient`.
+- The real relay is the default. Set `VITE_USE_MOCK_WEBSOCKET=true` to opt into `MockWebSocketClient`.
 - `FeedbackReport` components exist, but `FeedbackScreen` still renders raw feedback JSON.
-- `WaitingRoom` currently falls back to an empty placeholder PDF/JD instead of reliably reading the submitted upload from session state.
+- The submitted PDF/JD and complete Analyst output are retained in active session state for downstream calls.
 
-Do not describe the flow as end-to-end complete until the HTTP envelopes, Evaluator request, voice wire protocol, and upload handoff above are aligned.
+Do not describe the flow as end-to-end complete until it passes a live browser/Nova session and the deployment/authentication work below is complete.
 
 ## Verification Checklist
 
-- [ ] Frontend PDF limit matches the backend 4 MB limit.
-- [ ] Interviewer response is parsed using `success` and `runtime_context`.
-- [ ] Full Analyst output remains available through the interview.
-- [ ] Evaluator request matches `schemas/interviewer_output.json`.
-- [ ] Evaluator response is treated as the returned object, not `{status, data}`.
-- [ ] AgentCore endpoint is configurable outside source code.
+- [ ] Decide whether the frontend's existing 10 MB PDF limit should be aligned with the backend's 4 MB limit.
+- [x] Interviewer response is parsed using `success` and `runtime_context`.
+- [x] Full Analyst output remains available through the interview.
+- [x] Evaluator request matches `schemas/interviewer_output.json`.
+- [x] Evaluator response is treated as the returned object, not `{status, data}`.
+- [x] AgentCore endpoint is configurable through `VITE_VOICE_WS_URL`.
 - [ ] React production build and environment variables are configured in Amplify Hosting.
 - [ ] Browser identity and AgentCore WebSocket authorization are implemented with short-lived credentials/tokens.
-- [ ] Frontend and relay share one WebSocket wire protocol.
+- [x] Frontend and relay share one WebSocket wire protocol with focused unit coverage.
 - [ ] Public Function URLs are protected or placed behind an authenticated API boundary before a public launch.
 - [ ] Real browser flow passes Upload → Waiting → Interview → Feedback.

@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
-import { callAgent3 } from '@/services/agent3Client';
+import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
+import type { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 // --- Sub-components ---
 
@@ -200,7 +201,7 @@ function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => vo
 
 // --- Main Component ---
 
-export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
+export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | MockWebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -209,16 +210,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   const triggerAgent3 = useCallback(async () => {
     dispatch({ type: 'AGENT3_LOADING' });
     try {
-      const result = await callAgent3({
-        transcript: state.transcript,
-        competency_guides: state.competencyGuides,
-      });
+      const result = await callAgent3(buildAgent3Request(state));
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides]);
+  }, [dispatch, state]);
 
   // Audio streaming integration
   const { audioManagerRef } = useInterviewStreaming({
@@ -297,6 +295,14 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       // Send text via WebSocket
       if (wsClient && wsClient.getState() === 'connected') {
         wsClient.sendTextInput(text, 'default', 'text-input');
+        dispatch({
+          type: 'APPEND_TRANSCRIPT',
+          payload: {
+            role: 'user',
+            text,
+            timestamp: new Date().toISOString(),
+          },
+        });
       }
       // Resume capture after text submit (if audio manager available)
       if (audioManagerRef.current && state.inputMode === 'voice') {

@@ -6,7 +6,8 @@ AgentCore Runtime is a serverless managed container runtime. This project suppli
 
 ## Files
 
-- `server.py` — FastAPI WebSocket endpoint at `/` and health endpoint at `/health`
+- `server.py` — FastAPI WebSocket endpoints at `/` and `/ws`, plus `/health`
+- `protocol.py` — browser `{type, payload}` to/from Nova event adapter
 - `s2s_session_manager.py` — Nova stream lifecycle and audio queue
 - `s2s_events.py` — Nova protocol event builders
 - `Dockerfile` — Python 3.12 container on port 8080
@@ -19,7 +20,7 @@ AgentCore Runtime is a serverless managed container runtime. This project suppli
 - Input audio: 16 kHz, 16-bit, mono LPCM
 - Output audio: 24 kHz, 16-bit, mono LPCM
 
-The relay accepts and returns raw Nova `{"event": ...}` JSON. It does not currently translate the frontend's `{type, payload}` messages or emit `session_start_ack`; that adapter is required before the real frontend and relay are compatible.
+The browser and relay share the application-level `{type, payload}` contract defined by `frontend/src/services/webSocketClient.ts`. The relay owns Nova prompt/content identifiers, expands `session_start` into the required Nova event sequence, acknowledges setup with `session_start_ack`, routes audio through its bounded queue, and converts Nova audio/text/tool/interruption output back to browser events. Focused unit tests cover the adapter; a live Nova browser session still needs end-to-end verification.
 
 The target production path is:
 
@@ -40,7 +41,9 @@ python3 -m venv .venv
 .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080
 ```
 
-Check `http://localhost:8080/health`. The WebSocket endpoint is `ws://localhost:8080/`.
+Check `http://localhost:8080/health`. Local WebSocket clients can use `ws://localhost:8080/`; AgentCore uses `/ws`.
+
+The relay resolves credentials through boto3's standard chain. For local development, set `AWS_PROFILE=mock-interview-dev` after signing in with IAM Identity Center. In AgentCore, the same resolver uses the runtime execution-role credentials; do not inject permanent access keys.
 
 ## AgentCore Deployment
 
@@ -60,6 +63,6 @@ Deployment uses account-specific values in `.bedrock_agentcore.yaml`. Review the
 
 AgentCore deployment is independent of the CDK stack in `infrastructure/`, and Amplify Hosting is a third deployment boundary. Deploying any one of the three does not deploy the others.
 
-## Verification Gap
+## Verification
 
-Manual helpers are available under `backend/voice_agent/tools/`: `test_voice_agent.py`, `test_voice_client.html`, and `generate_test_context.py`. There is currently no automated relay integration test. Add a mock-Nova WebSocket test covering session start, one audio input/output exchange, text output, interruption, and session end.
+`tests/unit/test_voice_protocol.py` covers the pure adapter and exercises the WebSocket endpoint with a fake Nova session manager, so it does not invoke paid services. Manual helpers remain under `backend/voice_agent/tools/`: `test_voice_agent.py`, `test_voice_client.html`, and `generate_test_context.py`. A live browser session covering real Nova audio, transcript, interruption, and shutdown remains pending.

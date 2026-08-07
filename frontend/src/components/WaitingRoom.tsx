@@ -5,11 +5,12 @@ import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 const TIMEOUT_MS = 30000;
-const WS_URL = 'ws://localhost:8080';
+const WS_URL = import.meta.env.VITE_VOICE_WS_URL || 'ws://localhost:8080/';
+const USE_MOCK_WEBSOCKET = import.meta.env.VITE_USE_MOCK_WEBSOCKET === 'true';
 
-// Use mock in dev mode so the demo transitions without a real backend
+// Mocking is opt-in so local development can exercise the real relay.
 const createWsClient = () =>
-  import.meta.env.DEV ? new MockWebSocketClient() : new WebSocketClient();
+  USE_MOCK_WEBSOCKET ? new MockWebSocketClient() : new WebSocketClient();
 
 export function WaitingRoom() {
   const { state, dispatch, setWebSocketClient } = useSession();
@@ -18,11 +19,11 @@ export function WaitingRoom() {
   const agent1CalledRef = useRef(false);
   const wsCalledRef = useRef(false);
 
-  // Track cached upload data for retries
-  const uploadDataRef = useRef<{ pdf: File; jdText: string } | null>(null);
-
   // Start parallel requests on mount
   useEffect(() => {
+    if (state.error?.code === 'WS_SESSION_INVALID') {
+      return;
+    }
     startRequests();
     startTimeout();
 
@@ -70,9 +71,10 @@ export function WaitingRoom() {
   const startAgent1 = useCallback(async () => {
     agent1CalledRef.current = true;
     try {
-      // Get upload data from the stored ref or create a placeholder
-      const data = uploadDataRef.current || { pdf: new File([], 'resume.pdf'), jdText: '' };
-      const response = await callAgent1(data);
+      if (!state.uploadData) {
+        throw new Error('Upload data is missing. Please return and upload your résumé again.');
+      }
+      const response = await callAgent1(state.uploadData);
       dispatch({ type: 'AGENT1_SUCCESS', payload: response });
     } catch (err) {
       agent1CalledRef.current = false;
@@ -88,7 +90,20 @@ export function WaitingRoom() {
     wsCalledRef.current = true;
     const wsClient = createWsClient();
     wsClientRef.current = wsClient;
-    setWebSocketClient(wsClient as any);
+    setWebSocketClient(wsClient);
+
+    wsClient.onDisconnect = (reason) => {
+      dispatch({ type: 'WS_DISCONNECTED', payload: { reason } });
+    };
+    wsClient.onReconnectSuccess = () => {
+      dispatch({ type: 'WS_RECONNECT_SUCCESS' });
+    };
+    wsClient.onReconnectFailed = () => {
+      dispatch({ type: 'WS_RECONNECT_FAILED' });
+    };
+    wsClient.onSessionInvalid = () => {
+      dispatch({ type: 'WS_SESSION_INVALID' });
+    };
 
     try {
       await wsClient.connect({ url: WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
@@ -96,7 +111,7 @@ export function WaitingRoom() {
     } catch (err) {
       wsCalledRef.current = false;
       dispatch({
-        type: 'AGENT1_FAILED',
+        type: 'WS_CONNECT_FAILED',
         payload: { message: err instanceof Error ? err.message : 'WebSocket connection failed.' },
       });
     }
@@ -113,11 +128,33 @@ export function WaitingRoom() {
     if (!state.wsReady && state.wsConnectionState !== 'connected') {
       wsCalledRef.current = false;
       startWebSocket();
+    } else if (
+      !state.wsReady
+      && state.wsConnectionState === 'connected'
+      && state.agent1Ready
+      && wsClientRef.current
+    ) {
+      wsClientRef.current
+        .sendSessionStart(state.novaSonicContext, {})
+        .then(() => dispatch({ type: 'SESSION_START_ACKED' }))
+        .catch(() => dispatch({
+          type: 'WS_CONNECT_FAILED',
+          payload: { message: 'Failed to start session via WebSocket.' },
+        }));
     }
     // Restart timeout
     startTimeout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.agent1Ready, state.wsReady, state.wsConnectionState]);
+  }, [
+    state.agent1Ready,
+    state.wsReady,
+    state.wsConnectionState,
+    state.novaSonicContext,
+    dispatch,
+    startAgent1,
+    startWebSocket,
+    startTimeout,
+  ]);
 
   const handleBack = useCallback(() => {
     // Clean up WS if connected
@@ -125,9 +162,10 @@ export function WaitingRoom() {
       wsClientRef.current.disconnect();
       wsClientRef.current = null;
     }
+    setWebSocketClient(null);
     clearTimeoutTimer();
     dispatch({ type: 'RESET' });
-  }, [dispatch, clearTimeoutTimer]);
+  }, [dispatch, clearTimeoutTimer, setWebSocketClient]);
 
   const hasError = state.error !== null;
 

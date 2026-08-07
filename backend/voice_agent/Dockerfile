@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY s2s_events.py .
 COPY s2s_session_manager.py .
+COPY protocol.py .
 COPY server.py .
 
 # Expose the port uvicorn listens on

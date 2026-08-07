@@ -1,5 +1,6 @@
 fastapi==0.115.0
 uvicorn==0.30.6
 websockets==12.0
+boto3==1.43.66
 aws-sdk-bedrock-runtime==0.8.0
 smithy-aws-core==0.8.0

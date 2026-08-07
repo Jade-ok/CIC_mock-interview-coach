@@ -36,6 +36,7 @@ describe('sessionReducer', () => {
         type: 'AGENT1_SUCCESS',
         payload: {
           nova_sonic_context: 'ctx',
+          analyst_output: { candidate_profile: {} },
           competency_guides: [
             { id: '1', title: 'T', keywords: ['k'], description: 'd', highlighted: false },
           ],
@@ -110,9 +111,18 @@ describe('sessionReducer', () => {
   });
 
   describe('WS_SESSION_INVALID', () => {
-    it('sets error with WS_SESSION_INVALID code', () => {
-      const result = sessionReducer(initialState, { type: 'WS_SESSION_INVALID' });
+    it('returns to waiting with a disconnected, invalid-session error', () => {
+      const state: SessionState = {
+        ...initialState,
+        phase: 'interview',
+        wsReady: true,
+        wsConnectionState: 'connected',
+      };
+      const result = sessionReducer(state, { type: 'WS_SESSION_INVALID' });
       expect(result.error?.code).toBe('WS_SESSION_INVALID');
+      expect(result.phase).toBe('waiting');
+      expect(result.wsReady).toBe(false);
+      expect(result.wsConnectionState).toBe('disconnected');
     });
   });
 
@@ -353,7 +363,7 @@ describe('maybeStartSession', () => {
     });
   });
 
-  it('dispatches AGENT1_FAILED on sendSessionStart failure', async () => {
+  it('dispatches WS_CONNECT_FAILED on sendSessionStart failure', async () => {
     const sendSessionStart = vi.fn().mockRejectedValue(new Error('ws error'));
     const ws: WebSocketClient = { sendSessionStart };
     const dispatch = vi.fn();
@@ -369,7 +379,7 @@ describe('maybeStartSession', () => {
     maybeStartSession(state, ws, dispatch);
     await vi.waitFor(() => {
       expect(dispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'AGENT1_FAILED' })
+        expect.objectContaining({ type: 'WS_CONNECT_FAILED' })
       );
     });
   });
@@ -377,13 +387,13 @@ describe('maybeStartSession', () => {
 
 // ---------- Property-Based Tests ----------
 
-describe('PBT: Property 8 — Practice Mode 격리', () => {
+describe('PBT: Property 8 — Practice Mode isolation', () => {
   /**
-   * Feature: frontend-interview, Property 8: Practice Mode 격리
+   * Feature: frontend-interview, Property 8: Practice Mode isolation
    * **Validates: Requirements 5.2**
    *
-   * For any Practice Mode toggle state change, WebSocket으로 전송되는 메시지나
-   * Nova Sonic 세션에 어떤 영향도 없어야 한다 (프론트엔드 렌더링에만 영향).
+   * For any Practice Mode toggle, messages sent over WebSocket and the
+   * Nova Sonic session must remain unchanged (frontend rendering only).
    *
    * TOGGLE_PRACTICE_MODE should only change the `practiceMode` field and nothing else
    * that is relevant to WS/backend state.
@@ -396,6 +406,8 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
       inputMode: fc.constantFrom('voice', 'text_only') as fc.Arbitrary<SessionState['inputMode']>,
       textInputState: fc.constantFrom('idle', 'composing') as fc.Arbitrary<SessionState['textInputState']>,
       practiceMode: fc.boolean(),
+      uploadData: fc.constant(null),
+      analystOutput: fc.constant(null),
       transcript: fc.array(
         fc.record({
           role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
@@ -422,6 +434,7 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
       error: fc.constant(null),
       agent3Loading: fc.boolean(),
       feedbackResult: fc.constant(null),
+      endReason: fc.constant(null),
     });
 
     fc.assert(
@@ -450,14 +463,13 @@ describe('PBT: Property 8 — Practice Mode 격리', () => {
   });
 });
 
-describe('PBT: Property 13 — Transcript 누적 무손실', () => {
+describe('PBT: Property 13 — lossless transcript accumulation', () => {
   /**
-   * Feature: frontend-interview, Property 13: Transcript 누적 무손실
+   * Feature: frontend-interview, Property 13: lossless transcript accumulation
    * **Validates: Requirements 7.1**
    *
-   * For any 인터뷰 세션에서 수신된 text_output 이벤트(FINAL generationStage)
-   * 시퀀스에 대해, 세션 종료 시점의 transcript 배열은 모든 FINAL 이벤트를
-   * 수신 순서대로 포함해야 한다.
+   * For any sequence of FINAL text_output events received during an interview,
+   * the transcript at session end must contain every event in reception order.
    *
    * Dispatching N APPEND_TRANSCRIPT actions results in exactly N entries in
    * the transcript array, in order, with no data loss.

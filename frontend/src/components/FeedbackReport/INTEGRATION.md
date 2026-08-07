@@ -1,6 +1,6 @@
 # FeedbackReport Integration Status
 
-> Pending integration. Last verified: 2026-08-07.
+> Partially integrated. Last verified: 2026-08-07.
 
 The `FeedbackReport` component and its section components are implemented and tested, but the application does not currently render them. `FeedbackScreen.tsx` displays `feedbackResult` as formatted JSON.
 
@@ -8,9 +8,9 @@ Hosting the React build on AWS Amplify does not change this component contract. 
 
 ## Required Integration
 
-1. Align `agent3Client.ts` with `schemas/interviewer_output.json`.
-2. Retain the complete Analyst output in session state.
-3. Map the interview transcript to Evaluator conversation turns and metadata.
+1. [x] Align `agent3Client.ts` with `schemas/interviewer_output.json`.
+2. [x] Retain the complete Analyst output in session state.
+3. [x] Map the interview transcript to Evaluator conversation turns and metadata.
 4. Type a successful Evaluator response as `EvaluatorOutput`.
 5. Render `FeedbackReport` from `FeedbackScreen` when `feedbackResult` is present.
 
@@ -33,4 +33,4 @@ if (feedbackResult) {
 }
 ```
 
-Do not treat `AGENT3_SUCCESS` as correctly typed until the request and response handling in `agent3Client.ts` matches the backend. `AGENT3_SUCCESS` is a reducer action, not a SessionManager event.
+The request and response envelopes now match the backend. `feedbackResult` and `AGENT3_SUCCESS` remain intentionally untyped until the Evaluator output type and report rendering steps above are completed.

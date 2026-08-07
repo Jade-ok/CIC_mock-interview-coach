@@ -10,7 +10,10 @@
 - [x] Add the FastAPI health endpoint and WebSocket relay in `server.py`.
 - [x] Configure `amazon.nova-2-sonic-v1:0` in `us-east-1`.
 - [x] Add the Dockerfile, Python dependencies, and `.bedrock_agentcore.yaml`.
-- [x] Forward raw Nova events between the browser socket and Nova stream.
+- [x] Translate the browser `{type, payload}` contract to and from Nova events in `protocol.py`.
+- [x] Emit `session_start_ack` after the relay sends the Nova setup sequence.
+- [x] Route browser audio through `send_audio_chunk()` and the bounded queue.
+- [x] Add focused adapter tests for setup, audio, text, shutdown, transcripts, audio output, interruption, and credentials.
 
 ## Implemented Frontend Pieces
 
@@ -20,14 +23,10 @@
 
 ## Remaining Integration Work
 
-- [ ] Choose the canonical browser/relay wire protocol.
-- [ ] Route audio events through `send_audio_chunk()`; `server.py` currently sends audio directly through `send_event()`, so the queue is not wired into the relay path.
-- [ ] Either translate frontend `{type, payload}` messages in the relay or change the frontend to raw Nova `{event: ...}` messages.
-- [ ] Define session-start acknowledgment behavior consistently; the relay does not currently emit `session_start_ack`.
 - [ ] Verify one complete browser session: start, context injection, user audio, Nova audio/text, transcript capture, and session end.
 - [ ] Verify interruption/barge-in behavior through the actual relay.
 - [ ] Verify text fallback through the selected protocol.
-- [ ] Add integration tests using a mock WebSocket/Nova stream.
+- [x] Exercise the WebSocket endpoint with a fake Nova session manager without paid AWS calls.
 
 ## Deployment Verification
 

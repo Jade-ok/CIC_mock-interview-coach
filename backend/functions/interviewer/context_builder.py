@@ -64,5 +64,6 @@ def build_runtime_context(
     sections.append("- Do not ask the candidate to rate themselves")
     sections.append("- Signal transitions between points briefly (e.g. 'Great. Moving on.')")
     sections.append("- After the final follow-up answer, end with a brief positive closing and stop")
+    sections.append("- After speaking the closing, call the end_interview tool exactly once")
 
     return "\n".join(sections)

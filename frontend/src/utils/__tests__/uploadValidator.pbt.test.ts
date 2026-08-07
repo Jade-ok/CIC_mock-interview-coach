@@ -3,12 +3,12 @@ import * as fc from 'fast-check';
 import { validateFile, MAX_FILE_SIZE, ALLOWED_MIME_TYPE } from '@/utils/uploadValidator';
 
 /**
- * Feature: frontend-interview, Property 1: 파일 유효성 검증 — For any 첨부 파일에 대해,
- * 해당 파일이 PDF MIME 타입이 아니거나 10MB를 초과하면 업로드가 거부되고 에러 메시지가 반환되어야 한다.
+ * Feature: frontend-interview, Property 1: file validation. Any attachment
+ * that is not a PDF or exceeds 10 MB must be rejected with an error message.
  *
  * **Validates: Requirements 1.2**
  */
-describe('Property 1: 파일 유효성 검증', () => {
+describe('Property 1: file validation', () => {
   // Arbitrary for non-PDF MIME types
   const nonPdfMimeType = fc.stringOf(
     fc.constantFrom(
@@ -17,13 +17,13 @@ describe('Property 1: 파일 유효성 검증', () => {
     { minLength: 1, maxLength: 50 }
   ).filter((mime) => mime !== ALLOWED_MIME_TYPE);
 
-  // Arbitrary for file sizes exceeding 10MB
+  // Arbitrary for file sizes exceeding 10 MB
   const oversizedFileSize = fc.integer({
     min: MAX_FILE_SIZE + 1,
     max: MAX_FILE_SIZE * 3,
   });
 
-  // Arbitrary for valid file sizes (0 to 10MB)
+  // Arbitrary for valid file sizes (0 to 10 MB)
   const validFileSize = fc.integer({ min: 0, max: MAX_FILE_SIZE });
 
   it('rejects files with non-PDF MIME type', () => {
@@ -38,14 +38,14 @@ describe('Property 1: 파일 유효성 검증', () => {
 
           expect(result.valid).toBe(false);
           expect(result.error).toBeDefined();
-          expect(result.error).toBe('PDF 파일만 업로드할 수 있습니다.');
+          expect(result.error).toBe('Only PDF files can be uploaded.');
         }
       ),
       { numRuns: 100 }
     );
   });
 
-  it('rejects files exceeding 10MB', () => {
+  it('rejects files exceeding 10 MB', () => {
     fc.assert(
       fc.property(
         oversizedFileSize,
@@ -56,7 +56,7 @@ describe('Property 1: 파일 유효성 검증', () => {
 
           expect(result.valid).toBe(false);
           expect(result.error).toBeDefined();
-          expect(result.error).toBe('파일 크기가 10MB를 초과합니다.');
+          expect(result.error).toBe('The file size exceeds 10 MB.');
         }
       ),
       { numRuns: 100 }
@@ -101,13 +101,13 @@ describe('Property 1: 파일 유효성 검증', () => {
 });
 
 /**
- * Feature: frontend-interview, Property 2: 제출 버튼 비활성화 조건 — For any Upload Screen 상태에서,
- * 이력서 파일이 null이거나 JD 텍스트가 빈 문자열이면 제출 버튼은 항상 비활성화 상태여야 한다.
- * (trim 없이 빈 문자열 ""만 체크 — Req 1.4 의도)
+ * Feature: frontend-interview, Property 2: submit-button disabled condition.
+ * The button must be disabled whenever the resume is null or JD text is empty.
+ * Only the empty string is checked; whitespace is intentionally allowed by Req 1.4.
  *
  * **Validates: Requirements 1.4**
  */
-describe('Property 2: 제출 버튼 비활성화 조건', () => {
+describe('Property 2: submit-button disabled condition', () => {
   // Pure logic function that mirrors the component's submit disabled logic
   function isSubmitDisabled(file: File | null, jdText: string): boolean {
     return file === null || jdText === '';
