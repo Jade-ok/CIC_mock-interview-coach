@@ -8,7 +8,7 @@ try:
 except ImportError:
     from evaluator.exceptions import EvaluationError
 
-MODEL_ID = "global.anthropic.claude-fable-5"
+MODEL_ID = "global.anthropic.claude-sonnet-5"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 

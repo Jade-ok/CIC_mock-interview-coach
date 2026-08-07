@@ -134,9 +134,79 @@
             textInputConfiguration: { mediaType: "text/plain" }
         }}});
 
-        const systemPrompt = "You are a supportive mock interviewer for a student. " +
-            "You MUST speak first immediately. Keep every response to 1-2 sentences max. " +
-            "Greet the candidate briefly, then ask: What project are you most proud of?";
+        // Simulate what the real Interviewer Lambda would produce
+        const fakeAnalystOutput = {
+          selected_experiences: [
+            {
+              experience_id: "exp_1",
+              title: "Software Developer Intern",
+              experience_type: "internship",
+              organization: "a mid-size tech company",
+              summary: "Built backend features and wrote tests for a production service.",
+              candidate_claims: ["Improved API performance", "Wrote integration tests"],
+              skills_demonstrated: ["backend development", "testing", "teamwork"],
+              relevance_score: 0.9,
+              details_to_clarify: ["What did you personally own?", "How did you measure improvement?"]
+            },
+            {
+              experience_id: "exp_2",
+              title: "Hackathon Project",
+              experience_type: "hackathon",
+              organization: "a university hackathon",
+              summary: "Built a mobile app in 24 hours with a small team. Won a prize.",
+              candidate_claims: ["Won a category prize", "Built in 24 hours"],
+              skills_demonstrated: ["rapid prototyping", "mobile development", "collaboration"],
+              relevance_score: 0.7,
+              details_to_clarify: ["What was your specific role?", "What was the hardest technical problem?"]
+            },
+            {
+              experience_id: "exp_3",
+              title: "Course Team Project",
+              experience_type: "academic_project",
+              organization: "a software engineering course",
+              summary: "Led a small team to build a full-stack web application. Managed sprints and did code reviews.",
+              candidate_claims: ["Led the team", "Managed sprints"],
+              skills_demonstrated: ["leadership", "full-stack", "agile", "code reviews"],
+              relevance_score: 0.65,
+              details_to_clarify: ["How did you handle disagreements?", "What would you do differently?"]
+            }
+          ],
+          interview_plan: [
+            { topic: "Personal contribution and ownership", priority: 1, target_skill: "ownership", source_experience_id: "exp_1" },
+            { topic: "Technical problem-solving", priority: 2, target_skill: "problem-solving", source_experience_id: "exp_2" },
+            { topic: "Teamwork and collaboration", priority: 3, target_skill: "teamwork", source_experience_id: "exp_3" }
+          ]
+        };
+
+        const systemPrompt = `[CANDIDATE DATA]
+${JSON.stringify(fakeAnalystOutput, null, 2)}
+
+[INTERVIEW FLOW — FOLLOW THIS EXACT TURN SEQUENCE]
+You will have exactly 7 speaking turns. Each main question targets a DIFFERENT experience.
+
+YOUR TURN 1: Greet the candidate. Ask about their internship experience — focus on what they personally built or owned.
+  (candidate answers)
+YOUR TURN 2: Ask ONE follow-up referencing something specific from their answer. Then STOP talking.
+  (candidate answers)
+YOUR TURN 3: Transition to their hackathon project. Ask about a technical challenge they faced.
+  (candidate answers)
+YOUR TURN 4: Ask ONE follow-up about their decision-making. Then STOP talking.
+  (candidate answers)
+YOUR TURN 5: Transition to their course team project. Ask about how they coordinated with teammates.
+  (candidate answers)
+YOUR TURN 6: Ask ONE follow-up about what they learned or would change. Then STOP talking.
+  (candidate answers)
+YOUR TURN 7: Thank them warmly and STOP. Say nothing else.
+
+[BEHAVIORAL INSTRUCTIONS]
+- Generate natural questions — do NOT read verbatim
+- Always mention the experience by name when transitioning
+- 1-2 sentences max per response
+- Speak first — greet and ask immediately
+- Never ask about the same experience twice
+- Never say "that project or another experience"
+- Each follow-up must reference something the candidate actually said
+- MAXIMUM ONE FOLLOW-UP PER EXPERIENCE. After the candidate answers your follow-up, you MUST say a transition phrase and ask about the NEXT experience. Do NOT ask a second follow-up. Do NOT probe deeper on the same topic. MOVE ON.`;
 
         send({ event: { textInput: { promptName, contentName: sysContentName, content: systemPrompt } }});
         send({ event: { contentEnd: { promptName, contentName: sysContentName } }});

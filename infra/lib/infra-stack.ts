@@ -120,36 +120,12 @@ export class InfraStack extends cdk.Stack {
     });
 
     // ------------------------------------------------------------------
-    // 5. Polly Lambda — Amazon Polly TTS
-    // ------------------------------------------------------------------
-    const pollyFn = new lambda.Function(this, 'PollyFunction', {
-      runtime: lambda.Runtime.PYTHON_3_12,
-      code: lambda.Code.fromAsset('../polly'),
-      handler: 'handler.lambda_handler',
-      timeout: cdk.Duration.seconds(30),
-      memorySize: 256,
-    });
-
-    pollyFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['polly:SynthesizeSpeech'],
-        resources: ['*'],
-      })
-    );
-
-    const pollyUrl = pollyFn.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-      cors: corsOptions,
-    });
-
-    // ------------------------------------------------------------------
     // Outputs — Function URLs for the frontend .env
     // ------------------------------------------------------------------
     new cdk.CfnOutput(this, 'AnalystUrl', { value: analystUrl.url });
     new cdk.CfnOutput(this, 'EvaluatorUrl', { value: evaluatorUrl.url });
     new cdk.CfnOutput(this, 'InterviewerUrl', { value: interviewerUrl.url });
     new cdk.CfnOutput(this, 'PdfParserUrl', { value: pdfParserUrl.url });
-    new cdk.CfnOutput(this, 'PollyUrl', { value: pollyUrl.url });
     new cdk.CfnOutput(this, 'ConfigBucketName', { value: configBucket.bucketName });
   }
 }
