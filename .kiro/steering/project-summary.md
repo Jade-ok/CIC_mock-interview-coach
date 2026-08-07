@@ -149,8 +149,8 @@ The agreed deployment architecture uses one AWS account:
 - AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
 - Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke Claude Sonnet 4.6 through Amazon Bedrock; the Interviewer Lambda builds context from configuration without making a model call.
 - Amazon S3 stores the interview structure and student interview profile configuration.
-- AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration deployment. AgentCore deployment remains a separate container workflow.
+- AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration resources. AgentCore remains a separate hosted container boundary.
 
-This is the target deployment plan, not the current end-to-end state. The frontend reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, and the adapter has focused unit coverage. A hosted AgentCore runtime, a paid live Nova conversation, Amplify Hosting, and browser-compatible authorization still require environment-specific configuration and end-to-end verification. The four Lambda Function URLs are currently public and must be protected before the application is shared publicly.
+The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads its Lambda and AgentCore endpoints from environment configuration. The four hosted Lambda Function URLs are currently public and must be protected before the application is shared publicly.
 
 No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.

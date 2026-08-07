@@ -1,8 +1,8 @@
 # User Stories — Mock Interview Coach (Project-Wide)
 
-> Maintained product stories. Last verified against current contracts and the target AWS deployment plan: 2026-08-07. Amplify hosting and authenticated voice access are planned, not yet implemented.
+> Maintained product stories. Last verified against current contracts and the hosted AWS architecture: 2026-08-07. Amplify hosting and authenticated voice access require environment-specific configuration and verification.
 
-Covers the full candidate journey across every component in the architecture: an Amplify-hosted React client → `pdf_parser` → `analyst` → `interviewer` → authenticated WSS to the AgentCore voice relay → Nova 2 Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior. CDK manages the Lambda/S3 backend infrastructure; AgentCore deployment remains a separate workflow.
+Covers the full candidate journey across every component in the architecture: an Amplify-hosted React client → `pdf_parser` → `analyst` → `interviewer` → authenticated WSS to the AgentCore voice relay → Nova 2 Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior. CDK defines the Lambda/S3 backend infrastructure; AgentCore is a separate hosted-runtime boundary.
 
 Module-level requirements (acceptance criteria, error handling, etc.) for the Interviewer Lambda are defined separately in `.kiro/specs/interviewer-agent/requirements.md`.
 

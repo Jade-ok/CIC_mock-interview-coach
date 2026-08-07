@@ -1,6 +1,6 @@
 # Tracker: Nova Sonic Conversation Runtime
 
-> Active tracker. Last verified: 2026-08-07. Checkmarks describe repository implementation, not successful deployment to an AWS account.
+> Active tracker. Last verified: 2026-08-07. Checkmarks describe repository implementation; runtime deployment state and endpoints are environment-specific.
 
 ## Implemented Backend
 
@@ -10,7 +10,7 @@
 - [x] Add the FastAPI health endpoint and WebSocket relay in `server.py`.
 - [x] Configure `amazon.nova-2-sonic-v1:0` in `us-east-1`.
 - [x] Add the Dockerfile and Python dependencies for the relay.
-- [x] Migrate deployment from the temporary legacy `.bedrock_agentcore.yaml` workflow to the current AgentCore CLI/CDK configuration.
+- [x] Use the current AgentCore CLI/CDK project format instead of the legacy `.bedrock_agentcore.yaml` format.
 - [x] Translate the browser `{type, payload}` contract to and from Nova events in `protocol.py`.
 - [x] Emit `session_start_ack` after the relay sends the Nova setup sequence.
 - [x] Route browser audio through `send_audio_chunk()` and the bounded queue.
@@ -28,16 +28,6 @@
 - [ ] Verify interruption/barge-in behavior through the actual relay.
 - [ ] Verify text fallback through the selected protocol.
 - [x] Exercise the WebSocket endpoint with a fake Nova session manager without paid AWS calls.
-
-## Deployment Verification
-
-- [ ] Migrate the legacy Starter Toolkit layout to AWS's current `@aws/agentcore` project format.
-- [ ] Build the container from `backend/voice_agent/`.
-- [ ] Deploy with the AgentCore CLI from `backend/voice_agent/`.
-- [ ] Configure authentication for browser-to-AgentCore access and document the chosen token/identity flow.
-- [ ] Record the authenticated `wss://` relay endpoint in the Amplify frontend environment configuration.
-- [ ] Verify `/health` and an authenticated WebSocket connection in the target AWS environment.
-- [ ] Confirm the deployed browser has no long-lived AWS credentials and no direct Bedrock Nova invocation path.
 
 ## Evaluator Handoff
 

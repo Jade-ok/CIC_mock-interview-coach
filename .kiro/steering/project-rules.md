@@ -32,24 +32,24 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - Four Lambda Function URLs expose PDF Parser, Analyst, Interviewer, and Evaluator.
 - CDK uploads `backend/config/interview_structure.json` and `backend/config/student_interview_profile.json`; the Interviewer reads the resulting S3 object keys and returns a runtime-context string.
 - `backend/voice_agent/` contains the FastAPI/Python WebSocket relay, container assets, and current `@aws/agentcore` CLI/CDK configuration. Account- and runtime-specific deployment state stays in ignored local files.
-- The frontend uses the real relay by default and reads `VITE_VOICE_WS_URL`, falling back to `ws://localhost:8080/` for local work. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
-- Teammates without AgentCore permission run the Python relay locally with exported temporary AWS credentials that can invoke Nova 2 Sonic and use the shared Lambda Function URLs from ignored `frontend/.env.local`. Local browser traffic must use `ws://localhost:8080/`; AWS credentials must never enter `VITE_*` variables.
+- The frontend defaults to strict local mode: four HTTP routes under `http://localhost:8080/api` and voice at `ws://localhost:8080/`. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
+- Local development runs `backend.local_server:app`. PDF parsing and interview configuration use repository files; Analyst, Evaluator, and Nova use the developer's active AWS credentials. Hosted mode selects its environment-configured endpoints with `VITE_RUNTIME_MODE=hosted`. AWS credentials must never enter `VITE_*` variables.
 - `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter is unit-tested, but a live browser/Nova session remains unverified.
 - The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
 - AgentCore configuration currently uses AWS IAM/SigV4 for CLI-driven testing. Browser-compatible Cognito/OIDC JWT authorization is not implemented yet. `.bedrock_agentcore.yaml` remains ignored legacy configuration and is not the canonical deployment path.
 - Frontend hosting and Amplify authentication are not provisioned in this repository. The Lambda Function URLs currently use public `NONE` authentication and permissive CORS.
 
-## Target Deployment Architecture
+## Hosted Architecture
 
-- Deploy Amplify, AgentCore, Lambda, S3, and Bedrock access in one AWS account. Do not encode temporary account routing in source or documentation.
-- Host the React/Vite frontend with AWS Amplify Hosting.
-- Authenticate users before the browser opens the production WebSocket. The browser connects over authenticated `wss://` to Amazon Bedrock AgentCore Runtime; it does not receive permanent AWS credentials or call Bedrock directly.
-- Run the Python voice relay in AgentCore Runtime. AgentCore is a serverless, AWS-managed container runtime, not an EC2 server maintained by this project.
+- Amplify, AgentCore, Lambda, S3, and Bedrock access reside in one AWS account. Account-specific identifiers and generated infrastructure state remain outside version control.
+- AWS Amplify Hosting serves the React/Vite frontend.
+- Browser sessions authenticate before opening the hosted WebSocket. The browser connects over authenticated `wss://` to Amazon Bedrock AgentCore Runtime; it does not receive permanent AWS credentials or call Bedrock directly.
+- The Python voice relay runs in AgentCore Runtime. AgentCore is a serverless, AWS-managed container runtime, not an EC2 server maintained by this project.
 - The relay translates the agreed browser protocol, maintains connection-scoped state, and invokes `amazon.nova-2-sonic-v1:0` through Bedrock's bidirectional streaming API.
-- Keep PDF parsing, Analyst, Interviewer context building, and Evaluator work in the four Lambda functions. S3 remains the store for versioned interview configuration, and CDK remains the source of truth for backend infrastructure.
-- Add access control for the Lambda endpoints before a public launch; Amplify hosting alone does not secure their current public Function URLs.
+- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in the four Lambda functions. S3 stores versioned interview configuration, and CDK is the source of truth for backend infrastructure.
+- Lambda endpoints require access control before a public launch; Amplify hosting alone does not secure their current public Function URLs.
 
-Do not describe the target architecture as deployed until Amplify hosting/authentication, an authenticated AgentCore endpoint, deployment environment configuration, protected Lambda access, and the complete flow are verified end to end.
+Hosted environments require Amplify hosting, browser authentication, an authenticated AgentCore endpoint, protected Lambda access, and end-to-end verification.
 
 ## Contracts and Configuration
 
@@ -68,7 +68,7 @@ The frontend and PDF Parser both enforce a 4 MB PDF limit so oversized files are
 Known integration gaps must not be documented as working behavior:
 
 - A hosted AgentCore runtime, authenticated WebSocket handshake, and paid Nova 2 Sonic conversation still require end-to-end verification in the chosen deployment environment.
-- The hosted AgentCore endpoint must be supplied as `VITE_VOICE_WS_URL` in Amplify after browser-compatible authorization is configured.
+- Hosted frontend configuration includes the authenticated AgentCore WebSocket endpoint.
 - Current AgentCore CLI/CDK configuration is tracked and uses AWS IAM authorization; Cognito/OIDC custom-JWT settings and frontend token handling remain unimplemented.
 - Amplify Hosting and its authentication configuration are not represented in the current CDK stack or frontend configuration.
 - All four Lambda Function URLs currently use unauthenticated public access and `*` CORS; they require an explicit protection plan before public deployment.
@@ -97,16 +97,10 @@ Do not force a shared filename convention during unrelated changes. CDK handler 
 | PDF Parser | Direct payload and Function URL event body |
 | Evaluator | Function URL event body only |
 
-CORS and Function URL configuration are managed in CDK. Update `infrastructure/lib/infra-stack.ts`, not the AWS console, so deployed state remains reproducible.
+CORS and Function URL configuration are defined in CDK so hosted infrastructure remains reproducible.
 
-## Deployment and Testing
+## Local Testing
 
-- CDK is canonical for the four Lambdas and interview-config bucket.
-- AgentCore deployment is separate and runs from `backend/voice_agent/`.
-- Amplify Hosting is the chosen frontend deployment target, but its hosting and authentication resources are not yet configured in this repository.
-- A production frontend must obtain its Lambda endpoints and authenticated AgentCore `wss://` endpoint through deployment environment configuration; never commit account-specific URLs or credentials.
-- `scripts/deploy.sh` runs the canonical CDK backend deployment using the selected AWS profile. Its separate legacy AgentCore step is opt-in and validates the generated configuration against the active account and Region.
-- The Evaluator SAM template is a standalone development/deployment option and creates resources separately from the CDK stack.
 - Run Python tests from the repository root with `.venv/bin/pytest` (or `python3 -m pytest` in an equivalent environment).
 - Run frontend and infrastructure commands from their respective directories.
 - Function URL requests are limited to 6 MiB. Base64 increases upload size, and the backend PDF validation limit is 4 MB.

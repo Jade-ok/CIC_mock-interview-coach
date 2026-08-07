@@ -37,8 +37,8 @@ const MOCK_DATA: EvaluatorOutput = {
       scores: { concrete_example: 4, situation_action_result: 4, link_to_job: 5, quantifiable_outcome: 2 },
     },
     {
-      question_text: 'Give a specific example of resolving a disagreement with a teammate.',
-      answer_summary: 'Teammate wanted monolithic file. Pushed for separation. Compromised with clean modules but shared types. Saved debugging time.',
+      question_text: 'Give a specific example of resolving a disagreement with a team member.',
+      answer_summary: 'A team member wanted a monolithic file. I pushed for separation. We compromised with clean modules but shared types, which saved debugging time.',
       scores: { concrete_example: 5, situation_action_result: 5, link_to_job: 4, quantifiable_outcome: 3 },
     },
   ],

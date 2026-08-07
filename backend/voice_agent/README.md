@@ -33,17 +33,14 @@ Amplify Hosting does not proxy or authenticate this WebSocket automatically. Bro
 
 ## Local Run
 
-From `backend/voice_agent/`, with AWS credentials and Nova model access available:
+The relay resolves credentials through boto3's standard chain. For local testing, use a configured AWS profile with access to Sonnet 4.6 and Nova 2 Sonic:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080
+export AWS_PROFILE="<profile-name>"
+export AWS_REGION="us-east-1"
 ```
 
-Check `http://localhost:8080/ping` (AgentCore) or `http://localhost:8080/health` (local alias). Local WebSocket clients can use `ws://localhost:8080/`; AgentCore uses `/ws`.
-
-The relay resolves credentials through boto3's standard chain. Teammates without AgentCore access can export temporary AWS credentials with Nova 2 Sonic access in the relay terminal:
+Alternatively, export access keys in the relay terminal. `AWS_SESSION_TOKEN` is required only for temporary credentials:
 
 ```bash
 export AWS_ACCESS_KEY_ID="..."
@@ -52,32 +49,22 @@ export AWS_SESSION_TOKEN="..."
 export AWS_REGION="us-east-1"
 ```
 
-They then use `ws://localhost:8080/` and do not invoke AgentCore. In AgentCore, the same resolver uses runtime execution-role credentials. Never place either credential type in frontend variables.
+The server prints the active AWS account and ARN during startup. All local model usage is attributed to that credential identity. The hosted AgentCore runtime uses its execution-role identity. AWS credentials belong in backend runtime configuration rather than frontend variables.
 
-## AgentCore Deployment
-
-The relay uses the Node-based [`@aws/agentcore` CLI](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-get-started-cli.html). Install Node.js 20 or later and the CLI, then deploy from `backend/voice_agent/`:
+Start the complete local application backend from the repository root:
 
 ```bash
-npm install --global @aws/agentcore
-
-AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
-  agentcore validate
-
-AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
-  agentcore deploy --target <target-name>
-
-AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
-  agentcore status --target <target-name>
+python3 -m venv .venv
+.venv/bin/pip install -r backend/requirements-local.txt
+aws sts get-caller-identity
+.venv/bin/uvicorn backend.local_server:app --host 127.0.0.1 --port 8080
 ```
 
-Copy `agentcore/aws-targets.example.json` to ignored `agentcore/aws-targets.json` and replace the placeholder account and target name locally. Generated deployment state is also ignored so account IDs and runtime ARNs are never committed. The runtime uses AWS IAM authorization for initial deployment and testing. Amplify browser access still requires the planned Cognito/OIDC custom-JWT integration; never place AWS credentials in frontend environment variables.
+The combined server exposes HTTP handlers under `/api`, WebSocket routes at `/` and `/ws`, and health checks at `/api/health`, `/ping`, and `/health`.
 
-The CLI uses the checked-in `Dockerfile` as a remote CodeBuild container build. Docker Desktop is not required for this deployment path, although it remains useful for local container testing.
+## Hosted Runtime
 
-AgentCore deployment is independent of the CDK stack in `infrastructure/`, and Amplify Hosting is a third deployment boundary. Deploying any one of the three does not deploy the others.
-
-The repository-level `scripts/deploy.sh` deploys the Lambda/S3 CDK backend. AgentCore remains a separate deployment boundary and uses the commands above.
+The hosted architecture runs this relay on AgentCore and serves the React frontend through Amplify. AgentCore, Amplify, and the Lambda/S3 backend are separate infrastructure boundaries. Environment-specific target files, generated runtime state, account IDs, endpoints, and credentials are not committed.
 
 ## Verification
 

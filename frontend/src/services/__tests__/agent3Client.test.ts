@@ -89,7 +89,7 @@ describe('callAgent3', () => {
     vi.restoreAllMocks();
   });
 
-  it('posts the canonical request and returns the direct Function URL body', async () => {
+  it('posts the canonical request and returns the evaluator response', async () => {
     const request = buildAgent3Request(stateWith(1));
     const feedback = {
       per_question_scores: [{
@@ -126,6 +126,7 @@ describe('callAgent3', () => {
     );
 
     await expect(callAgent3(request)).resolves.toEqual(feedback);
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8080/api/evaluator');
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual(request);
   });
 

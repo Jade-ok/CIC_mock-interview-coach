@@ -17,18 +17,16 @@ The target deployment also includes:
 - An authenticated `wss://` connection to the Python voice relay on Amazon Bedrock AgentCore Runtime
 - Nova 2 Sonic invoked only by the relay
 
-AgentCore is a serverless managed container runtime, but it is not part of this CDK stack; deploy the relay separately from `backend/voice_agent/`. Amplify Hosting and authentication are also not provisioned here yet.
+AgentCore is a serverless managed container runtime and is not part of this CDK stack. Amplify Hosting and authentication are also separate from this stack.
 
-The Lambda Function URLs are currently public (`NONE` authentication with wildcard CORS). Protect them or put them behind an authenticated API boundary before treating the Amplify deployment as public production infrastructure.
+The Lambda Function URLs are currently public (`NONE` authentication with wildcard CORS). The hosted architecture requires an authenticated API boundary before the Amplify application is treated as public production infrastructure.
 
 ## Prerequisites
 
 - Node.js and npm
-- AWS CLI credentials for the target account
 - Docker running for PDF Parser dependency bundling
-- CDK bootstrap completed in `us-east-1`
 
-## Commands
+## Local Validation
 
 Run from `infrastructure/`:
 
@@ -36,10 +34,8 @@ Run from `infrastructure/`:
 npm ci
 npm run build
 npx cdk synth
-npx cdk diff
-npx cdk deploy
 ```
 
 `npm test` is configured for Jest, but this directory currently contains no infrastructure test suite.
 
-See `../docs/guides/infra-breakdown.md` for resource layout, outputs, deployment scope, and troubleshooting.
+See `../docs/guides/infra-breakdown.md` for resource layout and local troubleshooting.

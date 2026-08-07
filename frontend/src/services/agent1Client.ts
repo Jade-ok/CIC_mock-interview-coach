@@ -1,18 +1,15 @@
 /**
- * Agent 1 client — calls pdf_parser + analyst + interviewer Lambdas
+ * Agent 1 client — calls the PDF Parser, Analyst, and Interviewer HTTP stages
  * to produce nova_sonic_context and competency_guides from resume + JD.
  */
 
 import type { Agent1Response, CompetencyGuide } from '@/types/session';
+import { API_ENDPOINTS } from '@/services/apiConfig';
 
 export interface Agent1Request {
   pdf: File;
   jdText: string;
 }
-
-const PDF_PARSER_URL = import.meta.env.VITE_PDF_PARSER_URL;
-const ANALYST_URL = import.meta.env.VITE_ANALYST_URL;
-const INTERVIEWER_URL = import.meta.env.VITE_INTERVIEWER_URL;
 
 /**
  * Calls the full pipeline: pdf_parser → analyst → interviewer.
@@ -22,10 +19,10 @@ export async function callAgent1(
   request: Agent1Request,
   signal?: AbortSignal
 ): Promise<Agent1Response> {
-  // Step 1: Convert PDF to base64 and call pdf_parser
+  // Step 1: Convert PDF to base64 and call PDF Parser
   const base64Pdf = await fileToBase64(request.pdf);
 
-  const parseResponse = await fetch(PDF_PARSER_URL, {
+  const parseResponse = await fetch(API_ENDPOINTS.pdfParser, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -43,7 +40,7 @@ export async function callAgent1(
   const { resume_text, job_posting_text } = parseResult.data;
 
   // Step 2: Call analyst with extracted text
-  const analystResponse = await fetch(ANALYST_URL, {
+  const analystResponse = await fetch(API_ENDPOINTS.analyst, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resume_text, job_posting_text }),
@@ -58,7 +55,7 @@ export async function callAgent1(
   const analystOutput = analystResult.data;
 
   // Step 3: Call interviewer to get runtime context
-  const interviewerResponse = await fetch(INTERVIEWER_URL, {
+  const interviewerResponse = await fetch(API_ENDPOINTS.interviewer, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ analyst_output: analystOutput }),

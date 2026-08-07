@@ -1,9 +1,9 @@
 """Prompt construction for the Evaluator agent's Bedrock Converse API call."""
 
 try:
+    from .schemas import EVALUATION_TOOL_SCHEMA
+except ImportError:  # Lambda loads modules from the function root.
     from schemas import EVALUATION_TOOL_SCHEMA
-except ImportError:
-    from evaluator.schemas import EVALUATION_TOOL_SCHEMA
 
 
 SYSTEM_PROMPT = """You are an interview performance evaluator for co-op seeking students.

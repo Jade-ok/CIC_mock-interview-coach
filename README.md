@@ -13,7 +13,7 @@ backend/functions/interviewer/ → Interview context builder
 backend/functions/evaluator/   → Answer evaluation (Claude Sonnet 4.6)
 backend/functions/pdf_parser/  → PDF text extraction (pypdf)
 backend/voice_agent/         → Nova 2 Sonic WebSocket relay
-infrastructure/              → AWS CDK deployment
+infrastructure/              → AWS CDK infrastructure definitions
 ```
 
 ## Tech Stack
@@ -84,23 +84,38 @@ Inter-agent payload schemas are defined in `schemas/`:
 | `interviewer_output.json` | Completed interview payload sent to the Evaluator |
 | `evaluator_output.json` | What the Evaluator returns (scores + feedback) |
 
-## Local Development Without AgentCore
+## Local Development
 
-Teammates do not need AgentCore permissions to run and test the application locally. The frontend connects to the local Python relay, while the relay calls Nova 2 Sonic using temporary AWS credentials exported in its terminal.
+Local mode runs PDF parsing, Analyst, Interviewer context building, Evaluator, and the Nova voice relay on the development machine.
+
+The active AWS credentials must be able to invoke both `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0` in `us-east-1`. All model usage belongs to the AWS account shown by `aws sts get-caller-identity`.
+
+Use any credential method supported by the AWS SDK. For a configured AWS profile:
+
+```bash
+export AWS_PROFILE="<profile-name>"
+export AWS_REGION="us-east-1"
+```
+
+For environment-based temporary credentials:
 
 ```bash
 export AWS_ACCESS_KEY_ID="..."
 export AWS_SECRET_ACCESS_KEY="..."
 export AWS_SESSION_TOKEN="..."
 export AWS_REGION="us-east-1"
-
-cd backend/voice_agent
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8080
 ```
 
-In a second terminal, copy `frontend/.env.example` to the ignored `frontend/.env.local`, obtain the four shared Lambda Function URLs from the project maintainer, and then run:
+Then start the complete local backend from the repository root:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r backend/requirements-local.txt
+aws sts get-caller-identity
+.venv/bin/uvicorn backend.local_server:app --host 127.0.0.1 --port 8080
+```
+
+The local server prints the active AWS account and ARN at startup. In a second terminal, run:
 
 ```bash
 cd frontend
@@ -108,26 +123,11 @@ npm install
 npm run dev
 ```
 
-The local frontend uses `ws://localhost:8080/`, so it bypasses AgentCore. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+Local mode uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
 
-## Hosted Deployment Plan
+## Hosted Architecture
 
-Before deploying, confirm the target AWS account can use `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0` in `us-east-1`.
-
-The eventual hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for Sonnet 4.6 and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
-
-```bash
-# Deploy the Lambda functions and configuration bucket
-cd infrastructure
-npm ci
-npx cdk deploy
-
-# The evaluator's standalone SAM template remains available if needed
-cd ../backend/functions/evaluator
-sam build && sam deploy --guided
-```
-
-The AgentCore relay is a separate deployment boundary; follow `backend/voice_agent/README.md`. Amplify rebuilds frontend changes from its connected Git branch, while Lambda and AgentCore code changes require their own deployment workflows.
+The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for Sonnet 4.6 and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
 
 ## Important Notes
 
@@ -135,4 +135,4 @@ The AgentCore relay is a separate deployment boundary; follow `backend/voice_age
 - CORS is configured on the Function URL settings, not in Python code
 - Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
 - The frontend and PDF Parser both enforce a 4 MB PDF limit; Lambda Function URL request payloads are capped at 6 MiB
-- Trailing whitespace after URLs in `.env` causes 403 errors
+- Hosted endpoint values are used only when `VITE_RUNTIME_MODE=hosted`

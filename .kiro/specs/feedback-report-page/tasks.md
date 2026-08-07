@@ -1,6 +1,6 @@
 # Tasks
 
-> Active tracker. Last verified: 2026-08-07. FeedbackReport is integrated with the existing FeedbackScreen. Amplify publishing and authenticated AgentCore WSS are separate pending deployment tasks.
+> Active tracker. Last verified: 2026-08-07. FeedbackReport is integrated with the existing FeedbackScreen. Hosted presentation and authenticated AgentCore WSS are separate environment concerns.
 
 ## Task 1: Type Definitions and Utility Setup
 

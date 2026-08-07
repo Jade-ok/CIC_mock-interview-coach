@@ -72,14 +72,14 @@ This specification covers the React frontend and its use of existing HTTP and We
 5. `session_invalid` must show an explicit invalid-session error.
 6. Production must use an authenticated `wss://` endpoint supplied through environment configuration.
 
-## 7. Deployment and Security
+## 7. Hosted Architecture and Security
 
 1. The production static build must be hosted on AWS Amplify Hosting.
 2. Users must authenticate before opening the AgentCore WebSocket.
 3. Permanent AWS credentials must never be embedded in browser code.
 4. Lambda endpoints must be protected before public launch.
-5. Deployment-specific URLs must be supplied through environment variables rather than committed source.
-6. The application must be verified end to end from the deployed Amplify origin.
+5. Hosted endpoint values must be supplied through environment variables rather than committed source.
+6. The hosted application must support end-to-end verification from its Amplify origin.
 
 ## 8. Accessibility and Presentation
 

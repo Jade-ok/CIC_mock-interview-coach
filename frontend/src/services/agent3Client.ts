@@ -1,12 +1,11 @@
 /**
- * Agent 3 client — calls the evaluator Lambda to get feedback
+ * Agent 3 client — calls the Evaluator HTTP stage to get feedback
  * based on the canonical Interviewer output contract.
  */
 
 import type { Agent3Request, SessionState, TranscriptEntry } from '@/types/session';
 import type { EvaluatorOutput } from '@/types/evaluator';
-
-const EVALUATOR_URL = import.meta.env.VITE_EVALUATOR_URL;
+import { API_ENDPOINTS } from '@/services/apiConfig';
 
 /** Controls whether the stub should simulate failure (for testing) */
 let simulateFailure = false;
@@ -85,7 +84,7 @@ function pairConversation(transcript: TranscriptEntry[]): Agent3Request['convers
 }
 
 /**
- * Calls the evaluator Lambda with a canonical request.
+ * Calls the Evaluator with a canonical request.
  * Returns feedback data.
  */
 export async function callAgent3(request: Agent3Request): Promise<EvaluatorOutput> {
@@ -97,7 +96,7 @@ export async function callAgent3(request: Agent3Request): Promise<EvaluatorOutpu
     throw new Error('At least one completed question and answer is required for evaluation.');
   }
 
-  const response = await fetch(EVALUATOR_URL, {
+  const response = await fetch(API_ENDPOINTS.evaluator, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),

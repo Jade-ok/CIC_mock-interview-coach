@@ -157,8 +157,7 @@ async function main() {
                 // ARN that fails opaquely server-side at CreatePaymentConnector.
                 throw new Error(
                   `Payment connector "${c.name}" on manager "${p.name}" references credential ` +
-                    `"${c.credentialName}", but no deployed credential provider was found for it. ` +
-                    `Run \`agentcore deploy\` so the credential provider is created first.`
+                    `"${c.credentialName}", but no credential provider ARN is available in the target configuration.`
                 );
               }
               return { name: c.name, provider: c.provider, credentialProviderArn };

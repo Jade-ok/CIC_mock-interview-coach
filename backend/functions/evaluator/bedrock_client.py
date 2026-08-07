@@ -4,9 +4,9 @@ import boto3
 from botocore.config import Config
 
 try:
+    from .exceptions import EvaluationError
+except ImportError:  # Lambda loads modules from the function root.
     from exceptions import EvaluationError
-except ImportError:
-    from evaluator.exceptions import EvaluationError
 
 MODEL_ID = "global.anthropic.claude-sonnet-4-6"
 REGION = "us-east-1"

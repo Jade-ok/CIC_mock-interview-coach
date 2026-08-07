@@ -29,8 +29,8 @@ CONVERSATION = [
      "question": "What did you learn from collaborating and how does it connect to this role?",
      "answer": "Code reviews taught me patterns from seniors. I learned to ask questions early. In the hackathon I owned the backend and coordinated with the frontend dev."},
     {"point_id": "point_3", "turn_type": "follow_up",
-     "question": "Give a specific example of resolving a disagreement with a teammate.",
-     "answer": "Teammate wanted one monolithic file. I pushed for separation. We compromised with clean modules but shared types. It saved debugging time."},
+     "question": "Give a specific example of resolving a disagreement with a team member.",
+     "answer": "A team member wanted one monolithic file. I pushed for separation. We compromised with clean modules but shared types. It saved debugging time."},
 ]
 
 MOCK_LLM_RESPONSE = {

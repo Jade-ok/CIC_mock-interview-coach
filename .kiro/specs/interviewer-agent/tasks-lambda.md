@@ -1,13 +1,13 @@
 # Tasks: Interviewer Lambda (1 person)
 
-> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not imply that Amplify hosting or an authenticated AgentCore WebSocket deployment is currently available.
+> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not verify any current hosted environment.
 
 ## What You're Building
 
 A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, assembles a runtime context string, and returns it. No LLM calls, no audio, no state.
 
 **Reference docs:**
-- `design.md` — full architecture, function signatures, deployment commands
+- `design.md` — full architecture and function signatures
 - `requirements.md` — acceptance criteria and error messages
 - `backend/config/interview_structure.json` — what the interview covers
 - `backend/config/student_interview_profile.json` — how the interviewer behaves
@@ -130,25 +130,6 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
 
 **Run:** `python3 -m pytest backend/functions/interviewer/tests/ -v`
 
----
-
-### Task 7: Deploy and verify
-
-- [x] Package the contents of `backend/functions/interviewer/` at the ZIP root
-- [x] Create Lambda (see `design.md` Deployment section for full command)
-- [x] Set env vars on the Lambda
-- [x] Enable Function URL with CORS
-- [x] Test with curl:
-  ```bash
-  curl -X POST <function-url> \
-    -H "Content-Type: application/json" \
-    -d '{"analyst_output": {"schema_version": "1.0", "candidate_profile": {"candidate_level": "student_intern"}, "target_role": {"title": "SDE Intern"}, "resume_job_alignment": {}, "interview_plan": [], "selected_experiences": [], "analysis_warnings": []}}'
-  ```
-- [x] Verify: 200 response, `success: true`, non-empty `runtime_context`
-- [x] Share the Function URL with the frontend person
-
----
-
 ## Done Criteria
 
-At the time of this historical task record, the Lambda was deployed, returned a valid runtime_context when called with analyst_output, and its Function URL was accessible. The runtime context is intended for the serverless voice relay on AgentCore Runtime; current deployment status must be verified separately.
+The context-builder accepts Analyst output and returns a non-empty `runtime_context` for the voice relay. Local tests cover validation, configuration errors, and successful response construction.

@@ -1,6 +1,6 @@
 # Design: Interviewer and Voice Runtime
 
-> Maintained design. Last verified: 2026-08-07. This replaces the retired direct browser-to-Bedrock and signing-Lambda designs. Amplify hosting and authenticated browser-to-AgentCore WSS are the target deployment and remain unimplemented.
+> Maintained design. Last verified: 2026-08-07. This replaces the retired direct browser-to-Bedrock and signing-Lambda designs. Amplify hosting and authenticated browser-to-AgentCore WSS define the hosted architecture; their configuration and verification are environment-specific.
 
 ## Overview
 
@@ -65,7 +65,7 @@ Source: `backend/voice_agent/`
 - `protocol.py` translates the browser contract to and from Nova events.
 - `s2s_session_manager.py` owns the Nova bidirectional stream and transient queues.
 - `s2s_events.py` builds Nova protocol events.
-- `agentcore/agentcore.json` and `agentcore/aws-targets.json` define the current CLI/CDK deployment. Targets contain account and Region identifiers but no credentials. `.bedrock_agentcore.yaml` is ignored legacy Starter Toolkit configuration and is not canonical.
+- `agentcore/agentcore.json` defines the current CLI/CDK project. `agentcore/aws-targets.example.json` documents the shape of ignored environment-specific target data. `.bedrock_agentcore.yaml` is ignored legacy Starter Toolkit configuration and is not canonical.
 - `Dockerfile` packages the relay.
 
 The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
@@ -83,14 +83,13 @@ The production boundary is browser → authenticated `wss://` → AgentCore rela
 
 The context builder instructs Nova to conduct three main questions with one adaptive follow-up per main question, stay concise and supportive, accept student-level experience, avoid scoring during the interview, and stop gracefully.
 
-## Deployment
+## Hosted Architecture
 
-- Amplify Hosting will publish the React/Vite static frontend; this deployment is planned.
-- CDK deploys the four backend Lambdas (PDF Parser, Analyst, Interviewer context builder, and Evaluator) plus S3 configuration.
-- Run AgentCore deployment from `backend/voice_agent/`; this managed serverless runtime is separate from Amplify Hosting.
-- Configure the Amplify build with the deployed HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint should be hard-coded.
-- `scripts/deploy.sh` runs the canonical full CDK backend deployment. Its separate legacy AgentCore step is opt-in and validates the local generated configuration against the active account and Region.
+- Amplify Hosting serves the React/Vite static frontend.
+- CDK defines the four backend Lambdas and S3 configuration.
+- AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
+- Hosted environment values supply the HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint is hard-coded.
 
 ## Remaining Integration Gaps
 
-The production AgentCore endpoint and authentication flow are not configured, and the adapter has not completed a live browser/Nova session. The frontend now reads `VITE_VOICE_WS_URL` and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.
+The AgentCore endpoint and authentication flow are environment configuration. Each hosted environment must verify them with a live browser/Nova session. The frontend reads `VITE_VOICE_WS_URL` and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.

@@ -37,7 +37,7 @@ new InfraStack(app, 'MockInterviewStack', {
 
 ### Stack Definition (`lib/infra-stack.ts`)
 
-One stack provisions the HTTP backend and interview configuration. The AgentCore voice relay uses a separate deployment workflow.
+One stack defines the HTTP backend and interview configuration. The AgentCore voice relay is a separate infrastructure boundary.
 
 | Resource | Construct | Purpose |
 |----------|-----------|---------|
@@ -47,7 +47,7 @@ One stack provisions the HTTP backend and interview configuration. The AgentCore
 | Interviewer Lambda | `InterviewerFunction` | Reads config from S3, builds runtime context for Nova Sonic (no LLM call) |
 | PDF Parser Lambda | `PdfParserFunction` | Extracts text from uploaded resumes using pypdf |
 
-Every Lambda currently gets a **Function URL** with public `NONE` authentication. These are the HTTP endpoints the frontend calls directly during development. Before a public deployment, protect these operations or place them behind an authenticated API boundary and restrict CORS to the Amplify application origin.
+Every Lambda currently gets a **Function URL** with public `NONE` authentication for hosted operation. Local requests reach the same handler logic through `backend.local_server:app`. Public hosting requires an authenticated API boundary and CORS restricted to the application origin.
 
 The names above are CDK construct IDs. Because `functionName` is not set, CloudFormation generates the deployed physical Lambda names.
 
@@ -90,22 +90,11 @@ that bucket during deployment.
 
 ## How Infra Connects to the Frontend
 
-After `cdk deploy`, the stack outputs all Function URLs:
-
-```
-Outputs:
-MockInterviewStack.AnalystUrl = https://xxxx.lambda-url.us-east-1.on.aws/
-MockInterviewStack.EvaluatorUrl = https://xxxx.lambda-url.us-east-1.on.aws/
-MockInterviewStack.InterviewerUrl = https://xxxx.lambda-url.us-east-1.on.aws/
-MockInterviewStack.PdfParserUrl = https://xxxx.lambda-url.us-east-1.on.aws/
-MockInterviewStack.ConfigBucketName = mockinterviewstack-interviewconfigbucket-xxxxx
-```
-
-Copy these URLs into the frontend's local `.env` file. For an Amplify deployment, configure the corresponding `VITE_*` values in the Amplify application's build environment. The frontend currently makes `POST` requests directly to these URLs; no API Gateway sits between them.
+The stack exposes hosted endpoint and configuration-bucket outputs. Local mode sends the same `POST` payloads to the adapter under `http://localhost:8080/api`.
 
 Do not store secrets or permanent AWS credentials in `VITE_*` variables. Vite embeds those values into the public browser bundle.
 
-## Deployment Boundaries
+## Infrastructure Boundaries
 
 The complete target is intentionally split across managed services:
 
@@ -121,80 +110,11 @@ AgentCore Runtime is a serverless managed container runtime, not a server that t
 
 ---
 
-## How to Deploy After Code Changes
-
-### Prerequisites
-
-1. AWS CLI configured with a profile that has deploy permissions
-2. Node.js installed (for CDK CLI)
-3. Docker running (needed for the PDF Parser bundling step)
-4. Bedrock access confirmed in the target account for `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0`
-5. CDK bootstrapped in your account/region:
-   ```bash
-   cd infrastructure && npx cdk bootstrap aws://<ACCOUNT_ID>/us-east-1
-   ```
-
-### Deployment Steps
-
-```bash
-# From the repo root
-cd infrastructure
-
-# Install CDK dependencies (first time or after package.json changes)
-npm install
-
-# Preview what will change
-npx cdk diff
-
-# Deploy the stack
-npx cdk deploy
-```
-
-That's it. CDK will:
-1. Compile the TypeScript (`npx tsc && npx tsx bin/infra.ts` per `cdk.json`)
-2. Zip each Lambda folder (running Docker bundling for pdf_parser)
-3. Upload assets to the CDK bootstrap S3 bucket
-4. Create/update the CloudFormation stack
-5. Print the Function URLs to the terminal
-
-### What triggers a redeploy for each Lambda
-
-| Change | Effect |
-|--------|--------|
-| Edit Python code in a Lambda folder (e.g., `backend/functions/analyst/*.py`) | CDK detects the asset hash changed → redeploys that Lambda |
-| Edit `infra-stack.ts` (change timeout, memory, env vars) | Corresponding Lambda resource updates |
-| Add/remove a Lambda or change IAM policies | Stack update adds/removes resources |
-| No file changes | `cdk diff` shows no changes, deploy is a no-op |
-
-### Deployment Scope
-
-- `cd infrastructure && npx cdk deploy` is canonical for all four Lambdas and the S3 configuration bucket.
-- Amplify Hosting and browser authentication are separate planned deployments; `cdk deploy` does not create them today.
-- AgentCore is deployed through the separate workflow in `backend/voice_agent/`.
-- `scripts/deploy.sh` derives the active AWS account from `AWS_PROFILE` and deploys the canonical full Lambda/S3 CDK backend. Its opt-in legacy AgentCore branch is retained only for old Starter Toolkit environments. The canonical voice deployment now uses `@aws/agentcore` from `backend/voice_agent/`.
-- `backend/functions/evaluator/template.yaml` is a standalone SAM option. It creates a separate stack and should not be treated as an update to the CDK-managed Evaluator.
-
-Avoid direct `update-function-code` examples with assumed physical names; CDK generates those names unless `functionName` is explicitly configured.
-
-### Destroying the Stack
-
-```bash
-cd infrastructure
-npx cdk destroy
-```
-
-The S3 bucket has `RemovalPolicy.RETAIN`, so it will **not** be deleted — you must empty and delete it manually if you want it gone.
-
----
-
-## Common Gotchas
+## Local Development Gotchas
 
 | Issue | Fix |
 |-------|-----|
-| CORS error from frontend | CORS is set on the Function URL config, not in Python. Check `corsOptions` in `infra-stack.ts` |
-| Amplify site loads but voice does not connect | Amplify hosts static frontend assets only. Configure an authenticated AgentCore `wss://` endpoint and align the frontend/relay protocol. |
-| 403 when calling a Function URL | Need both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction` permissions if using IAM auth (currently set to NONE so this shouldn't happen) |
-| Docker not running → synth fails for pdf_parser | Start Docker Desktop before running `cdk deploy` |
-| Handler not found on Lambda invocation | Verify the CDK handler path matches the file inside the selected function asset. |
-| Trailing whitespace in `.env` URLs | Trim the URLs after pasting |
-| Payload too large | Function URLs have a 6 MiB request limit. The frontend and backend both reject PDFs above 4 MB. |
+| Missing AWS identity at startup | Configure an AWS profile or temporary environment credentials, then confirm with `aws sts get-caller-identity`. |
+| Model access error | Confirm the active AWS identity can invoke Sonnet 4.6 and Nova 2 Sonic in `us-east-1`. |
+| Python import error | Install `backend/requirements-local.txt` in the active virtual environment. |
+| Upload rejected | The frontend and backend both enforce the 4 MB PDF limit. |

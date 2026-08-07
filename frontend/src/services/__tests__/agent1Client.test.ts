@@ -6,7 +6,7 @@ describe('callAgent1', () => {
     vi.restoreAllMocks();
   });
 
-  it('runs all three Function URLs and retains the complete Analyst output', async () => {
+  it('runs all three HTTP stages and retains the complete Analyst output', async () => {
     const analystOutput = {
       candidate_profile: { candidate_level: 'new_grad' },
       target_role: { title: 'Software Engineer' },
@@ -41,6 +41,11 @@ describe('callAgent1', () => {
     }, abortController.signal);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'http://localhost:8080/api/pdf-parser',
+      'http://localhost:8080/api/analyst',
+      'http://localhost:8080/api/interviewer',
+    ]);
     for (const [, options] of fetchMock.mock.calls) {
       expect(options?.signal).toBe(abortController.signal);
     }

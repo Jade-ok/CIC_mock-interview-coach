@@ -1,6 +1,6 @@
 # Design Document: Resume Analysis Pipeline
 
-> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and planned gaps separately. Amplify hosting and authenticated AgentCore WSS are target deployment work, not completed infrastructure.
+> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and authenticated AgentCore WSS are separate deployment boundaries.
 
 ## Overview
 
@@ -9,7 +9,7 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Converse API with tool_use to force structured JSON output, validates the response against the analyst_output schema, and returns it to the frontend.
 
-The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The target production client is hosted on AWS Amplify. Both Lambdas are invoked via Lambda Function URLs (no API Gateway). Each Lambda supports dual invocation modes (Function URL mode and direct invocation mode) to enable both production and local testing workflows.
+The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
@@ -48,7 +48,7 @@ sequenceDiagram
     Evaluator-->>Browser: scored evaluation report
 ```
 
-The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines all four Lambdas and the S3 interview-configuration resources; Amplify Hosting and AgentCore deployment are separate workflows.
+The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines all four Lambdas and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
 
 ### Internal Lambda Architecture
 

@@ -4,9 +4,9 @@
 
 ## Overview
 
-The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume and job description, completes a real-time voice interview through the AgentCore relay and Nova 2 Sonic, and receives feedback from the Evaluator Lambda.
+The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume and job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
 
-The target production deployment uses AWS Amplify Hosting for the static frontend and an authenticated `wss://` connection to AgentCore. Amplify and browser authentication are not yet provisioned.
+Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and an authenticated `wss://` connection to AgentCore.
 
 ## Architecture
 
@@ -19,9 +19,9 @@ Amplify-hosted React/Vite browser
   └─ HTTPS → Evaluator Lambda (Claude Sonnet 4.6)
 ```
 
-Current deployment gaps:
+Hosted integration requirements:
 
-- The frontend falls back to `ws://localhost:8080/` unless `VITE_VOICE_WS_URL` is set.
+- Production builds select their configured HTTPS and WSS endpoints with `VITE_RUNTIME_MODE=hosted`.
 - AgentCore authentication and Amplify hosting/authentication are not configured.
 - Lambda Function URLs are public and use wildcard CORS.
 - The protocol is unit-tested but has not been verified in a live browser/Nova session.
@@ -202,18 +202,9 @@ Manual end:
 
 Evaluator failure keeps the transcript and Analyst output available for retry.
 
-## Environment Variables
+## Runtime Configuration
 
-```env
-VITE_PDF_PARSER_URL=https://...
-VITE_ANALYST_URL=https://...
-VITE_INTERVIEWER_URL=https://...
-VITE_EVALUATOR_URL=https://...
-VITE_VOICE_WS_URL=wss://...
-VITE_USE_MOCK_WEBSOCKET=false
-```
-
-Never place long-lived AWS credentials in a `VITE_*` variable because Vite bundles these values into browser assets.
+Local development uses the combined backend on port 8080. Hosted builds receive environment-specific HTTPS and WSS endpoints through the hosting environment. AWS credentials belong to backend runtime identities rather than browser configuration.
 
 ## Verification Properties
 
@@ -235,5 +226,3 @@ Never place long-lived AWS credentials in a `VITE_*` variable because Vite bundl
 - Implement the FeedbackReport transcript view.
 - Verify reconnection with real AgentCore session behavior and history restoration.
 - Run a live Nova browser test.
-- Add Amplify Hosting, user authentication, and AgentCore authorization.
-- Protect the Lambda endpoints before public launch.

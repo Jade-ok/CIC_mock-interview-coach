@@ -15,8 +15,12 @@ import math
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from protocol import BrowserProtocolError, BrowserSessionProtocol
-from s2s_session_manager import S2sSessionManager
+try:
+    from .protocol import BrowserProtocolError, BrowserSessionProtocol
+    from .s2s_session_manager import S2sSessionManager
+except ImportError:  # Direct execution from backend/voice_agent.
+    from protocol import BrowserProtocolError, BrowserSessionProtocol
+    from s2s_session_manager import S2sSessionManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

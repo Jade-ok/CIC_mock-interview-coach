@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { callAgent1 } from '@/services/agent1Client';
+import { VOICE_WS_URL } from '@/services/apiConfig';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
@@ -8,7 +9,6 @@ const WS_TIMEOUT_MS = 30000;
 // The Analyst Lambda allows two sequential 120-second Bedrock reads plus
 // parsing/Interviewer overhead. Do not report a false failure while it is live.
 const AGENT1_TIMEOUT_MS = 330000;
-const WS_URL = import.meta.env.VITE_VOICE_WS_URL || 'ws://localhost:8080/';
 const USE_MOCK_WEBSOCKET = import.meta.env.VITE_USE_MOCK_WEBSOCKET === 'true';
 
 // Mocking is opt-in so local development can exercise the real relay.
@@ -182,7 +182,7 @@ export function WaitingRoom() {
     };
 
     try {
-      await wsClient.connect({ url: WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
+      await wsClient.connect({ url: VOICE_WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
       if (!isCurrentRequest()) return;
       dispatch({ type: 'WS_CONNECTED' });
     } catch (err) {

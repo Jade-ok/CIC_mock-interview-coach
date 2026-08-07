@@ -77,14 +77,6 @@
   - [x] Wire Practice Again to reset the session.
   - [ ] Add transcript viewing; its controls are hidden until a callback is implemented.
 
-- [ ] 14. Complete production deployment.
-  - Deploy the four Lambdas and configuration bucket with CDK.
-  - Deploy the voice relay to AgentCore.
-  - Configure Amplify Hosting environment variables.
-  - Add user authentication and AgentCore authorization.
-  - Protect Lambda endpoints.
-  - Run the complete deployed Upload → Waiting → Interview → Feedback flow.
-
 ## Verification
 
 - Frontend unit/property tests: `cd frontend && npm test -- --run`

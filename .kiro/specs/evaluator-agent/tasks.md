@@ -65,11 +65,11 @@
 - [x] Write integration test with mocked Bedrock client testing full happy path
 - [x] Write integration tests for error paths (invalid input, API failure)
 
-## Task 8: End-to-End Testing and Deployment Prep
+## Task 8: Local End-to-End Testing and Packaging
 
 - [x] Create a sample test payload matching the actual Interviewer output format
 - [x] Run full integration test locally with mocked Bedrock response
 - [x] Verify response JSON matches the defined output schema
 - [x] Add requirements.txt or pyproject.toml with boto3 dependency
-- [x] Create SAM/CloudFormation template or deployment config for Lambda (300s timeout, Python 3.12 runtime)
+- [x] Keep the infrastructure template aligned with the Lambda runtime configuration (300s timeout, Python 3.12 runtime)
 - [x] Document environment variables needed (if any) and IAM permissions (bedrock:InvokeModel)

@@ -2,9 +2,9 @@
 
 import json
 try:
+    from .exceptions import ValidationError
+except ImportError:  # Lambda loads modules from the function root.
     from exceptions import ValidationError
-except ImportError:
-    from evaluator.exceptions import ValidationError
 
 
 def parse_and_validate(event: dict) -> dict:

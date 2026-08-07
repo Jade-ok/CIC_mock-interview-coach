@@ -1,6 +1,6 @@
 # Implementation Plan: Resume Analysis Pipeline
 
-> These completed tasks cover the Lambda implementation. Amplify frontend hosting and authenticated AgentCore voice deployment are tracked in the frontend/interviewer specs and must not be inferred as complete from this file.
+> These completed tasks cover the Lambda implementation. Amplify frontend hosting and authenticated AgentCore environment verification are tracked in the frontend/interviewer specs.
 
 > Historical implementation record. Last reconciled with the refactored paths on 2026-08-07.
 
@@ -16,7 +16,7 @@ The original hackathon build used standalone test events. The repository now use
   - [x] 1.1 Stage and commit shared artifacts to main branch
     - Stage `schemas/analyst_output.json`, `README.md`, and `.kiro/specs/resume-analysis-pipeline/` directory
     - Commit with message: `feat: add analyst_output schema contract + spec docs for resume-analysis-pipeline`
-    - Push to `main` so teammates (interviewer, evaluator, frontend) can access the schema immediately
+    - Push to `main` so downstream interviewer, evaluator, and frontend work can access the schema immediately
     - _Requirements: 6.1, 6.2_
 
 - [x] 2. Implement pdf_parser — validation and invocation mode detection
@@ -55,7 +55,7 @@ The original hackathon build used standalone test events. The repository now use
     - Create `backend/functions/pdf_parser/test_event.json` with two example events:
       - Direct mode: `{"resume": {"content": "<short base64 PDF>", "format": "pdf"}}`
       - Function URL mode: `{"body": "{\"resume\": {\"content\": \"<short base64 PDF>\", \"format\": \"pdf\"}}"}`
-    - Include a comment/note at top explaining usage: `aws lambda invoke --function-name pdf_parser --payload file://backend/functions/pdf_parser/test_event.json out.json`
+    - Keep the sample suitable for direct handler tests.
 
 - [x] 5. Implement analyst — validation and invocation mode detection
   - [x] 5.1 Create `backend/functions/analyst/validation.py`
@@ -119,11 +119,11 @@ The original hackathon build used standalone test events. The repository now use
     - Create `backend/functions/analyst/test_event.json` with two example events:
       - Direct mode: `{"resume_text": "Jane Doe, Software Engineering student...", "job_posting_text": "Software Engineer at Acme Corp..."}`
       - Function URL mode: `{"body": "{\"resume_text\": \"Jane Doe...\", \"job_posting_text\": \"Software Engineer at Acme Corp...\"}"}`
-    - Include a comment/note explaining usage: `aws lambda invoke --function-name analyst --payload file://backend/functions/analyst/test_event.json out.json`
+    - Keep the sample suitable for direct handler tests.
 
 ## Notes
 
-- Task 1 (git commit) should be done first to unblock teammates working on interviewer/evaluator/frontend
+- Task 1 (git commit) should be done first to unblock downstream interviewer, evaluator, and frontend work
 - `backend/functions/pdf_parser` (tasks 2–4) and `backend/functions/analyst` (tasks 5–9) are independent and can be built in parallel after task 1
 - Model is `global.anthropic.claude-sonnet-4-6` in `us-east-1`
 - `boto3` is available in the Lambda runtime — do NOT bundle it. Only bundle `pypdf` for `backend/functions/pdf_parser`.

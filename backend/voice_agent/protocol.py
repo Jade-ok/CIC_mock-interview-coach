@@ -7,18 +7,32 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from s2s_events import (
-    audio_input_event,
-    content_end_event,
-    content_start_audio_event,
-    content_start_text_event,
-    prompt_end_event,
-    prompt_start_event,
-    session_end_event,
-    session_start_event,
-    text_input_event,
-    tool_result_event,
-)
+try:
+    from .s2s_events import (
+        audio_input_event,
+        content_end_event,
+        content_start_audio_event,
+        content_start_text_event,
+        prompt_end_event,
+        prompt_start_event,
+        session_end_event,
+        session_start_event,
+        text_input_event,
+        tool_result_event,
+    )
+except ImportError:  # Direct execution from backend/voice_agent.
+    from s2s_events import (
+        audio_input_event,
+        content_end_event,
+        content_start_audio_event,
+        content_start_text_event,
+        prompt_end_event,
+        prompt_start_event,
+        session_end_event,
+        session_start_event,
+        text_input_event,
+        tool_result_event,
+    )
 
 
 class BrowserProtocolError(ValueError):
