@@ -2,7 +2,7 @@
 Quick test script for the Voice Agent Server.
 Connects via WebSocket, sends a sessionStart + system prompt, and checks for a response.
 
-Usage: python3 scripts/test_voice_agent.py
+Usage: python3 backend/voice_agent/tools/test_voice_agent.py
 """
 
 import asyncio

@@ -103,7 +103,7 @@ def _build_tool_config() -> dict:
 
 
 def _analyst_output_schema() -> dict:
-    """Return the analyst_output JSON Schema mirroring contracts/analyst_output.json."""
+    """Return the analyst_output JSON Schema mirroring schemas/analyst_output.json."""
     return {
         "type": "object",
         "required": [

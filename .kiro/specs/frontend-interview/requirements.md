@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained product requirements. Last verified: 2026-08-07. The backend PDF limit is currently 4 MB, voice/Evaluator integration remains incomplete, and Amplify hosting plus authenticated AgentCore access are target deployment work.
+
 ## Introduction
 
 AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화면을 다룬다. 사용자는 이력서(PDF)와 채용공고(JD)를 업로드하고, Amazon Nova Sonic 기반 실시간 음성 인터뷰를 진행한다. 인터뷰는 화상면접과 유사한 UX(다크 테마, 참가자 타일, 하단 컨트롤 바)로 구성되며, Practice Mode를 통해 실시간 텍스트 힌트를 볼 수 있다. Feedback 화면은 별도 spec에서 다룬다.
@@ -12,6 +14,7 @@ AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화
 - **Agent_1 API** (`nova_sonic_context`, `competency_guides` 반환) — analyst spec 담당
 - **Agent_3 API** (transcript 평가) — evaluator spec 담당
 - **WebSocket_Server** (Nova_Sonic 중계, 지속 연결 관리) — 별도 인프라 spec 또는 팀원 담당
+- **Amplify_Hosting 및 인증 연동** (React 정적 배포, 인증된 WSS 접속) — 배포/인프라 작업. 현재 코드에는 아직 완성되지 않음
 
 본 spec에서 이 항목들이 요구사항에 등장하는 이유는 프론트엔드가 **어떤 인터페이스를 기대하는지** 명세하기 위함이며 (API 계약), 구현 책임은 아니다. tasks.md 생성 시 이 항목들과 관련된 태스크는 "외부 인터페이스 mock/stub 처리" 수준으로만 다루고, 실제 백엔드/Nova Sonic 구현 태스크는 생성하지 않는다.
 
@@ -22,7 +25,9 @@ AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화
 - **Waiting_Room**: 제출 후 Agent 1 분석 완료 및 WebSocket 연결 완료까지 대기하는 화면
 - **Feedback_Screen**: 인터뷰 종료 후 Agent 3 평가 결과를 표시하는 화면 (별도 spec)
 - **Nova_Sonic**: Amazon Nova Sonic 실시간 음성 AI 모델
-- **WebSocket_Server**: Lambda가 아닌 지속 연결 가능한 백엔드 서버로 Nova Sonic과의 통신을 중계
+- **WebSocket_Server**: `backend/voice_agent/`의 FastAPI relay를 실행하는 Bedrock AgentCore Runtime. AgentCore는 AWS가 기반 서버를 관리하는 서버리스 컨테이너 런타임이며, 브라우저와의 지속 WebSocket과 Nova 2 Sonic 양방향 스트림을 중계
+- **Amplify_Hosting**: 생성된 React/Vite 정적 프론트엔드를 배포하는 대상 AWS 서비스
+- **Authenticated_WSS**: Amplify에서 로드된 브라우저가 인증된 세션/토큰으로 AgentCore voice relay에 연결하는 방식. 인증 제공자와 relay 검증 연동은 아직 구현 전
 - **Agent_1**: 이력서/JD를 분석하여 `nova_sonic_context`와 `competency_guides`를 생성하는 백엔드 에이전트
 - **Agent_3**: 인터뷰 종료 후 transcript를 받아 피드백을 생성하는 백엔드 에이전트
 - **Practice_Mode**: 인터뷰 중 텍스트 힌트(질문 말풍선)를 표시하는 프론트엔드 전용 모드
@@ -40,7 +45,7 @@ AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화
 #### Acceptance Criteria
 
 1. WHEN 사용자가 파일 선택 또는 드래그앤드롭으로 PDF를 첨부하면, THE Upload_Screen SHALL 파일을 업로드 필드에 등록하고 파일명을 표시한다.
-2. IF 첨부된 파일이 PDF 형식이 아니거나 10MB를 초과하면, THEN THE Upload_Screen SHALL 해당 조건에 맞는 에러 메시지를 표시하고 업로드를 거부한다.
+2. IF 첨부된 파일이 PDF 형식이 아니거나 4MB를 초과하면, THEN THE Upload_Screen SHALL 해당 조건에 맞는 에러 메시지를 표시하고 업로드를 거부한다. (현재 프론트엔드 구현은 아직 10MB를 허용하므로 수정이 필요하다.)
 3. THE Upload_Screen SHALL JD 입력용 텍스트 영역(textarea)을 제공한다.
 4. WHILE 이력서 파일 또는 JD 텍스트 중 하나라도 비어있는 상태인 동안, THE Upload_Screen SHALL 제출 버튼을 비활성화 상태로 유지한다 (공백/최소 길이 등 내용 유효성 검증은 의도적으로 하지 않음 — 필요 시 Agent_1/백엔드에서 처리).
 5. WHEN 사용자가 제출 버튼을 클릭하면, THE Upload_Screen SHALL 이력서 PDF와 JD 텍스트를 백엔드(Agent_1)로 전송한다.
@@ -139,6 +144,9 @@ AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화
 2. THE Upload_Screen SHALL 다크 테마 기반의 화상회의 스타일 UI(어두운 배경, 하단 컨트롤 바)를 따른다.
 3. THE Interview_Screen SHALL 다크 테마 기반의 화상회의 스타일 UI(어두운 배경, 참가자 타일, 하단 컨트롤 바)를 따른다. 색상/타이포그래피 토큰은 `.kiro/steering/design-theme.md` (Midnight green 테마)를 따른다.
 4. THE Interview_Screen SHALL MVP 기준으로 사용자 카메라를 사용하지 않는다.
+5. THE production React application SHALL be hosted as a static site on AWS Amplify Hosting.
+6. THE production Interview_Screen SHALL connect to the AgentCore voice relay over authenticated `wss://`; it SHALL NOT connect directly from the browser to Bedrock Nova with long-lived AWS credentials.
+7. THE WebSocket endpoint and HTTP Lambda endpoints SHALL be supplied through deployment environment configuration rather than hard-coded localhost or account-specific values.
 
 ## Out of Scope
 
@@ -149,3 +157,4 @@ AI Mock Interview Coach의 프론트엔드 중 업로드 화면과 인터뷰 화
 - **Agent 1 API 엔드포인트 스펙**: analyst spec에서 정의한다.
 - **Guide 키워드 매칭 알고리즘**: design.md에서 다룬다.
 - **Nova Sonic 세션/프롬프트/tool 정의, WebSocket 서버 구현**: Ownership & Boundaries 참조.
+- **Amplify/Auth 인프라 구현 상세**: 본 spec은 프론트엔드가 인증된 WSS를 사용해야 한다는 계약만 정의한다. 리소스 생성과 IAM/토큰 검증은 배포 작업으로 남아 있다.

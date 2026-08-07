@@ -1,348 +1,140 @@
-# Implementation Plan: Wiring the Frontend to the CDK Backend
+# Frontend–Backend Wiring Status
 
-## Architecture Overview
+> Current-state guide. Last verified: 2026-08-07. This document distinguishes implemented pieces from integration work that remains.
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Browser (frontend/)                                                │
-│                                                                     │
-│  Upload PDF ──► pdf_parser URL ──► resume_text + job_posting_text   │
-│       │                                                             │
-│       ▼                                                             │
-│  Analyst call ──► analyst URL ──► analyst_output (JSON)             │
-│       │                                                             │
-│       ▼                                                             │
-│  Interviewer call ──► interviewer URL ──► runtime_context           │
-│       │                                                             │
-│       ▼                                                             │
-│  Nova Sonic WebSocket ◄──► live interview (speech-to-speech)        │
-│       │                                                             │
-│       ▼                                                             │
-│  Evaluator call ──► evaluator URL ──► evaluation results            │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+## Target Deployment Topology
+
+```text
+React/Vite browser on AWS Amplify Hosting
+  ├─ HTTPS ─> PDF Parser / Analyst / Interviewer / Evaluator Lambdas
+  └─ authenticated WSS ─> Amazon Bedrock AgentCore Runtime
+                               └─ Python voice relay ─> Nova 2 Sonic
+
+CDK ─> four Lambdas + S3 interview configuration
 ```
 
-The frontend holds all state. No API Gateway, no database. Each Lambda is called directly via its Function URL.
+The four Lambdas and S3 configuration bucket are deployed by CDK. The React build is intended to be hosted by Amplify Hosting. The AgentCore voice relay is deployed separately from `backend/voice_agent/` because it needs a persistent bidirectional stream that is not a good fit for a Lambda invocation.
 
----
+AgentCore is serverless infrastructure from the application's perspective: it runs the relay as an AWS-managed container runtime, so this project does not provision or maintain an EC2 server. The relay can hold transient state for each active WebSocket session; durable interview state remains outside it.
 
-## Phase 1: Environment Configuration
+## What Exists Today
 
-### 1.1 Generate `.env` from CDK outputs
+- The CDK stack defines the four Lambda Function URLs and S3 configuration bucket.
+- The Python relay can run locally and has AgentCore deployment configuration.
+- The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
+- Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
+- The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
+- The frontend/relay wire protocols remain incompatible, as detailed below.
 
-After `npx cdk deploy`, CDK prints all Function URLs. Store them in `frontend/.env`:
+## Frontend Environment
+
+The current HTTP clients read:
 
 ```env
-VITE_PDF_PARSER_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
-VITE_ANALYST_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
-VITE_INTERVIEWER_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
-VITE_EVALUATOR_URL=https://xxxxxx.lambda-url.us-east-1.on.aws/
+VITE_PDF_PARSER_URL=https://...
+VITE_ANALYST_URL=https://...
+VITE_INTERVIEWER_URL=https://...
+VITE_EVALUATOR_URL=https://...
 ```
 
-> Use `VITE_` prefix if using Vite, `REACT_APP_` for CRA, or `NEXT_PUBLIC_` for Next.js.
+CDK prints the corresponding `PdfParserUrl`, `AnalystUrl`, `InterviewerUrl`, and `EvaluatorUrl` outputs. Trim copied values. The voice endpoint is not currently environment-driven: `WaitingRoom.tsx` uses `ws://localhost:8080`, and development mode selects a mock WebSocket client.
 
-### 1.2 Automate with a post-deploy script (optional)
+The target Amplify build also needs an environment-driven secure WebSocket URL and authentication configuration. Exact variable names should be documented once the implementation selects its Amplify Auth/Cognito and AgentCore authorization flow; do not put permanent AWS credentials in Vite variables because `VITE_*` values are bundled into browser code.
 
-```bash
-# scripts/sync-env.sh
-STACK_NAME="MockInterviewStack"
-REGION="us-east-1"
+## Implemented HTTP Pipeline
 
-get_output() {
-  aws cloudformation describe-stacks \
-    --stack-name $STACK_NAME --region $REGION \
-    --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" \
-    --output text
-}
+The current frontend client is `frontend/src/services/agent1Client.ts`.
 
-cat > frontend/.env << EOF
-VITE_PDF_PARSER_URL=$(get_output PdfParserUrl)
-VITE_ANALYST_URL=$(get_output AnalystUrl)
-VITE_INTERVIEWER_URL=$(get_output InterviewerUrl)
-VITE_EVALUATOR_URL=$(get_output EvaluatorUrl)
-EOF
-```
+### PDF Parser
 
----
+Request:
 
-## Phase 2: API Client Layer
-
-Create a shared API client module in the frontend that handles all Lambda calls.
-
-### 2.1 File: `frontend/src/api/config.ts`
-
-```typescript
-export const API_URLS = {
-  pdfParser: import.meta.env.VITE_PDF_PARSER_URL,
-  analyst: import.meta.env.VITE_ANALYST_URL,
-  interviewer: import.meta.env.VITE_INTERVIEWER_URL,
-  evaluator: import.meta.env.VITE_EVALUATOR_URL,
-} as const;
-```
-
-### 2.2 File: `frontend/src/api/client.ts`
-
-Shared `callLambda` function that:
-- POSTs JSON to the Function URL
-- Sends the body as a JSON string (Function URL mode: Lambda receives `{"body": "<JSON string>"}`)
-- Parses the response envelope (`{status, data}` or `{status, error}`)
-- Throws on network error or `status: "error"` response
-
-```typescript
-export async function callLambda<T>(url: string, payload: object): Promise<T> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const envelope = await response.json();
-
-  if (envelope.status === 'error') {
-    throw new Error(envelope.error);
-  }
-
-  return envelope.data as T;
+```json
+{
+  "resume": {"content": "<base64>", "format": "pdf"},
+  "job_posting": {"content": "<text>", "format": "text"}
 }
 ```
 
-### 2.3 File: `frontend/src/api/endpoints.ts`
+Response envelope: `{"status": "success", "data": {...}}` or `{"status": "error", "error": "..."}`.
 
-Type-safe wrappers for each Lambda:
+The backend decoded-content limit is 4 MB. The frontend currently allows 10 MB, so client-side validation is not yet aligned.
 
-```typescript
-import { callLambda } from './client';
-import { API_URLS } from './config';
+### Analyst
 
-// --- PDF Parser ---
-export interface ParseDocumentsRequest {
-  resume?: { content: string; format: 'pdf' };
-  job_posting?: { content: string; format: 'pdf' | 'text' };
-}
+Request: `{"resume_text": "...", "job_posting_text": "..."}`.
 
-export interface ParseDocumentsResponse {
-  resume_text?: string;
-  job_posting_text?: string;
-  errors?: Array<{ document: string; error: string }>;
-}
+Response envelope: `{"status": "success", "data": <analyst_output>}` or an error envelope. The output shape is defined by `schemas/analyst_output.json`.
 
-export function parseDocuments(req: ParseDocumentsRequest) {
-  return callLambda<ParseDocumentsResponse>(API_URLS.pdfParser, req);
-}
+### Interviewer
 
-// --- Analyst ---
-export interface AnalystRequest {
-  resume_text: string;
-  job_posting_text: string;
-}
+Request: `{"analyst_output": {...}}`.
 
-// AnalystOutput matches contracts/analyst_output.json
-export interface AnalystOutput { /* ... full type from schema ... */ }
+Actual response body: `{"success": true, "runtime_context": "..."}` or `{"success": false, "error_message": "..."}`.
 
-export function analyzeResume(req: AnalystRequest) {
-  return callLambda<AnalystOutput>(API_URLS.analyst, req);
-}
+The current frontend incorrectly expects the Analyst-style `{status, data}` envelope here. That mismatch must be fixed before the real waiting-room pipeline can complete.
 
-// --- Interviewer (context builder) ---
-export interface InterviewerRequest {
-  analyst_output: AnalystOutput;
-}
+### Evaluator
 
-export interface RuntimeContext {
-  system_instruction: string;
-  // Nova Sonic config returned by the interviewer
-}
+Canonical completed-interview request shape (`schemas/interviewer_output.json`):
 
-export function buildInterviewContext(req: InterviewerRequest) {
-  return callLambda<RuntimeContext>(API_URLS.interviewer, req);
-}
-
-// --- Evaluator ---
-export interface EvaluatorRequest {
-  analyst_output: AnalystOutput;
-  transcript: Array<{ role: string; content: string }>;
-}
-
-export interface EvaluationResult { /* scoring output */ }
-
-export function evaluateInterview(req: EvaluatorRequest) {
-  return callLambda<EvaluationResult>(API_URLS.evaluator, req);
-}
-
-```
-
----
-
-## Phase 3: Frontend Flow (Page by Page)
-
-### 3.1 Upload Page
-
-| Step | Action | Lambda |
-|------|--------|--------|
-| 1 | User uploads resume PDF + pastes/uploads job posting | — |
-| 2 | Convert PDF to base64 (`FileReader.readAsDataURL`) | — |
-| 3 | Validate file size < 4 MB client-side | — |
-| 4 | Call `parseDocuments(...)` | pdf_parser |
-| 5 | Store `resume_text` + `job_posting_text` in app state | — |
-
-### 3.2 Analysis Page
-
-| Step | Action | Lambda |
-|------|--------|--------|
-| 1 | Call `analyzeResume({ resume_text, job_posting_text })` | analyst |
-| 2 | Show loading spinner (Bedrock can take 10-20s) | — |
-| 3 | Display analyst_output summary to user (skills, alignment, plan) | — |
-| 4 | Store full `analyst_output` in app state | — |
-
-### 3.3 Interview Prep Page
-
-| Step | Action | Lambda |
-|------|--------|--------|
-| 1 | Call `buildInterviewContext({ analyst_output })` | interviewer |
-| 2 | Receive `runtime_context` (system instruction for Nova Sonic) | — |
-| 3 | Store `runtime_context` in app state | — |
-| 4 | Show interview configuration / ready screen | — |
-
-### 3.4 Live Interview Page (Nova Sonic WebSocket)
-
-| Step | Action | Service |
-|------|--------|---------|
-| 1 | Open WebSocket to Nova Sonic using `runtime_context.system_instruction` | Nova Sonic |
-| 2 | Stream microphone audio to Nova Sonic | Nova Sonic |
-| 3 | Receive audio responses from Nova Sonic, play in real-time | Nova Sonic |
-| 4 | Accumulate Q&A transcript in app state | — |
-| 5 | On interview end, close WebSocket | — |
-
-### 3.5 Evaluation Page
-
-| Step | Action | Lambda |
-|------|--------|--------|
-| 1 | Call `evaluateInterview({ analyst_output, transcript })` | evaluator |
-| 2 | Show loading spinner | — |
-| 3 | Display evaluation results (scores, feedback) | — |
-
----
-
-## Phase 4: State Management
-
-The browser holds all state. Recommended shape:
-
-```typescript
-interface AppState {
-  // From upload
-  resumeBase64: string | null;
-  jobPostingContent: string | null;
-
-  // From pdf_parser
-  resumeText: string | null;
-  jobPostingText: string | null;
-
-  // From analyst
-  analystOutput: AnalystOutput | null;
-
-  // From interviewer
-  runtimeContext: RuntimeContext | null;
-
-  // During interview
-  transcript: Array<{ role: string; content: string }>;
-
-  // From evaluator
-  evaluationResult: EvaluationResult | null;
-
-  // UI
-  currentStep: 'upload' | 'analysis' | 'prep' | 'interview' | 'evaluation';
-  loading: boolean;
-  error: string | null;
+```json
+{
+  "conversation": [
+    {
+      "point_id": "point_1",
+      "turn_type": "main_question",
+      "question": "...",
+      "answer": "..."
+    }
+  ],
+  "interview_metadata": {},
+  "analyst_output": {}
 }
 ```
 
-Use React Context, Zustand, or simple `useState` — no backend persistence needed.
+The Evaluator returns the feedback object directly in the Function URL body; it does not wrap success as `{status, data}`.
 
----
+The current `agent3Client.ts` instead sends `transcript` and `competency_guides`, expects `{status, data}`, and the current session state does not retain full Analyst output. These are open integration tasks.
 
-## Phase 5: Error Handling
+## Voice Integration and Authentication
 
-### 5.1 Network errors
+The implemented backend voice path is:
 
-- Wrap all `callLambda` calls in try/catch
-- Show user-friendly error message + retry button
-- Common issues: CORS (fix Function URL config, not code), 403 (check AWS credentials are not expired), timeout
-
-### 5.2 Lambda response errors
-
-- All Lambdas return `{"status": "error", "error": "message"}` on failure
-- Surface the `error` string to the user
-- For analyst/evaluator, offer a retry since Bedrock calls can intermittently fail
-
-### 5.3 Client-side validation
-
-- PDF size < 4 MB before sending
-- Resume required, job posting required
-- Trim trailing whitespace from URLs in `.env` (known 403 cause)
-
----
-
-## Phase 6: Nova Sonic WebSocket Integration
-
-This is the most complex piece. The frontend connects directly to Nova Sonic — the interviewer Lambda only builds the context.
-
-### 6.1 Connection setup
-
-```typescript
-// Pseudocode — actual Nova Sonic SDK may differ
-const ws = new WebSocket(NOVA_SONIC_ENDPOINT);
-
-ws.onopen = () => {
-  // Send session config with system instruction from runtime_context
-  ws.send(JSON.stringify({
-    type: 'session.config',
-    system_instruction: runtimeContext.system_instruction,
-  }));
-};
+```text
+Browser WebSocket → AgentCore FastAPI relay → Nova 2 Sonic
 ```
 
-### 6.2 Audio streaming
+The relay forwards raw Nova `{"event": ...}` JSON. The frontend WebSocket client currently sends and expects application messages shaped as `{type, payload}` and waits for a synthetic `session_start_ack` that the relay does not send.
 
-- Use `MediaRecorder` or Web Audio API to capture microphone
-- Stream audio chunks to WebSocket
-- Receive audio response chunks and play via `AudioContext`
-- Track transcript (Nova Sonic returns text alongside audio)
+Before connecting the real endpoint, choose one adapter direction:
 
-### 6.3 Session end
+1. translate app-level messages to/from Nova events in the relay; or
+2. change the frontend client to speak raw Nova events.
 
-- User clicks "End Interview" or Nova Sonic signals completion
-- Close WebSocket
-- Final transcript is ready for the evaluator
+Then add a contract test covering session start, context injection, one audio turn, transcript output, and session end.
 
----
+For deployment, the browser-to-AgentCore connection must be authenticated with short-lived user credentials or tokens. Amplify Hosting only serves the frontend build; it does not make the WebSocket authenticated by itself. Add Amplify Auth/Cognito (or another AgentCore-supported authorization configuration), validate authorization at the runtime boundary, and never expose long-lived AWS access keys in the browser.
 
-## Phase 7: Deployment Checklist
+## Current Frontend Flow
 
-| Item | Status |
-|------|--------|
-| `npx cdk bootstrap` run once per account | ☐ |
-| `npx cdk deploy` successful | ☐ |
-| All 5 Function URLs accessible (curl test) | ☐ |
-| `.env` populated with correct URLs (no trailing whitespace) | ☐ |
-| CORS working (test from browser console with `fetch`) | ☐ |
-| pdf_parser handles 4 MB PDF without timeout | ☐ |
-| analyst returns valid `analyst_output.json` schema | ☐ |
-| interviewer returns runtime_context with system_instruction | ☐ |
-| Nova Sonic WebSocket connects with runtime_context | ☐ |
-| evaluator returns scores given analyst_output + transcript | ☐ |
+- Upload, waiting-room, interview, audio, text-input, reconnect, and feedback-state components exist.
+- Development mode uses `MockWebSocketClient`.
+- `FeedbackReport` components exist, but `FeedbackScreen` still renders raw feedback JSON.
+- `WaitingRoom` currently falls back to an empty placeholder PDF/JD instead of reliably reading the submitted upload from session state.
 
----
+Do not describe the flow as end-to-end complete until the HTTP envelopes, Evaluator request, voice wire protocol, and upload handoff above are aligned.
 
-## Key Gotchas (from project rules)
+## Verification Checklist
 
-1. **CORS is on the Function URL config** — already set in CDK. If you see CORS errors, check the CDK `corsOptions`, not your Python code.
-2. **403 needs two permissions** — CDK handles both `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` automatically with `authType: NONE`.
-3. **Trailing whitespace in `.env`** — causes silent 403. Trim URLs.
-4. **6 MiB payload limit** — PDF upload capped at 4 MB client-side.
-5. **No API Gateway** — all calls go directly to Function URLs. No `/stage/` prefix in paths.
-6. **Stateless** — if the user refreshes, state is lost. Consider `sessionStorage` for persistence across page navigations within a session.
+- [ ] Frontend PDF limit matches the backend 4 MB limit.
+- [ ] Interviewer response is parsed using `success` and `runtime_context`.
+- [ ] Full Analyst output remains available through the interview.
+- [ ] Evaluator request matches `schemas/interviewer_output.json`.
+- [ ] Evaluator response is treated as the returned object, not `{status, data}`.
+- [ ] AgentCore endpoint is configurable outside source code.
+- [ ] React production build and environment variables are configured in Amplify Hosting.
+- [ ] Browser identity and AgentCore WebSocket authorization are implemented with short-lived credentials/tokens.
+- [ ] Frontend and relay share one WebSocket wire protocol.
+- [ ] Public Function URLs are protected or placed behind an authenticated API boundary before a public launch.
+- [ ] Real browser flow passes Upload → Waiting → Interview → Feedback.

@@ -1,5 +1,7 @@
 # Tasks
 
+> Historical implementation record. Paths and field names were refreshed on 2026-08-07; check current code and tests for implementation status.
+
 ## Task 1: Project Setup and Module Scaffolding
 
 - [x] Create the `backend/functions/evaluator/` directory structure with all module files
@@ -16,7 +18,7 @@
 ## Task 2: Implement Input Validation
 
 - [x] Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event
-- [x] Validate presence of required fields: conversation, interview_metadata, resume_analysis
+- [x] Validate presence of required fields: conversation, interview_metadata, analyst_output
 - [x] Validate conversation length (1-6 pairs)
 - [x] Validate each turn contains point_id, turn_type, question, answer
 - [x] Raise `ValidationError` with descriptive messages on failure
@@ -25,9 +27,9 @@
 ## Task 3: Implement Prompt Builder
 
 - [x] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
-- [x] Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object
+- [x] Implement `_format_user_message(conversation, analyst_output)` to format the user message, extracting target_role and resume_job_alignment from the structured analyst_output object
 - [x] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
-- [x] Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple
+- [x] Implement `build(conversation, analyst_output)` returning (system, messages, tool_config) tuple
 - [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
 - [x] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 

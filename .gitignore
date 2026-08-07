@@ -11,7 +11,7 @@ node_modules/
 .aws-sam/
 dist/
 *.zip
-scripts/test_runtime_context.js
+backend/voice_agent/tools/test_runtime_context.js
 
 # Test and coverage files
 .pytest_cache/

@@ -1,5 +1,7 @@
 # Tasks: Interviewer Lambda (1 person)
 
+> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work.
+
 ## What You're Building
 
 A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, assembles a runtime context string, and returns it. No LLM calls, no audio, no state.
@@ -9,7 +11,7 @@ A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, ass
 - `requirements.md` — acceptance criteria and error messages
 - `backend/config/interview_structure.json` — what the interview covers
 - `backend/config/student_interview_profile.json` — how the interviewer behaves
-- `contracts/analyst_output.json` — what you receive as input
+- `schemas/analyst_output.json` — what you receive as input
 
 **Environment:**
 - Region: `us-east-1`

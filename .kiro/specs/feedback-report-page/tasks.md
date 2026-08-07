@@ -1,5 +1,7 @@
 # Tasks
 
+> Active tracker. Last verified: 2026-08-07. FeedbackReport components are implemented; integration with the existing FeedbackScreen is not.
+
 ## Task 1: Type Definitions and Utility Setup
 
 - [x] Create `frontend/src/types/evaluator.ts` with EvaluatorOutput, PerQuestionScore, OverallScores, and InterviewMetadata interfaces
@@ -73,15 +75,15 @@
 
 - [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.tsx` — page-level container
 - [x] Compose all section components in correct order: Header → Hero → Dimensions → Columns → Advice → Questions → Footer
-- [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.module.css` — page-level styles
+- [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.css` — page-level styles
 - [x] Create `frontend/src/components/FeedbackReport/index.ts` — barrel export
 - [x] Pass data from EvaluatorOutput prop to each sub-component
 - [x] Write integration test: full render with mock EvaluatorOutput data, all sections present
 
 ## Task 10: Integration with Existing App
 
-- [x] Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback')
-- [x] Map AGENT3_SUCCESS payload to EvaluatorOutput type
-- [x] Wire onPracticeAgain to dispatch RESET action
-- [x] Wire onViewTranscript to open transcript view (or placeholder)
-- [x] Verify the full flow: mock evaluator response → FeedbackReport renders correctly
+- [ ] Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback'); it currently renders raw JSON
+- [ ] Map AGENT3_SUCCESS payload to EvaluatorOutput only after the frontend request matches the Evaluator contract
+- [ ] Wire onPracticeAgain to dispatch RESET action in the integrated screen
+- [ ] Wire onViewTranscript to open transcript view (or retain an explicitly labeled placeholder)
+- [ ] Verify the full flow: mock evaluator response → FeedbackReport renders correctly

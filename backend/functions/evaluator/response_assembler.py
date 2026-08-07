@@ -18,7 +18,7 @@ def build(
         interview_metadata: Metadata passed through unchanged from input.
 
     Returns:
-        The complete Feedback Report dict matching contracts/evaluator_output.json.
+        The complete Feedback Report dict matching schemas/evaluator_output.json.
     """
     return {
         "per_question_scores": per_question_scores,

@@ -1,15 +1,18 @@
 # Design Document — Frontend Interview
 
+> Maintained target design with implementation-status notes. Last verified: 2026-08-07. Amplify hosting, authenticated AgentCore WSS, the browser/relay wire-protocol adapter, and the Evaluator handoff are not yet complete; the gaps are called out below.
+
 ## Overview
 
 본 설계는 AI Mock Interview Coach 프론트엔드의 Upload Screen과 Interview Screen을 다룬다. 사용자가 이력서(PDF)와 JD를 제출하면 Agent 1이 분석하고, WebSocket Server를 통해 Amazon Nova Sonic과 실시간 음성 인터뷰를 진행하는 SPA(Single Page Application)다.
 
 핵심 기술 결정:
-- **프레임워크**: React + TypeScript (기존 프로젝트 Lambda 구조와 독립적인 정적 배포)
+- **프레임워크**: React + TypeScript (AWS Amplify Hosting에 Vite 정적 빌드 배포)
 - **상태관리**: React Context + useReducer (전역 상태: session, transcript, interview status)
 - **오디오 처리**: Web Audio API + AudioWorklet (저지연 마이크 캡처 및 재생)
-- **통신**: 단일 WebSocket 연결 (Nova Sonic ↔ WebSocket Server ↔ Browser)
+- **통신**: 인증된 단일 WSS 연결 (Browser ↔ AgentCore voice relay ↔ Nova 2 Sonic) + Lambda Function URL HTTPS
 - **빌드**: Vite (빠른 개발 서버, 정적 배포)
+- **런타임**: AgentCore는 FastAPI relay 컨테이너를 실행하는 AWS 관리형 서버리스 런타임이며, 운영자가 서버/EC2를 관리하지 않는다.
 
 ---
 
@@ -19,30 +22,41 @@
 
 ```mermaid
 graph TB
-    subgraph Browser
+    subgraph Amplify_Hosting
+      subgraph Browser
         UI[React App]
         AM[AudioManager]
         WS[WebSocketClient]
         SM[SessionManager]
+      end
     end
 
-    subgraph Backend
-        WSS[WebSocket Server]
-        A1[Agent 1 - Lambda]
-        A3[Agent 3 - Lambda]
-        NS[Nova Sonic - Bedrock]
+    subgraph AWS_Backend
+        PDF[PDF Parser Lambda]
+        A1[Analyst Lambda]
+        INT[Interviewer Context Lambda]
+        A3[Evaluator Lambda]
+        S3[S3 Interview Config]
+        WSS[AgentCore Serverless Voice Relay]
+        NS[Nova 2 Sonic - Bedrock]
     end
 
     UI -->|user actions| SM
     SM -->|state updates| UI
     SM -->|audio chunks| WS
-    WS -->|binary frames| WSS
+    WS -->|authenticated WSS; JSON frames| WSS
     WSS -->|bidirectional stream| NS
     AM -->|PCM chunks| SM
     SM -->|playback data| AM
-    UI -->|PDF + JD| A1
+    UI -->|PDF| PDF
+    PDF -->|extracted text| UI
+    UI -->|resume text + JD| A1
+    UI -->|analyst_output| INT
+    INT -->|read config| S3
     SM -->|transcript| A3
 ```
+
+CDK in `infrastructure/` defines the four Lambda functions and S3 configuration resources. AgentCore and Amplify use their own deployment workflows. The current repository has the React build, Lambdas, CDK stack, and relay container, but production Amplify/Auth configuration and a verified authenticated WSS session remain planned work.
 
 ### 컴포넌트 계층
 
@@ -387,6 +401,8 @@ interface EndConfirmModalProps {
 
 ### Nova Sonic 통신 프로토콜
 
+> **Current integration gap:** the tables below describe the frontend's implemented `{type, payload}` abstraction. The AgentCore relay currently forwards raw Nova `{"event": ...}` messages and does not emit `session_start_ack`. These are not yet a working shared wire contract. See `interviewer-agent/design.md` and choose an adapter direction before implementing more protocol behavior.
+
 **Frontend → WebSocket Server (Input Events):**
 
 | Event | Purpose | Payload |
@@ -428,6 +444,8 @@ interface EndConfirmModalProps {
 
 ### Agent 1 응답 스키마
 
+The current frontend service returns the UI-oriented shape below, but it does not retain the complete `analyst_output`. Retaining that object is required for the Evaluator handoff.
+
 ```typescript
 interface Agent1Response {
   nova_sonic_context: string;      // Nova Sonic system prompt에 주입할 컨텍스트
@@ -437,10 +455,18 @@ interface Agent1Response {
 
 ### Agent 3 요청 스키마
 
+The canonical completed-interview payload is `schemas/interviewer_output.json`. The existing frontend `Agent3Request` shown in older code (`transcript` + `competency_guides`) is not compatible and remains an integration gap.
+
 ```typescript
 interface Agent3Request {
-  transcript: TranscriptEntry[];  // { role, text, timestamp }[]
-  competency_guides: CompetencyGuide[]; // 참고용 전달
+  conversation: Array<{
+    point_id: string;
+    turn_type: 'main_question' | 'follow_up';
+    question: string;
+    answer: string;
+  }>;
+  interview_metadata: InterviewMetadata;
+  analyst_output: AnalystOutput;
 }
 ```
 
@@ -644,7 +670,7 @@ const [agent1Promise, wsHandshakePromise] = [
 
 ### Property 1: 파일 유효성 검증
 
-*For any* 첨부 파일에 대해, 해당 파일이 PDF MIME 타입이 아니거나 10MB를 초과하면 업로드가 거부되고 에러 메시지가 반환되어야 한다.
+*For any* 첨부 파일에 대해, 해당 파일이 PDF MIME 타입이 아니거나 4MB를 초과하면 업로드가 거부되고 에러 메시지가 반환되어야 한다. 현재 프론트엔드의 10MB 상수는 이 요구사항과 불일치한다.
 
 **Validates: Requirements 1.2**
 
@@ -752,7 +778,7 @@ const [agent1Promise, wsHandshakePromise] = [
 | `WS_RECONNECT_FAILED` | 인터뷰 중 2회 재연결 모두 실패 | 에러 메시지 + 업로드 화면 복귀 | 처음부터 다시 시작 |
 | `WS_SESSION_INVALID` | 재연결 성공했으나 세션 만료 | 에러 메시지 + 업로드 화면 복귀 | 처음부터 다시 시작 |
 | `TIMEOUT` | Waiting Room 30초 초과 | 타임아웃 메시지 + 재시도/돌아가기 | 실패 항목 재시도 또는 업로드 복귀 |
-| `FILE_INVALID` | PDF 형식 위반 또는 10MB 초과 | 인라인 에러 메시지 | 파일 재선택 |
+| `FILE_INVALID` | PDF 형식 위반 또는 4MB 초과 | 인라인 에러 메시지 | 파일 재선택 |
 | `AGENT3_FAILED` | Agent 3 API 실패 (5xx, network) | 피드백 화면 에러 + 재시도 | 동일 transcript로 재요청 |
 
 ### 에러 처리 원칙

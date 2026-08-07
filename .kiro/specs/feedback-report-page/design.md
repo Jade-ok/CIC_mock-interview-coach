@@ -1,12 +1,14 @@
 # Design Document — Feedback Report Page
 
+> Maintained component design. Last verified: 2026-08-07. The component exists, but application-level integration into `FeedbackScreen` remains pending.
+
 ## Overview
 
-The Feedback Report Page is a read-only React page that renders the Evaluator agent's JSON output as a visually rich, student-friendly feedback report. It consumes the `EvaluatorOutput` type (matching `contracts/evaluator_output.json`) passed via props or session state, and renders it using the project's Midnight Green dark theme.
+The Feedback Report Page is a read-only React page that renders the Evaluator agent's JSON output as a visually rich, student-friendly feedback report. It consumes the `EvaluatorOutput` type (matching `schemas/evaluator_output.json`) passed via props or session state, and renders it using the project's Midnight Green dark theme.
 
 Key technical decisions:
 - **Framework**: React 18 + TypeScript (consistent with existing frontend)
-- **Styling**: CSS Modules with CSS custom properties (theme tokens from `design-theme.md`)
+- **Styling**: component-scoped conventional CSS files with CSS custom properties (theme tokens from `design-theme.md`)
 - **Testing**: Vitest + React Testing Library
 - **Layout**: Single scrollable page with section-based composition
 - **No routing library**: Page rendered as a component within the existing `App.tsx` phase-based navigation (`phase === 'feedback'`)
@@ -235,7 +237,7 @@ frontend/src/
 ├── components/
 │   └── FeedbackReport/
 │       ├── FeedbackReport.tsx        # Page container
-│       ├── FeedbackReport.module.css
+│       ├── FeedbackReport.css
 │       ├── HeroSection.tsx
 │       ├── DimensionScoresGrid.tsx
 │       ├── DimensionCard.tsx
@@ -297,7 +299,7 @@ SessionManager (phase: 'feedback')
 
 ### Integration Test
 
-- Pass a complete `EvaluatorOutput` fixture (from `backend/functions/evaluator/tests/fixtures/sample_input.json` mock response)
+- Pass a complete inline `EvaluatorOutput` fixture. The evaluator's `tests/fixtures/sample_input.json` is an input request, not an output fixture.
 - Verify all 6 questions render with correct scores
 - Verify overall scores display correctly
 - Verify readiness label and subheading match

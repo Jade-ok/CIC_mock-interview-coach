@@ -1,6 +1,6 @@
 # Frontend Integration Guide
 
-> Legacy reference: this guide documents the earlier SDK/Cognito integration. The current architecture uses Lambda Function URLs and the AgentCore voice relay described in the root README.
+> **Historical only — do not execute these instructions.** This guide preserves the retired direct-browser Bedrock SDK/Cognito experiment. The target architecture hosts the React frontend on AWS Amplify Hosting and uses an authenticated browser WebSocket to a Python voice relay on Amazon Bedrock AgentCore Runtime; that relay invokes Nova 2 Sonic. Lambda Function URLs remain the currently implemented HTTP surface. Use `docs/guides/frontend-backend-wiring.md` for the current state, target topology, and integration gaps.
 
 ## Deployed Services
 
@@ -13,10 +13,10 @@
 
 **Note**: Function URLs return 403 due to workshop SCP. Use AWS SDK `LambdaClient.invoke()` for all Lambda calls.
 
-## Cognito Identity Pool (for Nova Sonic)
+## Legacy Cognito Identity Pool (direct Nova access)
 
 ```
-Identity Pool ID: us-east-1:be3da380-d032-46f4-b4a2-85846a61bc52
+Identity Pool ID: <legacy-identity-pool-id>
 Region: us-east-1
 Auth: Unauthenticated (no login needed)
 ```
@@ -34,7 +34,7 @@ import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { fromCognitoIdentityPool } from "@aws-sdk/credential-providers";
 
 const credentials = fromCognitoIdentityPool({
-  identityPoolId: "us-east-1:be3da380-d032-46f4-b4a2-85846a61bc52",
+  identityPoolId: "<legacy-identity-pool-id>",
   clientConfig: { region: "us-east-1" },
 });
 

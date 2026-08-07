@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained requirements. Last verified: 2026-08-07. Component implementation exists; integration into the current `FeedbackScreen` is still pending.
+
 ## Introduction
 
 The Feedback Report Page is a React component that renders the Evaluator agent's output as a student-friendly interview feedback report. It displays per-question scores, overall readiness assessment, qualitative feedback, and contextual advice.
@@ -8,11 +10,11 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 
 ## Glossary
 
-- **Feedback_Report**: The JSON response from the Evaluator Lambda conforming to `contracts/evaluator_output.json`
+- **Feedback_Report**: The JSON response from the Evaluator Lambda conforming to `schemas/evaluator_output.json`
 - **Readiness_Label**: One of five categorical labels ("Interview ready", "Strong foundation", "Developing well", "Needs more practice", "Needs clearer examples")
 - **Dimension_Score**: A per-dimension average (1.0-5.0) across all answered questions
 - **Score_Bar**: A visual 5-segment bar chart showing a score out of 5
-- **Question_Card**: A collapsible card showing one Q&A pair with its 4 dimension scores
+- **Question_Card**: A static card showing one Q&A pair with its 4 dimension scores
 
 ## Requirements
 
@@ -77,17 +79,6 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 3. EACH advice item SHALL be displayed as a numbered item with clear, readable formatting
 4. THE section SHALL be visually separated from the strengths/improvements section above
 
-### Requirement 5: Contextual Advice Section
-
-**User Story:** As a co-op student, I want resume-specific advice for future interviews, so I can prepare better next time.
-
-#### Acceptance Criteria
-
-1. THE page SHALL display a "For your next interview" section with all items from the contextual_advice array
-2. THE section SHALL include a subheading: "Advice based on your resume and the job you're aiming for."
-3. EACH advice item SHALL be displayed as a numbered item with clear, readable formatting
-4. THE section SHALL be visually separated from the strengths/improvements section above
-
 ### Requirement 6: Per-Question Breakdown Section
 
 **User Story:** As a co-op student, I want to see how each individual answer scored, so I can identify which specific responses need improvement.
@@ -119,7 +110,7 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 
 #### Acceptance Criteria
 
-1. THE component SHALL accept a prop of type `EvaluatorOutput` matching the `contracts/evaluator_output.json` structure
+1. THE component SHALL accept a prop of type `EvaluatorOutput` matching the `schemas/evaluator_output.json` structure
 2. THE component SHALL handle variable question_count (1 to 6) gracefully, rendering only the questions present
 3. THE component SHALL display dimension labels in human-readable form (snake_case → Title Case with appropriate labels)
 4. THE component SHALL format numeric scores to one decimal place for averages and integer for per-question scores

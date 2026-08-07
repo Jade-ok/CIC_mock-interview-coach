@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained requirements. Last verified: 2026-08-07.
+
 ## Introduction
 
 The Evaluator Agent is the third and final agent in the CIC Mock Interview Coach pipeline. After the Interviewer agent completes a turn-based interview session, the Evaluator receives the full interview conversation along with the analyst's structured assessment which combines analyst output and job-role alignment. It generates a scored feedback report assessing the student's interview performance across four fixed dimensions, provides an overall readiness label, and delivers actionable feedback with contextual advice.
@@ -68,6 +70,8 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 2. THE Bedrock_Client SHALL use the tool_use pattern to force structured JSON output matching the defined evaluation schema
 3. IF the Bedrock API call fails or returns an invalid response, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
 4. IF both attempts fail, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message
+
+**Current gap:** transport failures are retried, but malformed or missing tool output raises `EvaluationError` immediately and is not retried.
 
 ### Requirement 4: Per-Question Scoring
 
@@ -146,3 +150,5 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 1. IF an unexpected error occurs during evaluation, THEN THE Evaluator SHALL return a 500 status code with a JSON error response containing an error type and descriptive message
 2. IF the LLM response does not conform to the expected tool_use schema, THEN THE Evaluator SHALL attempt to parse partial results and retry once before returning an error
 3. THE Evaluator SHALL log all errors with sufficient context for debugging without exposing sensitive student data in error responses
+
+**Current gap:** partial-result parsing is not implemented, and invalid tool output currently exits without the retry required above.

@@ -1,16 +1,18 @@
 # Implementation Plan: Resume Analysis Pipeline
 
+> Historical implementation record. Last reconciled with the refactored paths on 2026-08-07.
+
 ## Overview
 
-Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-5`, region: `us-east-1`) to produce structured JSON conforming to `contracts/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
+Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-5`, region: `us-east-1`) to produce structured JSON conforming to `schemas/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
 
-Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `test_event.json` for quick local invocation via `aws lambda invoke`.
+The original hackathon build used standalone test events. The repository now uses pytest through the root `pytest.ini`, and each Lambda folder still includes a `test_event.json` for manual invocation.
 
 ## Tasks
 
 - [x] 1. Commit schema, README, and spec docs to main
   - [x] 1.1 Stage and commit shared artifacts to main branch
-    - Stage `contracts/analyst_output.json`, `README.md`, and `.kiro/specs/resume-analysis-pipeline/` directory
+    - Stage `schemas/analyst_output.json`, `README.md`, and `.kiro/specs/resume-analysis-pipeline/` directory
     - Commit with message: `feat: add analyst_output schema contract + spec docs for resume-analysis-pipeline`
     - Push to `main` so teammates (interviewer, evaluator, frontend) can access the schema immediately
     - _Requirements: 6.1, 6.2_
@@ -66,7 +68,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
     - Implement `build_converse_request(resume_text, job_posting_text) -> dict`
     - Build system prompt with analyst persona and instructions for behavioral interview context
     - Build user message combining resume_text and job_posting_text
-    - Build `toolConfig` with `analyst_output` tool spec mirroring `contracts/analyst_output.json` as JSON Schema
+    - Build `toolConfig` with `analyst_output` tool spec mirroring `schemas/analyst_output.json` as JSON Schema
     - Set `toolChoice: {"tool": {"name": "analyst_output"}}` to force structured output
     - _Requirements: 5.1, 6.4, 7.1, 7.2, 7.3_
 
@@ -126,7 +128,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
 - Each Lambda asset is packaged independently with its module files at the ZIP root.
 - Handler path format for these flat assets: `handler.lambda_handler`
 - CORS is handled at the Function URL config level, not in code
-- No test framework — test manually with `test_event.json` files and `aws lambda invoke`
+- Pytest is configured at the repository root; `test_event.json` files remain available for manual Lambda invocation.
 
 ## Task Dependency Graph
 

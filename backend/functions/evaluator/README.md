@@ -6,9 +6,11 @@ Evaluates mock interview performance for co-op seeking students.
 
 Stateless AWS Lambda function invoked via Function URL. Receives interview conversation + analyst output, calls Bedrock Converse API for scoring, then aggregates and returns a feedback report.
 
+In the target deployment, the React frontend is hosted on AWS Amplify Hosting and reaches this function through the HTTP backend path. The current CDK Function URL is public (`NONE` authentication); protecting the HTTP APIs is required before a public production launch. This function is separate from the AgentCore Runtime voice relay, which handles only the real-time Nova 2 Sonic stream.
+
 ## Input
 
-See `contracts/evaluator_input.json` for the full input schema.
+See `../../../schemas/interviewer_output.json` for the current input shape.
 
 Required fields:
 - `conversation` — array of 1-6 question-answer turn objects
@@ -17,7 +19,7 @@ Required fields:
 
 ## Output
 
-See `contracts/evaluator_output.json` for the full output schema.
+See `../../../schemas/evaluator_output.json` for the current output shape.
 
 ## Environment
 
@@ -27,6 +29,8 @@ See `contracts/evaluator_output.json` for the full output schema.
 - **Timeout**: 60 seconds
 
 ## IAM Permissions
+
+The standalone SAM template uses the scoped policy below. The current CDK stack grants `bedrock:InvokeModel` with `Resource: "*"`, so the two deployment options are not policy-identical.
 
 ```json
 {
@@ -49,6 +53,8 @@ python -m pytest backend/functions/evaluator/tests/ -v
 ```
 
 ## Deployment
+
+This is a standalone SAM deployment and creates resources separately from the CDK `MockInterviewStack`. Use CDK for the canonical four-Lambda backend; use SAM only when a separate Evaluator stack is intentional.
 
 ```bash
 cd backend/functions/evaluator

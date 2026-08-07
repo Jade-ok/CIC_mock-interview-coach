@@ -1,8 +1,10 @@
 # Implementation Plan
 
+> Active tracker. Last verified: 2026-08-07. Completed UI pieces are distinguished from the still-unverified end-to-end voice/Evaluator integrations and the planned Amplify/authenticated-WSS deployment.
+
 ## Overview
 
-AI Mock Interview Coach 프론트엔드 구현 — Upload Screen, Waiting Room, Interview Screen (실시간 음성 스트리밍, Practice Mode, Guide 패널), 인터뷰 종료 및 Feedback 전환까지. React + TypeScript + Vite 기반 SPA로, WebSocket을 통해 Nova Sonic과 통신한다. 외부 인터페이스(Agent 1, Agent 3, WebSocket 서버)는 mock/stub으로만 처리.
+AI Mock Interview Coach 프론트엔드 구현 — Upload Screen, Waiting Room, Interview Screen (실시간 음성 스트리밍, Practice Mode, Guide 패널), 인터뷰 종료 및 Feedback 전환까지. React + TypeScript + Vite 기반 SPA다. Agent 1, Agent 3, WebSocket용 실제 클라이언트 코드와 개발용 mock이 모두 존재하지만, 실제 백엔드 계약 및 E2E 통합은 아직 완료되지 않았다.
 
 ## Task Dependency Graph
 
@@ -72,7 +74,7 @@ graph TD
   - **Requirements**: 3.1, 3.2, 3.4, 3.7, 3.9, 3.10
   - **Dependencies**: 1
 
-- [x] 5. Upload Screen 컴포넌트: components/UploadScreen.tsx (FileUploader 드래그앤드롭 + 파일 선택, JDTextarea, SubmitButton), utils/uploadValidator.ts (MIME type + 10MB 크기 체크), PDF/크기 에러 메시지 표시, 제출 시 PDF base64 변환 + JD text 전달, 단위 테스트 + PBT (Property 1, 2)
+- [x] 5. Upload Screen 컴포넌트: components/UploadScreen.tsx (FileUploader 드래그앤드롭 + 파일 선택, JDTextarea, SubmitButton), utils/uploadValidator.ts (MIME type + 현재 10MB 크기 체크), PDF/크기 에러 메시지 표시, 제출 시 PDF base64 변환 + JD text 전달, 단위 테스트 + PBT (Property 1, 2). **Gap:** backend 4MB 제한과 일치하도록 프론트엔드 제한을 낮춰야 한다.
   - **Requirements**: 1.1, 1.2, 1.3, 1.4, 1.5
   - **Dependencies**: 1, 2
 
@@ -85,34 +87,46 @@ graph TD
   - **Dependencies**: 2, 4
 
 - [ ] 8. Interview Screen 음성 스트리밍 통합: 인터뷰 진입 시 AudioManager.startCapture + WebSocket audio_chunk 전송 루프, audio_output 수신 → enqueueAudio + 웨이브폼 활성, interrupted 수신 → stopPlayback + turnState 전환, text_output 수신 → transcript 누적 (FINAL만) + Practice bubble 업데이트, 마이크 권한 거부 → 텍스트 전용 모드 전환 (오디오 재생 유지), 통합 테스트 (mock WS 서버)
+  - **Status:** streaming hooks and audio services exist, but they have not been verified against the raw-Nova AgentCore relay protocol.
   - **Requirements**: 3.1, 3.2, 3.3, 3.4, 3.9, 3.10
   - **Dependencies**: 3, 4, 7
 
 - [ ] 9. Interview Screen 텍스트 입력 및 동시 제어: TextInput 컴포넌트 (첫 글자 입력 → TEXT_INPUT_START → pauseCapture, 텍스트 제출 → text_input 전송 + TEXT_INPUT_CLEAR → resumeCapture, 입력창 비워짐 → TEXT_INPUT_CLEAR → resumeCapture), 제출된 답변 말풍선 미표시 (Practice Mode 무관), 단위 테스트 (composing 상태 전이, pauseCapture/resumeCapture 호출)
+  - **Status:** text input and capture pause/resume behavior exist; real relay compatibility remains unverified.
   - **Requirements**: 3.6, 3.7, 3.8
   - **Dependencies**: 4, 7, 8
 
 - [ ] 10. Practice Mode + Guide 패널: PracticeModeToggle (초기값 ON), PracticeBubbles (ON → interviewer 텍스트 말풍선, OFF → 숨김, ON→OFF → 즉시 제거), components/GuidePanel.tsx (competency_guides 상시 표시), utils/keywordMatcher.ts (case-insensitive 한글/영문 매칭, word boundary), Practice Mode ON + 새 텍스트 → 하이라이트, OFF → 하이라이트 비활성, 단위 테스트 + PBT (Property 8, 9, 10, 11, 12)
+  - **Status:** toggles/placeholders exist, but the full GuidePanel and practice-bubble behavior remains incomplete.
   - **Requirements**: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 6.1, 6.2, 6.3
   - **Dependencies**: 2, 7
 
 - [ ] 11. 인터뷰 종료 흐름: EndConfirmModal (확인/취소), 수동 종료 (확인 → stopPlayback + session_end + disconnect + Feedback 전환), 자동 종료 (end_interview tool_use → waitForPlaybackEnd + session_end + disconnect + Feedback 전환), transcript Agent 3 HTTP POST (mock/stub), Agent 3 실패 → 에러 + 재시도, components/FeedbackScreen.tsx (로딩/에러/결과 분기), 통합 테스트 + PBT (Property 14)
+  - **Status:** manual/automatic UI flows and FeedbackScreen states exist; the Evaluator payload and FeedbackReport integration are still incomplete.
   - **Requirements**: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8
   - **Dependencies**: 3, 4, 7, 8
 
 - [ ] 12. WebSocket 재연결 (인터뷰 중): 끊김 감지 → 자동 재연결 (최대 2회, backoff), 재연결 중 UI 표시, 성공 + 세션 유효 → state 유지 계속 진행, 세션 무효 → 에러 + 업로드 복귀, 재연결 실패 → 에러 + 업로드 복귀, 통합 테스트
+  - **Status:** reconnection logic exists in the frontend client; end-to-end behavior with AgentCore is unverified.
   - **Requirements**: 3.14
   - **Dependencies**: 3, 8
 
 - [ ] 13. 다크 테마 스타일링 + 최종 통합: 전역 다크 테마 CSS (Zoom 스타일), 웨이브폼 애니메이션 (CSS/Canvas), 반응형 레이아웃, 전체 E2E 통합 테스트 (Upload → Waiting → Interview → Feedback), vite build 성공 확인
+  - **Status:** styling and production build exist; the full real-backend E2E flow does not.
   - **Requirements**: 8.2, 8.3
   - **Dependencies**: 5, 6, 7, 8, 9, 10, 11, 12
 
+- [ ] 14. Amplify 생산 배포 + 인증 WSS: Amplify Hosting에 React/Vite 빌드 연결, Lambda/AgentCore URL을 배포 환경 변수로 제공, 프론트엔드 인증 세션을 AgentCore 인증과 연결, `wss://` 접속 검증, 직접 browser-to-Bedrock 자격 증명이 없음을 확인, 배포된 origin에서 전체 E2E 검증
+  - **Status:** target deployment plan only; Amplify/Auth resources and authenticated AgentCore browser access are not implemented in the repository.
+  - **Requirements**: 8.5, 8.6, 8.7
+  - **Dependencies**: 13
+
 ## Notes
 
-- 외부 인터페이스(Agent 1, Agent 3, WebSocket 서버)는 mock/stub으로만 처리 — 실제 백엔드 구현은 별도 spec 소관
+- Agent 1, Agent 3, WebSocket 실제 클라이언트가 존재하며 개발 모드에서는 WebSocket mock을 사용한다. 실제 계약/E2E 검증은 별도 통합 작업으로 남아 있다.
 - Practice Mode 초기값은 ON (Req 2.3)
 - Property-based tests는 fast-check 라이브러리 사용, 최소 100회 반복
 - Transcript의 role은 'interviewer' | 'user', timestamp는 ISO 8601 프론트 로컬 시간
 - wsReady = WS handshake + session_start 전송 + 서버 ack 수신 완료 (단순 handshake 아님)
 - session_start는 agent1Ready 이후에만 전송 가능 (novaSonicContext 필요)
+- Amplify는 React 정적 프론트엔드를 호스팅하고, AgentCore는 별도의 관리형 서버리스 컨테이너 런타임에서 voice relay를 호스팅한다.

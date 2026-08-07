@@ -61,12 +61,12 @@ backend/functions/interviewer/
 
 ## Contracts
 
-Inter-agent data contracts are defined in `contracts/`:
+Inter-agent payload schemas are defined in `schemas/`:
 
 | File | Purpose |
 |------|---------|
 | `analyst_output.json` | Analyst → Interviewer & Evaluator |
-| `evaluator_input.json` | What the Evaluator receives (Analyst output + transcript) |
+| `interviewer_output.json` | Completed interview payload sent to the Evaluator |
 | `evaluator_output.json` | What the Evaluator returns (scores + feedback) |
 
 ## Deployment

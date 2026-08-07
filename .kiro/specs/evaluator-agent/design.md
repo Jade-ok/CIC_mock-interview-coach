@@ -1,5 +1,7 @@
 # Design Document
 
+> Maintained design. Last verified: 2026-08-07.
+
 ## Overview
 
 The Evaluator Agent is a stateless AWS Lambda function that receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly.
@@ -465,7 +467,7 @@ class EvaluationError(Exception):
 ```json
 {
   "error": "ValidationError",
-  "message": "Missing or empty required field: transcript"
+  "message": "Missing or empty required field: conversation"
 }
 ```
 

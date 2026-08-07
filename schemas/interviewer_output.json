@@ -1,7 +1,5 @@
 {
-  "schema_version": "1.0",
-
-  "analyst_output": "object — the complete Analyst output conforming to contracts/analyst_output.json, passed through unchanged",
+  "analyst_output": "object — the complete Analyst output conforming to schemas/analyst_output.json, passed through unchanged",
 
   "conversation": [
     {

@@ -1,5 +1,7 @@
 # Design Document: Resume Analysis Pipeline
 
+> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and planned gaps separately.
+
 ## Overview
 
 The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that form the intake and analysis stage of the mock interview coaching app:
@@ -13,7 +15,7 @@ The browser orchestrates the pipeline: it calls pdf_parser first, then passes ex
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
 - tool_use pattern — we define the analyst_output schema as a "tool" in the Bedrock Converse API call, forcing Claude to produce valid JSON. This eliminates brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
-- Retry with ceiling — Bedrock calls retry once (max 2 attempts) for transient failures or invalid responses.
+- Layered retry — each Bedrock client call permits up to two transient attempts, and the orchestrator may repeat the client call once after schema-invalid output. This currently permits up to four Bedrock calls; a global two-attempt ceiling remains a design goal rather than implemented behavior.
 
 ## Architecture
 
@@ -205,7 +207,7 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     - toolConfig with analyst_output schema as a tool definition
     - toolChoice forcing the model to call the analyst_output tool
     
-    The tool definition's inputSchema mirrors contracts/analyst_output.json.
+    The tool definition's inputSchema mirrors schemas/analyst_output.json.
     This forces Claude to produce structured JSON matching the schema.
     
     Returns:
@@ -372,7 +374,7 @@ When one document succeeds and another fails in a combined request:
 }
 ```
 
-The `data` field contains the full analyst_output conforming to `contracts/analyst_output.json`.
+The `data` field contains the full analyst_output conforming to `schemas/analyst_output.json`.
 
 ### analyst Error Response
 
@@ -417,7 +419,7 @@ The `data` field contains the full analyst_output conforming to `contracts/analy
 }
 ```
 
-The `toolChoice` field forces the model to call the `analyst_output` tool, guaranteeing structured JSON output. The `inputSchema` mirrors `contracts/analyst_output.json` converted to JSON Schema format.
+The `toolChoice` field forces the model to call the `analyst_output` tool, guaranteeing structured JSON output. The `inputSchema` mirrors `schemas/analyst_output.json` converted to JSON Schema format.
 
 ### Converse API Response Parsing
 
@@ -526,6 +528,8 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 
 ### pdf_parser Error Handling
 
+Validation failures use the error envelope/status indicators below. Extraction failures are different in the current implementation: the orchestrator records `resume_error` or `job_posting_error`, and the handler returns HTTP 200 with a success envelope. That behavior also occurs for a single failed document and does not yet satisfy the maintained requirements.
+
 | Error Condition | Response | Status Indicator |
 |---|---|---|
 | Invalid base64 encoding | `{"status": "error", "error": "Failed to decode base64 content for <doc_type>: <detail>"}` | 400 |
@@ -555,25 +559,30 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 
 ### Retry Strategy (analyst)
 
-```
-attempt = 0
-while attempt < MAX_ATTEMPTS:
-    try:
-        response = bedrock_client.converse(**request)
-        parsed = parse_converse_response(response)
-        validate_schema(parsed)
-        return success(parsed)
-    except (TransientError, SchemaValidationError, ParseError) as e:
-        attempt += 1
-        if attempt >= MAX_ATTEMPTS:
-            return error_response(str(e), 502)
+```text
+orchestrator attempt 1
+  └─ bedrock_client: up to 2 calls for transient failures
+  └─ parse and validate
+if schema validation fails:
+  orchestrator attempt 2
+    └─ bedrock_client: again up to 2 transient attempts
+    └─ parse and validate
 ```
 
-Transient errors include: `botocore.exceptions.ReadTimeoutError`, `ThrottlingException`, any `5xx` from Bedrock. Schema validation and parse errors are also retried (the model may produce valid output on the second attempt).
+Transient errors include `ReadTimeoutError`, throttling, and Bedrock 5xx responses. Because transport and schema retries are nested, the maximum is currently four service calls, not two.
 
-## Testing Strategy
+## Testing Strategy: Current and Planned
 
-### Property-Based Testing
+### Current Coverage
+
+- `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
+- `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
+- Evaluator and Interviewer have their own unit suites under their function directories.
+- There is currently no dedicated Analyst unit-test directory, PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
+
+The sections below are the planned expansion, not a description of tests that already exist.
+
+### Planned Property-Based Testing
 
 Property-based testing (PBT) is appropriate for this feature because:
 - The pdf_parser has pure functions with clear input/output (base64 → text, validation → bool)
@@ -607,7 +616,7 @@ Property-based testing (PBT) is appropriate for this feature because:
 | 11: Response Envelope | `*/handler.py` | Any inputs (valid and invalid) |
 | 12: Partial Success | `backend/functions/pdf_parser/orchestrator.py` | One valid + one invalid document |
 
-### Unit Tests (Example-Based)
+### Planned Unit Tests (Example-Based)
 
 Unit tests complement property tests for specific scenarios:
 
@@ -623,7 +632,7 @@ Unit tests complement property tests for specific scenarios:
   - First call fails, retry succeeds → success returned
   - Direct mode invocation
 
-### Integration Tests
+### Planned External Integration Tests
 
 Integration tests verify the full pipeline against real services:
 
@@ -633,7 +642,7 @@ Integration tests verify the full pipeline against real services:
 
 These run with 1–3 representative inputs (not PBT) due to cost and external dependencies.
 
-### Test File Organization
+### Planned Test File Organization
 
 ```
 backend/functions/

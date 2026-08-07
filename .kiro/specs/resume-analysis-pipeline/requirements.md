@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained requirements. Last verified: 2026-08-07.
+
 ## Introduction
 
 The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coaching app. It handles document intake (resume PDFs and job postings) via the `pdf_parser` Lambda, then produces a structured JSON analysis via the `analyst` Lambda. The analyst output serves as the interface contract consumed by downstream Lambdas (interviewer, evaluator) and the frontend. The target audience is university students preparing for behavioral job interviews.
@@ -32,6 +34,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 2. WHEN the extracted text is ready, THE PDF_Parser SHALL return a JSON response containing the extracted text and the document type label (resume or job_posting).
 3. IF the base64 content cannot be decoded into a valid PDF, THEN THE PDF_Parser SHALL return a JSON error response with a descriptive error message and a 400 status indicator.
 4. IF the PDF contains zero extractable text, THEN THE PDF_Parser SHALL return a JSON error response indicating that no text could be extracted from the document.
+
+**Current gap:** extraction failures are currently returned inside a successful HTTP 200 envelope as `resume_error` or `job_posting_error`, even when the request contains only the failed document. The 400 behavior above is not implemented.
 
 ### Requirement 2: Job Posting Intake (Dual Format)
 
@@ -86,11 +90,12 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE Analyst SHALL include the field `schema_version` set to `"1.0"` in every Analyst_Output response.
-2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, selected_experiences, analysis_warnings) in every Analyst_Output response.
+2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, analysis_warnings) in every Analyst_Output response.
 3. THE Analyst SHALL set `experience_type` to one of the allowed values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, or `"student_club"`.
 4. THE Analyst SHALL use the Converse_API with tool_use to force Claude to produce JSON conforming to the defined schema.
 5. WHEN the Converse_API response does not conform to the expected schema, THE Analyst SHALL retry the Bedrock call once (maximum 2 total attempts).
 6. IF the Analyst_Output still does not conform after the retry, THEN THE Analyst SHALL return an error response indicating schema validation failure.
+7. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
 
 ### Requirement 7: Analyst Bedrock Configuration
 
@@ -122,6 +127,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL retry the call once (maximum 2 total attempts).
 2. IF the Converse_API call fails on both attempts, THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator.
 3. IF the Converse_API call returns an invalid or unparseable response, THEN THE Analyst SHALL treat it as a failure and retry once.
+
+**Current behavior:** transient retries occur inside `bedrock_client`, while a schema-invalid result can cause `orchestrator` to call that client again. In the worst case this can produce four Bedrock calls, so the implementation does not enforce one global two-attempt ceiling.
 
 ### Requirement 10: Analysis Warnings
 
