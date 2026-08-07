@@ -11,7 +11,7 @@
 | Evaluator | `aws lambda invoke --function-name mock-interview-evaluator` (SDK only) |
 | Nova Sonic | Direct WebSocket via Cognito credentials |
 
-**Note**: Function URLs return 403 due to workshop SCP. Use AWS SDK `LambdaClient.invoke()` for all Lambda calls.
+**Note**: This retired experiment used SDK invocation because its Function URLs were unavailable. It is not the current integration path.
 
 ## Legacy Cognito Identity Pool (direct Nova access)
 

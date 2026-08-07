@@ -1,0 +1,8 @@
+[
+  {
+    "name": "hosted",
+    "description": "AWS account for the hosted AgentCore voice relay",
+    "account": "123456789012",
+    "region": "us-east-1"
+  }
+]

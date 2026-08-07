@@ -13,14 +13,16 @@ React/Vite browser on AWS Amplify Hosting
 CDK ─> four Lambdas + S3 interview configuration
 ```
 
-The four Lambdas and S3 configuration bucket are deployed by CDK. The React build is intended to be hosted by Amplify Hosting. The AgentCore voice relay is deployed separately from `backend/voice_agent/` because it needs a persistent bidirectional stream that is not a good fit for a Lambda invocation.
+The four Lambdas and S3 configuration bucket are provisioned through CDK. The React build is intended to be hosted by Amplify Hosting. The AgentCore voice relay has a separate deployment workflow under `backend/voice_agent/` because it needs a persistent bidirectional stream that is not a good fit for a Lambda invocation.
+
+The eventual hosted architecture places Amplify, AgentCore, Lambda, S3, and Bedrock access in one AWS account. Account-specific identifiers and temporary environment workarounds do not belong in tracked configuration or documentation.
 
 AgentCore is serverless infrastructure from the application's perspective: it runs the relay as an AWS-managed container runtime, so this project does not provision or maintain an EC2 server. The relay can hold transient state for each active WebSocket session; durable interview state remains outside it.
 
 ## What Exists Today
 
 - The CDK stack defines the four Lambda Function URLs and S3 configuration bucket.
-- The Python relay runs locally and is configured for deployment with AWS's current `@aws/agentcore` CLI. A development runtime is deployed with AWS IAM authorization, and its signed WebSocket handshake is verified.
+- The Python relay runs locally and is configured for deployment with AWS's current `@aws/agentcore` CLI. Hosted runtime state and verification are environment-specific and are not tracked in this repository.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
 - The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
@@ -38,6 +40,12 @@ VITE_EVALUATOR_URL=https://...
 ```
 
 CDK prints the corresponding `PdfParserUrl`, `AnalystUrl`, `InterviewerUrl`, and `EvaluatorUrl` outputs. Trim copied values. `WaitingRoom.tsx` reads the voice endpoint from `VITE_VOICE_WS_URL` and falls back to `ws://localhost:8080/`; set `VITE_USE_MOCK_WEBSOCKET=true` only when the mock is intentional.
+
+### Teammate local workflow (no AgentCore permission)
+
+Copy `frontend/.env.example` to ignored `frontend/.env.local` and obtain the four shared Function URLs from the project maintainer. Export temporary AWS credentials with Nova 2 Sonic access only in the terminal that starts `backend/voice_agent`. Keep `VITE_VOICE_WS_URL=ws://localhost:8080/`. The browser therefore bypasses AgentCore entirely, while the HTTP pipeline continues to use the shared Lambda endpoints.
+
+This workflow does not require AgentCore create, update, status, or invoke permissions. It does require valid temporary credentials with Nova 2 Sonic access. Never commit the shared URLs, account identifiers, or credentials.
 
 The target Amplify build also needs an environment-driven secure WebSocket URL and authentication configuration. Exact variable names should be documented once the implementation selects its Amplify Auth/Cognito and AgentCore authorization flow; do not put permanent AWS credentials in Vite variables because `VITE_*` values are bundled into browser code.
 

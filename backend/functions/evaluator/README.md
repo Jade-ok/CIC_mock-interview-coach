@@ -6,7 +6,7 @@ Evaluates mock interview performance for co-op seeking students.
 
 Stateless AWS Lambda function invoked via Function URL. Receives interview conversation + analyst output, calls Bedrock Converse API for scoring, then aggregates and returns a feedback report.
 
-In the target deployment, the React frontend is hosted on AWS Amplify Hosting and reaches this function through the HTTP backend path. The current CDK Function URL is public (`NONE` authentication); protecting the HTTP APIs is required before a public production launch. This function is separate from the AgentCore Runtime voice relay, which handles only the real-time Nova 2 Sonic stream.
+During local development, the React frontend reaches this function through its Function URL. The current CDK Function URL is public (`NONE` authentication), so it must be protected before the eventual Amplify-hosted application is shared publicly. This function is separate from the Python voice relay, which runs locally during development and on AgentCore in the hosted architecture.
 
 ## Input
 
@@ -30,7 +30,7 @@ See `../../../schemas/evaluator_output.json` for the current output shape.
 
 ## IAM Permissions
 
-The standalone SAM template uses the scoped policy below. The current CDK stack grants `bedrock:InvokeModel` with `Resource: "*"`, so the two deployment options are not policy-identical.
+The standalone SAM template and CDK stack scope `bedrock:InvokeModel` to the Sonnet 4.6 inference profile and its required foundation-model resources:
 
 ```json
 {

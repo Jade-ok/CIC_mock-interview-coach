@@ -5,13 +5,17 @@
 set -euo pipefail
 
 DEPLOY_REGION="us-east-1"
-DEPLOY_PROFILE="${AWS_PROFILE:-mock-interview-dev}"
+DEPLOY_PROFILE="${AWS_PROFILE:-}"
 DEPLOY_LEGACY_AGENTCORE="${DEPLOY_LEGACY_AGENTCORE:-false}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AGENTCORE_CONFIG="$REPO_ROOT/backend/voice_agent/.bedrock_agentcore.yaml"
 
 command -v aws >/dev/null || { echo "AWS CLI is required."; exit 1; }
 command -v npm >/dev/null || { echo "npm is required."; exit 1; }
+[ -n "$DEPLOY_PROFILE" ] || {
+  echo "Set AWS_PROFILE to the deployment profile before running this script."
+  exit 1
+}
 
 echo "Checking AWS identity for profile '$DEPLOY_PROFILE'..."
 DEPLOY_ACCOUNT="$(aws sts get-caller-identity \

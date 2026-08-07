@@ -142,7 +142,7 @@ The implemented handoff marks an early-ended interview accordingly and scores on
 
 ## AWS Services
 
-The agreed deployment architecture is:
+The agreed deployment architecture uses one AWS account:
 
 - AWS Amplify Hosting serves the React/Vite frontend.
 - An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
@@ -151,6 +151,6 @@ The agreed deployment architecture is:
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration deployment. AgentCore deployment remains a separate container workflow.
 
-This is the target deployment plan, not the current end-to-end state. The AgentCore relay is deployed with AWS IAM authorization and its signed WebSocket handshake is verified. The frontend reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, and the adapter has focused unit coverage; a paid live Nova conversation remains unverified. Amplify Hosting and browser-compatible Cognito/OIDC JWT authentication are not provisioned, and the four Lambda Function URLs are currently public. Those gaps must be closed and tested before the application is shared publicly.
+This is the target deployment plan, not the current end-to-end state. The frontend reads `VITE_VOICE_WS_URL` with a local `ws://localhost:8080/` fallback, and the adapter has focused unit coverage. A hosted AgentCore runtime, a paid live Nova conversation, Amplify Hosting, and browser-compatible authorization still require environment-specific configuration and end-to-end verification. The four Lambda Function URLs are currently public and must be protected before the application is shared publicly.
 
 No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.

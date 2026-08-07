@@ -1,6 +1,6 @@
 # Tasks: Interviewer Lambda (1 person)
 
-> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not imply that the current AWS account, Amplify hosting, or authenticated AgentCore WSS is deployed.
+> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not imply that Amplify hosting or an authenticated AgentCore WebSocket deployment is currently available.
 
 ## What You're Building
 

@@ -40,24 +40,6 @@ npx cdk diff
 npx cdk deploy
 ```
 
-### Optional isolated Claude stack
-
-For a temporary split-account deployment, create Analyst and Evaluator in a
-separate stack without modifying `MockInterviewStack`:
-
-```bash
-npx cdk deploy \
-  --app "npx tsc && npx tsx bin/claude-agents.ts" \
-  MockInterviewWorkshopClaudeStack \
-  --profile mock-interview-workshop
-```
-
-This optional stack contains only the two Claude Lambdas, scoped Bedrock
-permissions, and Function URLs. It is independent of PDF Parser, Interviewer,
-S3 configuration, AgentCore, and Amplify. Use its outputs temporarily, then
-switch the frontend back to the canonical account and destroy this isolated
-stack when it is no longer needed.
-
 `npm test` is configured for Jest, but this directory currently contains no infrastructure test suite.
 
 See `../docs/guides/infra-breakdown.md` for resource layout, outputs, deployment scope, and troubleshooting.

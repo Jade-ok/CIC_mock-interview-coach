@@ -6,6 +6,7 @@ node_modules/
 
 # Environment variables
 .env*
+!frontend/.env.example
 
 # Build and generated files
 .aws-sam/
@@ -13,6 +14,8 @@ dist/
 *.zip
 bedrock_request.json
 backend/voice_agent/.bedrock_agentcore.yaml
+backend/voice_agent/agentcore/aws-targets.json
+backend/voice_agent/agentcore/.cli/deployed-state.json
 backend/voice_agent/tools/test_runtime_context.js
 
 # Test and coverage files

@@ -20,7 +20,7 @@ infrastructure/              → AWS CDK deployment
 
 - **Runtime**: Python 3.12 (AWS Lambda)
 - **LLM**: Amazon Bedrock Converse API (`tool_use` pattern)
-- **Speech**: Amazon Nova 2 Sonic (WebSocket via the AgentCore relay)
+- **Speech**: Amazon Nova 2 Sonic (local WebSocket relay for development; AgentCore when hosted)
 - **PDF**: pypdf
 - **Region**: us-east-1
 
@@ -84,9 +84,37 @@ Inter-agent payload schemas are defined in `schemas/`:
 | `interviewer_output.json` | Completed interview payload sent to the Evaluator |
 | `evaluator_output.json` | What the Evaluator returns (scores + feedback) |
 
-## Deployment
+## Local Development Without AgentCore
+
+Teammates do not need AgentCore permissions to run and test the application locally. The frontend connects to the local Python relay, while the relay calls Nova 2 Sonic using temporary AWS credentials exported in its terminal.
+
+```bash
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_SESSION_TOKEN="..."
+export AWS_REGION="us-east-1"
+
+cd backend/voice_agent
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn server:app --host 127.0.0.1 --port 8080
+```
+
+In a second terminal, copy `frontend/.env.example` to the ignored `frontend/.env.local`, obtain the four shared Lambda Function URLs from the project maintainer, and then run:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The local frontend uses `ws://localhost:8080/`, so it bypasses AgentCore. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+
+## Hosted Deployment Plan
 
 Before deploying, confirm the target AWS account can use `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0` in `us-east-1`.
+
+The eventual hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for Sonnet 4.6 and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
 
 ```bash
 # Deploy the Lambda functions and configuration bucket
@@ -99,7 +127,7 @@ cd ../backend/functions/evaluator
 sam build && sam deploy --guided
 ```
 
-The AgentCore relay is a separate deployment boundary. Its current repository layout uses the legacy Starter Toolkit and still needs migration to AWS's current AgentCore CLI before production deployment; follow `backend/voice_agent/README.md` rather than mixing CLI formats.
+The AgentCore relay is a separate deployment boundary; follow `backend/voice_agent/README.md`. Amplify rebuilds frontend changes from its connected Git branch, while Lambda and AgentCore code changes require their own deployment workflows.
 
 ## Important Notes
 

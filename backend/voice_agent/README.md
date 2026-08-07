@@ -43,7 +43,16 @@ python3 -m venv .venv
 
 Check `http://localhost:8080/ping` (AgentCore) or `http://localhost:8080/health` (local alias). Local WebSocket clients can use `ws://localhost:8080/`; AgentCore uses `/ws`.
 
-The relay resolves credentials through boto3's standard chain. For local development, set `AWS_PROFILE=mock-interview-dev` after signing in with IAM Identity Center. In AgentCore, the same resolver uses the runtime execution-role credentials; do not inject permanent access keys.
+The relay resolves credentials through boto3's standard chain. Teammates without AgentCore access can export temporary AWS credentials with Nova 2 Sonic access in the relay terminal:
+
+```bash
+export AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."
+export AWS_SESSION_TOKEN="..."
+export AWS_REGION="us-east-1"
+```
+
+They then use `ws://localhost:8080/` and do not invoke AgentCore. In AgentCore, the same resolver uses runtime execution-role credentials. Never place either credential type in frontend variables.
 
 ## AgentCore Deployment
 
@@ -52,17 +61,17 @@ The relay uses the Node-based [`@aws/agentcore` CLI](https://docs.aws.amazon.com
 ```bash
 npm install --global @aws/agentcore
 
-AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
+AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
   agentcore validate
 
-AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
-  agentcore deploy --target personal
+AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
+  agentcore deploy --target <target-name>
 
-AWS_PROFILE=mock-interview-dev AWS_REGION=us-east-1 \
-  agentcore status --target personal
+AWS_PROFILE=<deployment-profile> AWS_REGION=us-east-1 \
+  agentcore status --target <target-name>
 ```
 
-`agentcore/aws-targets.json` records the deployment account and Region but contains no credentials. A teammate deploying to another account should replace or add a target and select it with `--target`. The runtime uses AWS IAM authorization for the initial deployment and testing. Amplify browser access still requires the planned Cognito/OIDC custom-JWT integration; never place AWS credentials in frontend environment variables.
+Copy `agentcore/aws-targets.example.json` to ignored `agentcore/aws-targets.json` and replace the placeholder account and target name locally. Generated deployment state is also ignored so account IDs and runtime ARNs are never committed. The runtime uses AWS IAM authorization for initial deployment and testing. Amplify browser access still requires the planned Cognito/OIDC custom-JWT integration; never place AWS credentials in frontend environment variables.
 
 The CLI uses the checked-in `Dockerfile` as a remote CodeBuild container build. Docker Desktop is not required for this deployment path, although it remains useful for local container testing.
 

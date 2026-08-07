@@ -6,6 +6,9 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
+const CLAUDE_MODEL_ID = 'global.anthropic.claude-sonnet-4-6';
+const CLAUDE_FOUNDATION_MODEL_ID = 'anthropic.claude-sonnet-4-6';
+
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -43,6 +46,12 @@ export class InfraStack extends cdk.Stack {
       'test_event.json',
     ];
 
+    const claudeBedrockResources = [
+      `arn:${cdk.Aws.PARTITION}:bedrock:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:inference-profile/${CLAUDE_MODEL_ID}`,
+      `arn:${cdk.Aws.PARTITION}:bedrock:${cdk.Aws.REGION}::foundation-model/${CLAUDE_FOUNDATION_MODEL_ID}`,
+      `arn:${cdk.Aws.PARTITION}:bedrock:::foundation-model/${CLAUDE_FOUNDATION_MODEL_ID}`,
+    ];
+
     // ------------------------------------------------------------------
     // 1. Analyst Lambda — Bedrock (Claude)
     // ------------------------------------------------------------------
@@ -62,7 +71,7 @@ export class InfraStack extends cdk.Stack {
     analystFn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel'],
-        resources: ['*'],
+        resources: claudeBedrockResources,
       })
     );
 
@@ -96,7 +105,7 @@ export class InfraStack extends cdk.Stack {
     evaluatorFn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ['bedrock:InvokeModel'],
-        resources: ['*'],
+        resources: claudeBedrockResources,
       })
     );
 
