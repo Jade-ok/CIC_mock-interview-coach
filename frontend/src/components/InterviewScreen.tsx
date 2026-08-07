@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
+import { PracticeBubbles } from '@/components/PracticeBubbles';
+import { GuidePanel } from '@/components/GuidePanel';
 import { callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
 
@@ -325,6 +327,16 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     [dispatch, audioManagerRef, state.inputMode]
   );
 
+  // Derive the latest interviewer text from transcript (FINAL only)
+  const latestInterviewerText = useMemo(() => {
+    for (let i = state.transcript.length - 1; i >= 0; i--) {
+      if (state.transcript[i].role === 'interviewer') {
+        return state.transcript[i].text;
+      }
+    }
+    return null;
+  }, [state.transcript]);
+
   return (
     <div className="interview-screen" data-testid="interview-screen">
       {/* Mic denied error message */}
@@ -337,15 +349,15 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       <div className="interview-screen__main">
         <div className="interview-screen__left">
           <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
-          {/* Practice Bubbles placeholder */}
-          <div className="practice-bubbles" data-testid="practice-bubbles" />
+          <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
           <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
         </div>
         <div className="interview-screen__right">
-          {/* Guide Panel placeholder */}
-          <div className="guide-panel" data-testid="guide-panel">
-            <span className="guide-panel__title">Guide Panel</span>
-          </div>
+          <GuidePanel
+            guides={state.competencyGuides}
+            practiceMode={state.practiceMode}
+            currentInterviewerText={latestInterviewerText}
+          />
         </div>
       </div>
       <ControlBar

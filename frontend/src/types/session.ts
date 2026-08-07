@@ -19,6 +19,8 @@ export interface SessionState {
   error: SessionError | null;
   agent3Loading: boolean;
   feedbackResult: unknown;
+  uploadedPdf: File | null;
+  uploadedJdText: string;
 }
 
 export interface TranscriptEntry {
