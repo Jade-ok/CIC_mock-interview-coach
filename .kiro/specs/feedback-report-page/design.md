@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Feedback Report Page is a read-only React page that renders the Evaluator agent's JSON output as a visually rich, student-friendly feedback report. It consumes the `EvaluatorOutput` type (matching `schemas/evaluator_output.json`) passed via props or session state, and renders it using the project's Midnight Green dark theme.
+The Feedback Report Page is a read-only React page that renders the Evaluator agent's JSON output as a visually rich, student-friendly feedback report. It consumes the `EvaluatorOutput` type (matching `contracts/evaluator_output.json`) passed via props or session state, and renders it using the project's Midnight Green dark theme.
 
 Key technical decisions:
 - **Framework**: React 18 + TypeScript (consistent with existing frontend)
@@ -297,7 +297,7 @@ SessionManager (phase: 'feedback')
 
 ### Integration Test
 
-- Pass a complete `EvaluatorOutput` fixture (from `evaluator/tests/fixtures/sample_input.json` mock response)
+- Pass a complete `EvaluatorOutput` fixture (from `backend/functions/evaluator/tests/fixtures/sample_input.json` mock response)
 - Verify all 6 questions render with correct scores
 - Verify overall scores display correctly
 - Verify readiness label and subheading match

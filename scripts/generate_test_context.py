@@ -12,15 +12,15 @@ import os
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, "backend", "functions"))
 
 from interviewer.context_builder import build_runtime_context
 
 # Load local configs
-with open(os.path.join(ROOT, ".kiro", "specs", "interviewer-agent", "schemas", "interview_structure.json")) as f:
+with open(os.path.join(ROOT, "backend", "config", "interview_structure.json")) as f:
     interview_structure = json.load(f)
 
-with open(os.path.join(ROOT, ".kiro", "specs", "interviewer-agent", "schemas", "student_interview.json")) as f:
+with open(os.path.join(ROOT, "backend", "config", "student_interview_profile.json")) as f:
     interview_profile = json.load(f)
 
 # Realistic analyst output for testing

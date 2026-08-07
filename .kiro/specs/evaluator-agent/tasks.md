@@ -2,16 +2,16 @@
 
 ## Task 1: Project Setup and Module Scaffolding
 
-- [x] Create the `evaluator/` directory structure with all module files
-- [x] Create `evaluator/__init__.py`
-- [x] Create `evaluator/lambda_handler.py` with handler stub
-- [x] Create `evaluator/validator.py` with empty function stubs
-- [x] Create `evaluator/prompt_builder.py` with empty function stubs
-- [x] Create `evaluator/bedrock_client.py` with empty function stubs
-- [x] Create `evaluator/scorer.py` with empty function stubs
-- [x] Create `evaluator/response_assembler.py` with empty function stubs
-- [x] Create `evaluator/exceptions.py` with ValidationError and EvaluationError classes
-- [x] Create `evaluator/schemas.py` with tool schema definition placeholder
+- [x] Create the `backend/functions/evaluator/` directory structure with all module files
+- [x] Create `backend/functions/evaluator/__init__.py`
+- [x] Create `backend/functions/evaluator/lambda_handler.py` with handler stub
+- [x] Create `backend/functions/evaluator/validator.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/prompt_builder.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/bedrock_client.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/scorer.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/response_assembler.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/exceptions.py` with ValidationError and EvaluationError classes
+- [x] Create `backend/functions/evaluator/schemas.py` with tool schema definition placeholder
 
 ## Task 2: Implement Input Validation
 

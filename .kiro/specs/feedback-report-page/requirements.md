@@ -8,7 +8,7 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 
 ## Glossary
 
-- **Feedback_Report**: The JSON response from the Evaluator Lambda conforming to `schemas/evaluator_output.json`
+- **Feedback_Report**: The JSON response from the Evaluator Lambda conforming to `contracts/evaluator_output.json`
 - **Readiness_Label**: One of five categorical labels ("Interview ready", "Strong foundation", "Developing well", "Needs more practice", "Needs clearer examples")
 - **Dimension_Score**: A per-dimension average (1.0-5.0) across all answered questions
 - **Score_Bar**: A visual 5-segment bar chart showing a score out of 5
@@ -119,7 +119,7 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 
 #### Acceptance Criteria
 
-1. THE component SHALL accept a prop of type `EvaluatorOutput` matching the `schemas/evaluator_output.json` structure
+1. THE component SHALL accept a prop of type `EvaluatorOutput` matching the `contracts/evaluator_output.json` structure
 2. THE component SHALL handle variable question_count (1 to 6) gracefully, rendering only the questions present
 3. THE component SHALL display dimension labels in human-readable form (snake_case → Title Case with appropriate labels)
 4. THE component SHALL format numeric scores to one decimal place for averages and integer for per-question scores

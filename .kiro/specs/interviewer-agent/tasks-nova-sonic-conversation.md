@@ -33,15 +33,15 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ### Task 1: Create server structure
 
-- [ ] Create `voice-agent/` directory
-- [ ] Create `voice-agent/requirements.txt`:
+- [ ] Create `backend/voice_agent/` directory
+- [ ] Create `backend/voice_agent/requirements.txt`:
   ```
   fastapi
   uvicorn
   websockets
   aws-sdk-bedrock-runtime
   ```
-- [ ] Create `voice-agent/Dockerfile`:
+- [ ] Create `backend/voice_agent/Dockerfile`:
   ```dockerfile
   FROM python:3.12-slim
   WORKDIR /app
@@ -53,7 +53,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ---
 
-### Task 2: Implement `voice-agent/s2s_events.py`
+### Task 2: Implement `backend/voice_agent/s2s_events.py`
 
 - [ ] Create event factory functions for all Nova Sonic protocol events:
   - `session_start_event(max_tokens, temperature, top_p, sensitivity)` → JSON string
@@ -68,7 +68,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ---
 
-### Task 3: Implement `voice-agent/s2s_session_manager.py`
+### Task 3: Implement `backend/voice_agent/s2s_session_manager.py`
 
 - [ ] Create `S2sSessionManager` class
 - [ ] `__init__`: Initialize with model_id, region, create asyncio queues
@@ -81,7 +81,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ---
 
-### Task 4: Implement `voice-agent/server.py`
+### Task 4: Implement `backend/voice_agent/server.py`
 
 - [ ] Create FastAPI app with a WebSocket endpoint at `/`
 - [ ] On WebSocket connect:
@@ -103,7 +103,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ### Task 5: Deploy to AgentCore Runtime
 
-- [ ] Build Docker image: `docker build -t mock-interview-voice-agent ./voice-agent`
+- [ ] Build Docker image: `docker build -t mock-interview-voice-agent ./backend/voice_agent`
 - [ ] Create ECR repository: `aws ecr create-repository --repository-name mock-interview-voice-agent --region us-east-1`
 - [ ] Push image to ECR
 - [ ] Deploy using `bedrock-agentcore-starter-toolkit` (follow AgentCore docs)
@@ -222,7 +222,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
 
 ### Task 13: Send Results to Evaluator
 
-- [ ] After interview ends, assemble payload per `schemas/evaluator_input.json`:
+- [ ] After interview ends, assemble payload per `contracts/evaluator_input.json`:
   ```json
   {
     "analyst_output": { "...unchanged..." },
@@ -242,7 +242,7 @@ Nova Sonic (amazon.nova-2-sonic-v1:0)
     }
   }
   ```
-- [ ] `analyst_output` from `schemas/analyst_output.json` — pass through unchanged
+- [ ] `analyst_output` from `contracts/analyst_output.json` — pass through unchanged
 - [ ] `conversation` structured by point_id + turn_type
 - [ ] `interview_metadata` pulled from state + analyst_output fields
 - [ ] POST to Evaluator Lambda Function URL

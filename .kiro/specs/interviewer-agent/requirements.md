@@ -29,7 +29,7 @@ The frontend connects to Nova Sonic directly using the presigned URL. There is n
 
 | Term | Definition |
 |------|------------|
-| **Analyst Output** | Structured JSON from the Analyst Lambda. Schema: `schemas/analyst_output.json` |
+| **Analyst Output** | Structured JSON from the Analyst Lambda. Schema: `contracts/analyst_output.json` |
 | **Interview Structure** | S3 JSON config defining what the interview covers. File: `interview_structure.json` |
 | **Interview Profile** | S3 JSON config defining how the interviewer behaves. File: `student_interview_profile.json` |
 | **Runtime Context** | Combined string returned to the frontend. Becomes Nova Sonic's system instruction. |

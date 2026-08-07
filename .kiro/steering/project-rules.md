@@ -73,7 +73,7 @@ module/
 
 **Interviewer Lambda (context-builder, no LLM):**
 ```
-interviewer/
+backend/functions/interviewer/
   __init__.py
   handler.py          # entry point
   validation.py       # input validation
@@ -85,7 +85,7 @@ interviewer/
 - `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
 
 **Signing Lambda (presigns Nova Sonic WebSocket URL):**
-_Removed — no longer needed. Frontend uses Cognito + Bedrock SDK for direct WebSocket signing._
+_Removed — no longer needed. The frontend connects through the AgentCore voice relay._
 
 ## Deployment Gotchas
 
@@ -96,4 +96,4 @@ These cost us time before — don't repeat them:
 - 403 needs two permission statements, not one: `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`.
 - Trailing whitespace after a URL in `.env` causes a 403 that is hard to trace.
 - Request payload limit is 6 MiB. PDF upload capped at 4 MB client-side.
-- zip packaging: if code imports from `analyst.xxx`, zip the whole folder (`zip -r analyst.zip analyst/`), handler is `analyst.handler.lambda_handler`. Bundle pypdf with `pip3 install pypdf -t pdf_parser/`.
+- CDK packages each service from `backend/functions/`. The PDF parser bundling step installs pypdf into its Lambda asset.

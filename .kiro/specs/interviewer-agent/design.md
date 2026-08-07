@@ -55,7 +55,7 @@ flowchart TD
 ### Module Structure
 
 ```
-interviewer/
+backend/functions/interviewer/
   __init__.py
   handler.py            # Lambda entry point
   validation.py         # Input validation
@@ -130,7 +130,7 @@ The frontend uses the Bedrock JS SDK (`@aws-sdk/client-bedrock-runtime`) with Co
 ### Lambda Input
 
 ```json
-{ "analyst_output": { "...per schemas/analyst_output.json..." } }
+{ "analyst_output": { "...per contracts/analyst_output.json..." } }
 ```
 
 ### Lambda Output (Success)
@@ -165,7 +165,8 @@ The frontend uses the Bedrock JS SDK (`@aws-sdk/client-bedrock-runtime`) with Co
 ## Deployment
 
 ```bash
-zip -r interviewer.zip interviewer/ -x "interviewer/.env" "interviewer/tests/*"
+(cd backend/functions/interviewer && zip -r ../../../interviewer.zip . \
+  -x ".env" "tests/*" "__pycache__/*" "*.pyc")
 aws lambda update-function-code \
   --function-name mock-interview-interviewer \
   --zip-file fileb://interviewer.zip \

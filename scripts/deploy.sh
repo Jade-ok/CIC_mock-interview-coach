@@ -4,7 +4,7 @@
 #
 # Prerequisites:
 #   - AWS CLI configured with credentials
-#   - Docker running (for voice-agent)
+#   - Docker running (for backend/voice_agent)
 #   - agentcore CLI installed (pip3 install bedrock-agentcore-starter-toolkit)
 
 set -e
@@ -30,9 +30,9 @@ echo ""
 
 # Upload S3 configs
 echo "[2/6] Uploading S3 interview configs..."
-aws s3 cp .kiro/specs/interviewer-agent/schemas/interview_structure.json \
+aws s3 cp backend/config/interview_structure.json \
     s3://$S3_BUCKET/interview_structure.json --region $REGION
-aws s3 cp .kiro/specs/interviewer-agent/schemas/student_interview.json \
+aws s3 cp backend/config/student_interview_profile.json \
     s3://$S3_BUCKET/student_interview_profile.json --region $REGION
 echo "  ✓ S3 configs uploaded to s3://$S3_BUCKET/"
 echo ""
@@ -40,7 +40,11 @@ echo ""
 # Deploy Interviewer Lambda
 echo "[3/6] Deploying Interviewer Lambda..."
 rm -f interviewer.zip
-zip -r interviewer.zip interviewer/ -x "interviewer/.env" "interviewer/tests/*" > /dev/null
+(
+    cd backend/functions/interviewer
+    zip -r ../../../interviewer.zip . \
+        -x ".env" "tests/*" "__pycache__/*" "*.pyc" > /dev/null
+)
 
 # Check if function exists
 if aws lambda get-function --function-name mock-interview-interviewer --region $REGION > /dev/null 2>&1; then
@@ -49,12 +53,22 @@ if aws lambda get-function --function-name mock-interview-interviewer --region $
         --function-name mock-interview-interviewer \
         --zip-file fileb://interviewer.zip \
         --region $REGION > /dev/null
+    aws lambda wait function-updated \
+        --function-name mock-interview-interviewer \
+        --region $REGION
+    aws lambda update-function-configuration \
+        --function-name mock-interview-interviewer \
+        --handler handler.lambda_handler \
+        --region $REGION > /dev/null
+    aws lambda wait function-updated \
+        --function-name mock-interview-interviewer \
+        --region $REGION
 else
     echo "  Creating new function..."
     aws lambda create-function \
         --function-name mock-interview-interviewer \
         --runtime python3.12 \
-        --handler interviewer.handler.lambda_handler \
+        --handler handler.lambda_handler \
         --zip-file fileb://interviewer.zip \
         --role "arn:aws:iam::${ACCOUNT_ID}:role/${LAMBDA_ROLE}" \
         --region $REGION \
@@ -106,7 +120,7 @@ echo ""
 # Deploy Voice Agent Server to AgentCore
 echo "[5/6] Deploying Voice Agent Server to AgentCore Runtime..."
 if command -v agentcore > /dev/null 2>&1; then
-    cd voice-agent
+    cd backend/voice_agent
     AGENTCORE_SUPPRESS_RECOMMENDATION=1 agentcore deploy \
         -a mock-interview-voice-agent \
         --env AWS_REGION=$REGION \
@@ -135,5 +149,5 @@ echo "      --region $REGION --cli-binary-format raw-in-base64-out \\"
 echo "      --payload '{\"analyst_output\":{...}}' /dev/stdout"
 echo ""
 echo "  To check voice agent status:"
-echo "    cd voice-agent && agentcore status"
+echo "    cd backend/voice_agent && agentcore status"
 echo "=========================================="

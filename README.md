@@ -7,18 +7,20 @@ AI-powered mock interview application. Analyzes resumes, generates interview que
 The browser manages all state. Each Lambda is stateless. No database, no S3 session state, no API Gateway.
 
 ```
-frontend/        → Browser UI (holds state)
-analyst/         → Resume analysis (Claude Sonnet 5)
-interviewer/     → Interview context builder (Nova Sonic via frontend WebSocket)
-evaluator/       → Answer evaluation (Claude Sonnet 5)
-pdf_parser/      → PDF text extraction (pypdf)
+frontend/                    → Browser UI (holds state)
+backend/functions/analyst/  → Resume analysis (Claude Sonnet 5)
+backend/functions/interviewer/ → Interview context builder
+backend/functions/evaluator/   → Answer evaluation (Claude Sonnet 5)
+backend/functions/pdf_parser/  → PDF text extraction (pypdf)
+backend/voice_agent/         → Nova Sonic WebSocket relay
+infrastructure/              → AWS CDK deployment
 ```
 
 ## Tech Stack
 
 - **Runtime**: Python 3.12 (AWS Lambda)
 - **LLM**: Amazon Bedrock Converse API (`tool_use` pattern)
-- **Speech**: Amazon Nova Sonic (WebSocket, frontend-direct)
+- **Speech**: Amazon Nova Sonic (WebSocket via the AgentCore relay)
 - **PDF**: pypdf
 - **Region**: us-east-1
 
@@ -40,7 +42,7 @@ module/
 The Interviewer Lambda is a context-builder (no LLM call):
 
 ```
-interviewer/
+backend/functions/interviewer/
   __init__.py
   handler.py          # Lambda entry point
   validation.py       # Input validation
@@ -57,9 +59,9 @@ interviewer/
 | evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
 | pdf_parser | pypdf only |
 
-## Schemas
+## Contracts
 
-Inter-agent data contracts are defined in `schemas/`:
+Inter-agent data contracts are defined in `contracts/`:
 
 | File | Purpose |
 |------|---------|
@@ -70,15 +72,18 @@ Inter-agent data contracts are defined in `schemas/`:
 ## Deployment
 
 ```bash
-# Lambda zip packaging
-zip -r analyst.zip analyst/
+# Deploy the Lambda functions and configuration bucket
+cd infrastructure
+npm ci
+npx cdk deploy
 
-# pdf_parser requires pypdf bundled
-pip3 install pypdf -t pdf_parser/
-zip -r pdf_parser.zip pdf_parser/
+# Deploy the Nova Sonic voice relay
+cd ../backend/voice_agent
+agentcore deploy -a mock-interview-voice-agent
 
-# Evaluator uses SAM
-cd evaluator && sam build && sam deploy --guided
+# The evaluator's standalone SAM template remains available if needed
+cd ../functions/evaluator
+sam build && sam deploy --guided
 ```
 
 ## Important Notes

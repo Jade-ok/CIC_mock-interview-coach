@@ -25,7 +25,7 @@ All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The
 ### Module Structure
 
 ```
-evaluator/
+backend/functions/evaluator/
 ├── lambda_handler.py          # Entry point, orchestrator
 ├── validator.py               # Input validation logic
 ├── prompt_builder.py          # LLM prompt construction

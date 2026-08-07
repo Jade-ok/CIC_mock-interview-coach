@@ -205,7 +205,7 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     - toolConfig with analyst_output schema as a tool definition
     - toolChoice forcing the model to call the analyst_output tool
     
-    The tool definition's inputSchema mirrors schemas/analyst_output.json.
+    The tool definition's inputSchema mirrors contracts/analyst_output.json.
     This forces Claude to produce structured JSON matching the schema.
     
     Returns:
@@ -372,7 +372,7 @@ When one document succeeds and another fails in a combined request:
 }
 ```
 
-The `data` field contains the full analyst_output conforming to `schemas/analyst_output.json`.
+The `data` field contains the full analyst_output conforming to `contracts/analyst_output.json`.
 
 ### analyst Error Response
 
@@ -417,7 +417,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
 }
 ```
 
-The `toolChoice` field forces the model to call the `analyst_output` tool, guaranteeing structured JSON output. The `inputSchema` mirrors `schemas/analyst_output.json` converted to JSON Schema format.
+The `toolChoice` field forces the model to call the `analyst_output` tool, guaranteeing structured JSON output. The `inputSchema` mirrors `contracts/analyst_output.json` converted to JSON Schema format.
 
 ### Converse API Response Parsing
 
@@ -594,18 +594,18 @@ Property-based testing (PBT) is appropriate for this feature because:
 
 | Property | Module Under Test | Key Generators |
 |---|---|---|
-| 1: PDF Round-Trip | `pdf_parser/parser.py` | Generate text → build PDF with pypdf → base64 encode |
-| 2: Text Pass-Through | `pdf_parser/orchestrator.py` | `st.text()` |
-| 3: Invalid PDF Rejection | `pdf_parser/parser.py` | `st.binary()` base64-encoded (non-PDF) |
-| 4: Invalid Format Flag | `pdf_parser/validation.py` | `st.text().filter(lambda s: s not in ("pdf", "text"))` |
+| 1: PDF Round-Trip | `backend/functions/pdf_parser/parser.py` | Generate text → build PDF with pypdf → base64 encode |
+| 2: Text Pass-Through | `backend/functions/pdf_parser/orchestrator.py` | `st.text()` |
+| 3: Invalid PDF Rejection | `backend/functions/pdf_parser/parser.py` | `st.binary()` base64-encoded (non-PDF) |
+| 4: Invalid Format Flag | `backend/functions/pdf_parser/validation.py` | `st.text().filter(lambda s: s not in ("pdf", "text"))` |
 | 5: Invocation Mode Equivalence | `*/handler.py` | Any valid payload wrapped/unwrapped |
-| 6: pdf_parser Validation | `pdf_parser/validation.py` | Payloads with missing/oversized fields |
-| 7: Analyst Validation | `analyst/validation.py` | Payloads with missing/empty text fields |
-| 8: Schema Validator | `analyst/parser.py` | Dicts with random mutations (remove keys, bad values) |
-| 9: Retry Logic | `analyst/bedrock_client.py` | Mock failures with various error types |
-| 10: Analysis Warnings | `analyst/parser.py` | Strings of varying word counts, lists of varying length |
+| 6: pdf_parser Validation | `backend/functions/pdf_parser/validation.py` | Payloads with missing/oversized fields |
+| 7: Analyst Validation | `backend/functions/analyst/validation.py` | Payloads with missing/empty text fields |
+| 8: Schema Validator | `backend/functions/analyst/parser.py` | Dicts with random mutations (remove keys, bad values) |
+| 9: Retry Logic | `backend/functions/analyst/bedrock_client.py` | Mock failures with various error types |
+| 10: Analysis Warnings | `backend/functions/analyst/parser.py` | Strings of varying word counts, lists of varying length |
 | 11: Response Envelope | `*/handler.py` | Any inputs (valid and invalid) |
-| 12: Partial Success | `pdf_parser/orchestrator.py` | One valid + one invalid document |
+| 12: Partial Success | `backend/functions/pdf_parser/orchestrator.py` | One valid + one invalid document |
 
 ### Unit Tests (Example-Based)
 
@@ -636,18 +636,19 @@ These run with 1–3 representative inputs (not PBT) due to cost and external de
 ### Test File Organization
 
 ```
-tests/
-  pdf_parser/
+backend/functions/
+  pdf_parser/tests/
     test_parser_properties.py      # Property tests (Hypothesis)
     test_validation_properties.py  # Property tests
     test_handler.py                # Unit + invocation mode tests
     test_orchestrator.py           # Unit tests
-  analyst/
+  analyst/tests/
     test_parser_properties.py      # Property tests (schema validation, warnings)
     test_validation_properties.py  # Property tests
     test_bedrock_client.py         # Retry property tests (mocked)
     test_handler.py                # Unit + invocation mode tests
     test_orchestrator.py           # Unit tests (mocked Bedrock)
+tests/
   integration/
     test_pdf_parser_e2e.py
     test_analyst_e2e.py
