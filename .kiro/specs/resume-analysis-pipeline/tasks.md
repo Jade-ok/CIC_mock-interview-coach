@@ -2,7 +2,7 @@
 
 ## Overview
 
-Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-4-6`, region: `us-east-1`) to produce structured JSON conforming to `schemas/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
+Two independent Lambda functions — `pdf_parser` and `analyst` — built in Python 3.12. The pdf_parser extracts text from base64 PDFs and passes through plain-text job postings. The analyst calls Bedrock Converse API with tool_use (model: `global.anthropic.claude-sonnet-5`, region: `us-east-1`) to produce structured JSON conforming to `schemas/analyst_output.json`. Both support dual invocation modes and share the same response envelope pattern.
 
 Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `test_event.json` for quick local invocation via `aws lambda invoke`.
 
@@ -62,7 +62,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
 
 - [x] 6. Implement analyst — prompt_builder
   - [x] 6.1 Create analyst/prompt_builder.py
-    - Define `MODEL_ID = "global.anthropic.claude-sonnet-4-6"`
+    - Define `MODEL_ID = "global.anthropic.claude-sonnet-5"`
     - Implement `build_converse_request(resume_text, job_posting_text) -> dict`
     - Build system prompt with analyst persona and instructions for behavioral interview context
     - Build user message combining resume_text and job_posting_text
@@ -121,7 +121,7 @@ Hackathon build — ~4 hours. No test framework. Each Lambda folder includes a `
 
 - Task 1 (git commit) should be done first to unblock teammates working on interviewer/evaluator/frontend
 - pdf_parser (tasks 2–4) and analyst (tasks 5–9) are independent and can be built in parallel after task 1
-- Model is `global.anthropic.claude-sonnet-4-6` in `us-east-1`
+- Model is `global.anthropic.claude-sonnet-5` in `us-east-1`
 - `boto3` is available in the Lambda runtime — do NOT bundle it. Only bundle `pypdf` for pdf_parser (`pip3 install pypdf -t pdf_parser/`)
 - Each Lambda is zipped independently: `zip -r pdf_parser.zip pdf_parser/` and `zip -r analyst.zip analyst/`
 - Handler path format: `pdf_parser.handler.lambda_handler` and `analyst.handler.lambda_handler`

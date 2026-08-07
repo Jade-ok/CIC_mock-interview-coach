@@ -1,6 +1,6 @@
 # User Stories — Mock Interview Coach (Project-Wide)
 
-Covers the full candidate journey across every component in the architecture: `pdf_parser` → `analyst` → `interviewer` → Nova Sonic (live interview) → `evaluator` → `polly`, plus cross-cutting platform behavior.
+Covers the full candidate journey across every component in the architecture: `pdf_parser` → `analyst` → `interviewer` → Nova Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior.
 
 Module-level requirements (acceptance criteria, error handling, etc.) for the Interviewer Lambda are defined separately in `.kiro/specs/interviewer-agent/requirements.md`.
 
@@ -39,11 +39,7 @@ Module-level requirements (acceptance criteria, error handling, etc.) for the In
 - **US-5.4** As a candidate, I want recommended next steps, so that I leave with a plan, not just a score.
 - **US-5.5** As a candidate who ends early, I want to be scored only on what I covered, without penalty for skipped areas, so that a partial session still feels fair.
 
-## Epic 6: Voice Playback (`polly`)
-
-- **US-6.1** As a candidate, I want written feedback or instructions read aloud on non-interview pages, so that the experience stays consistent with the voice-first format even outside the live Nova Sonic session.
-
-## Epic 7: Cross-Cutting / Platform
+## Epic 6: Cross-Cutting / Platform
 
 - **US-7.1** As a candidate, I want the app to treat me as a student/intern-level candidate rather than expect senior scope, so that the bar matches where I actually am.
 - **US-7.2** As a candidate, I want a friendly error message and retry option if any step fails (upload, analysis, interview setup, evaluation), so that a transient backend hiccup doesn't end my session.

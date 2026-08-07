@@ -195,7 +195,7 @@ def detect_invocation_mode(event: dict) -> dict:
 #### prompt_builder.py — Claude Prompt Construction
 
 ```python
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"  # swappable
+MODEL_ID = "global.anthropic.claude-sonnet-5"  # swappable
 
 def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     """
@@ -387,7 +387,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
 
 ```python
 {
-    "modelId": "global.anthropic.claude-sonnet-4-6",
+    "modelId": "global.anthropic.claude-sonnet-5",
     "messages": [
         {
             "role": "user",
@@ -432,7 +432,7 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 | Constant | Value | Location |
 |----------|-------|----------|
 | REGION | `"us-east-1"` | `bedrock_client.py` |
-| MODEL_ID | `"global.anthropic.claude-sonnet-4-6"` | `prompt_builder.py` |
+| MODEL_ID | `"global.anthropic.claude-sonnet-5"` | `prompt_builder.py` |
 | MAX_ATTEMPTS | `2` | `bedrock_client.py` |
 | MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |

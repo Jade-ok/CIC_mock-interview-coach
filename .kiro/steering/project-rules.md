@@ -14,17 +14,16 @@ Each agent uses a different model or service — this is intentional.
 
 | Agent | Model / Service |
 |-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
 | interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) — no Bedrock text model |
-| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
-| polly | Amazon Polly only — no Bedrock |
+| evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
 | pdf_parser | pypdf only — no Bedrock |
 
-If a Bedrock model feels too slow during testing, swap to `global.anthropic.claude-sonnet-4-6` by changing the model ID string in that Lambda only. No other code changes needed.
+Both Bedrock agents use the same Sonnet 5 model to keep analysis and evaluation behavior consistent.
 
 ## Bedrock (analyst, evaluator only)
 
-- Region: `us-east-1` for Bedrock, Polly, Nova Sonic, and all Lambdas.
+- Region: `us-east-1` for Bedrock, Nova Sonic, and all Lambdas.
 - Use the Converse API with `tool_use` to force JSON output. Never parse plain text.
 - Retry each Bedrock call once (max 2 attempts) on failure or invalid response.
 
@@ -41,7 +40,7 @@ If a Bedrock model feels too slow during testing, swap to `global.anthropic.clau
 - Stateless. No database. The browser holds all state.
 - S3 is used only for interview configuration files (interview structure, interview profile) — not for session state.
 - The frontend connects directly to Nova Sonic via the Bedrock JS SDK with Cognito credentials. No proxy server, no containers.
-- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, pdf_parser, and Polly endpoints.
+- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, and pdf_parser endpoints.
 - LLM does subjective judgment only (analyst: candidate analysis, evaluator: answer scoring). Deterministic logic (score calculation, classification, flow decisions) is done in Python.
 - The interviewer does not score or judge — it only builds context for Nova Sonic.
 
@@ -82,9 +81,8 @@ interviewer/
   context_builder.py  # assembles runtime context for Nova Sonic
 ```
 
-**Other Lambdas:**
+**Other Lambda:**
 - `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
-- `polly`: single `handler.py` only, no Bedrock.
 
 **Signing Lambda (presigns Nova Sonic WebSocket URL):**
 _Removed — no longer needed. Frontend uses Cognito + Bedrock SDK for direct WebSocket signing._
