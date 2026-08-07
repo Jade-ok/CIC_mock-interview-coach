@@ -1,34 +1,35 @@
 /**
- * Agent 1 client — calls pdf_parser + analyst + interviewer Lambdas
+ * Agent 1 client — calls the PDF Parser, Analyst, and Interviewer HTTP stages
  * to produce nova_sonic_context and competency_guides from resume + JD.
  */
 
 import type { Agent1Response, CompetencyGuide } from '@/types/session';
+import { API_ENDPOINTS } from '@/services/apiConfig';
 
 export interface Agent1Request {
   pdf: File;
   jdText: string;
 }
 
-const PDF_PARSER_URL = import.meta.env.VITE_PDF_PARSER_URL;
-const ANALYST_URL = import.meta.env.VITE_ANALYST_URL;
-const INTERVIEWER_URL = import.meta.env.VITE_INTERVIEWER_URL;
-
 /**
  * Calls the full pipeline: pdf_parser → analyst → interviewer.
- * Returns nova_sonic_context and competency_guides.
+ * Returns the complete Analyst output plus the derived runtime context and UI guides.
  */
-export async function callAgent1(request: Agent1Request): Promise<Agent1Response> {
-  // Step 1: Convert PDF to base64 and call pdf_parser
+export async function callAgent1(
+  request: Agent1Request,
+  signal?: AbortSignal
+): Promise<Agent1Response> {
+  // Step 1: Convert PDF to base64 and call PDF Parser
   const base64Pdf = await fileToBase64(request.pdf);
 
-  const parseResponse = await fetch(PDF_PARSER_URL, {
+  const parseResponse = await fetch(API_ENDPOINTS.pdfParser, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       resume: { content: base64Pdf, format: 'pdf' },
       job_posting: { content: request.jdText, format: 'text' },
     }),
+    signal,
   });
 
   const parseResult = await parseResponse.json();
@@ -39,10 +40,11 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   const { resume_text, job_posting_text } = parseResult.data;
 
   // Step 2: Call analyst with extracted text
-  const analystResponse = await fetch(ANALYST_URL, {
+  const analystResponse = await fetch(API_ENDPOINTS.analyst, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ resume_text, job_posting_text }),
+    signal,
   });
 
   const analystResult = await analystResponse.json();
@@ -53,19 +55,21 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   const analystOutput = analystResult.data;
 
   // Step 3: Call interviewer to get runtime context
-  const interviewerResponse = await fetch(INTERVIEWER_URL, {
+  const interviewerResponse = await fetch(API_ENDPOINTS.interviewer, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ analyst_output: analystOutput }),
+    signal,
   });
 
   const interviewerResult = await interviewerResponse.json();
-  if (!interviewerResult.success) {
-    throw new Error(`Interviewer setup failed: ${interviewerResult.error_message}`);
+  if (!interviewerResponse.ok || interviewerResult.success !== true) {
+    throw new Error(
+      `Interviewer setup failed: ${interviewerResult.error_message || interviewerResponse.statusText}`
+    );
   }
 
-  const novaSonicContext = interviewerResult.runtime_context
-    || JSON.stringify(interviewerResult);
+  const novaSonicContext = interviewerResult.runtime_context;
 
   // Step 4: Map analyst output to competency_guides for the UI
   const competencyGuides: CompetencyGuide[] = mapToCompetencyGuides(analystOutput);

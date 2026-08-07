@@ -1,3 +1,5 @@
+import type { EvaluatorOutput } from './evaluator';
+
 export type InterviewPhase = 'upload' | 'waiting' | 'interview' | 'feedback';
 export type TurnState = 'ai_speaking' | 'user_turn' | 'idle';
 export type InputMode = 'voice' | 'text_only';
@@ -9,6 +11,8 @@ export interface SessionState {
   inputMode: InputMode;
   textInputState: TextInputState;
   practiceMode: boolean;
+  uploadData: UploadData | null;
+  analystOutput: AnalystOutput | null;
   transcript: TranscriptEntry[];
   competencyGuides: CompetencyGuide[];
   novaSonicContext: string;
@@ -18,11 +22,16 @@ export interface SessionState {
   wsReady: boolean;
   error: SessionError | null;
   agent3Loading: boolean;
-  feedbackResult: unknown;
-  analystOutput: Record<string, unknown> | null;
-  uploadedPdf: File | null;
-  uploadedJdText: string;
+  feedbackResult: EvaluatorOutput | null;
+  endReason: 'auto' | 'manual' | null;
 }
+
+export interface UploadData {
+  pdf: File;
+  jdText: string;
+}
+
+export type AnalystOutput = Record<string, unknown>;
 
 export interface TranscriptEntry {
   role: 'interviewer' | 'user';
@@ -57,6 +66,7 @@ export type SessionAction =
   | { type: 'AGENT1_SUCCESS'; payload: Agent1Response }
   | { type: 'AGENT1_FAILED'; payload: { message: string } }
   | { type: 'WS_CONNECTED' }
+  | { type: 'WS_CONNECT_FAILED'; payload: { message: string } }
   | { type: 'SESSION_START_ACKED' }
   | { type: 'WS_DISCONNECTED'; payload: { reason: string } }
   | { type: 'WS_RECONNECT_SUCCESS' }
@@ -72,8 +82,8 @@ export type SessionAction =
   | { type: 'TEXT_INPUT_CLEAR' }
   | { type: 'END_INTERVIEW'; payload: { reason: 'auto' | 'manual' } }
   | { type: 'AGENT3_LOADING' }
-  | { type: 'AGENT3_SUCCESS'; payload: unknown }
-  | { type: 'AGENT3_FAILED'; payload: { message: string } }
+  | { type: 'AGENT3_SUCCESS'; payload: EvaluatorOutput }
+  | { type: 'AGENT3_FAILED'; payload: { message: string; retryable?: boolean } }
   | { type: 'TIMEOUT' }
   | { type: 'MIC_DENIED' }
   | { type: 'TICK' }
@@ -82,11 +92,24 @@ export type SessionAction =
 export interface Agent1Response {
   nova_sonic_context: string;
   competency_guides: CompetencyGuide[];
-  analyst_output?: Record<string, unknown>;
+  analyst_output: AnalystOutput;
 }
 
 export interface Agent3Request {
-  transcript: TranscriptEntry[];
-  competency_guides: CompetencyGuide[];
-  analyst_output?: Record<string, unknown>;
+  conversation: Array<{
+    point_id: string;
+    turn_type: 'main_question' | 'follow_up';
+    question: string;
+    answer: string;
+  }>;
+  interview_metadata: {
+    candidate_level: string;
+    target_role: string;
+    status: 'completed' | 'ended_early';
+    completion_reason: 'all_questions_completed' | 'user_ended_early';
+    main_questions_completed: number;
+    follow_ups_completed: number;
+    ended_early: boolean;
+  };
+  analyst_output: AnalystOutput;
 }

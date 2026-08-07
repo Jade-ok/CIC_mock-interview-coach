@@ -1,22 +1,24 @@
 # Tasks
 
+> Historical implementation record. Paths and field names were refreshed on 2026-08-07; check current code and tests for implementation status. Amplify hosting, authenticated AgentCore WSS, and frontend handoff verification are tracked separately and are not implied complete below.
+
 ## Task 1: Project Setup and Module Scaffolding
 
-- [x] Create the `evaluator/` directory structure with all module files
-- [x] Create `evaluator/__init__.py`
-- [x] Create `evaluator/lambda_handler.py` with handler stub
-- [x] Create `evaluator/validator.py` with empty function stubs
-- [x] Create `evaluator/prompt_builder.py` with empty function stubs
-- [x] Create `evaluator/bedrock_client.py` with empty function stubs
-- [x] Create `evaluator/scorer.py` with empty function stubs
-- [x] Create `evaluator/response_assembler.py` with empty function stubs
-- [x] Create `evaluator/exceptions.py` with ValidationError and EvaluationError classes
-- [x] Create `evaluator/schemas.py` with tool schema definition placeholder
+- [x] Create the `backend/functions/evaluator/` directory structure with all module files
+- [x] Create `backend/functions/evaluator/__init__.py`
+- [x] Create `backend/functions/evaluator/lambda_handler.py` with handler stub
+- [x] Create `backend/functions/evaluator/validator.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/prompt_builder.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/bedrock_client.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/scorer.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/response_assembler.py` with empty function stubs
+- [x] Create `backend/functions/evaluator/exceptions.py` with ValidationError and EvaluationError classes
+- [x] Create `backend/functions/evaluator/schemas.py` with tool schema definition placeholder
 
 ## Task 2: Implement Input Validation
 
 - [x] Implement `validator.parse_and_validate(event)` to parse JSON body from Function URL event
-- [x] Validate presence of required fields: conversation, interview_metadata, resume_analysis
+- [x] Validate presence of required fields: conversation, interview_metadata, analyst_output
 - [x] Validate conversation length (1-6 pairs)
 - [x] Validate each turn contains point_id, turn_type, question, answer
 - [x] Raise `ValidationError` with descriptive messages on failure
@@ -25,9 +27,9 @@
 ## Task 3: Implement Prompt Builder
 
 - [x] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
-- [x] Implement `_format_user_message(conversation, resume_analysis)` to format the user message, extracting target_role and resume_job_alignment from the structured resume_analysis object
+- [x] Implement `_format_user_message(conversation, analyst_output)` to format the user message, extracting target_role and resume_job_alignment from the structured analyst_output object
 - [x] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
-- [x] Implement `build(conversation, resume_analysis)` returning (system, messages, tool_config) tuple
+- [x] Implement `build(conversation, analyst_output)` returning (system, messages, tool_config) tuple
 - [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
 - [x] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 
@@ -63,11 +65,11 @@
 - [x] Write integration test with mocked Bedrock client testing full happy path
 - [x] Write integration tests for error paths (invalid input, API failure)
 
-## Task 8: End-to-End Testing and Deployment Prep
+## Task 8: Local End-to-End Testing and Packaging
 
 - [x] Create a sample test payload matching the actual Interviewer output format
 - [x] Run full integration test locally with mocked Bedrock response
 - [x] Verify response JSON matches the defined output schema
 - [x] Add requirements.txt or pyproject.toml with boto3 dependency
-- [x] Create SAM/CloudFormation template or deployment config for Lambda (60s timeout, Python 3.12 runtime)
+- [x] Keep the infrastructure template aligned with the Lambda runtime configuration (300s timeout, Python 3.12 runtime)
 - [x] Document environment variables needed (if any) and IAM permissions (bedrock:InvokeModel)

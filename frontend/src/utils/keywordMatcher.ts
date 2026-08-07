@@ -1,57 +1,28 @@
 import type { CompetencyGuide } from '@/types/session';
 
-/**
- * Determines if a keyword is Korean (contains Hangul characters).
- */
-function isKorean(keyword: string): boolean {
-  return /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(keyword);
+/** Escape user-provided guide keywords before placing them in a regular expression. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Checks if a Korean keyword exists in the text (case-insensitive inclusion).
+ * Match a complete English keyword or phrase without matching it inside a
+ * larger alphanumeric word. The comparison is case-insensitive and supports
+ * punctuation in keywords such as "C++".
  */
-function matchKorean(text: string, keyword: string): boolean {
-  return text.toLowerCase().includes(keyword.toLowerCase());
+function containsKeyword(text: string, keyword: string): boolean {
+  const normalizedKeyword = keyword.trim();
+  if (!normalizedKeyword) return false;
+
+  const escaped = escapeRegExp(normalizedKeyword).replace(/\s+/g, '\\s+');
+  return new RegExp(`(^|[^A-Za-z0-9])${escaped}(?=$|[^A-Za-z0-9])`, 'i').test(text);
 }
 
-/**
- * Checks if an English keyword exists in the text using word boundary matching.
- */
-function matchEnglish(text: string, keyword: string): boolean {
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-  return regex.test(text);
-}
-
-/**
- * Matches interviewer text against competency guide keywords.
- * Returns an array of matched guide IDs.
- *
- * - Korean keywords: simple case-insensitive inclusion check
- * - English keywords: word boundary regex matching
- */
+/** Return the IDs of guides whose keywords occur in interviewer text. */
 export function matchKeywords(text: string, guides: CompetencyGuide[]): string[] {
-  if (!text || !guides || guides.length === 0) {
-    return [];
-  }
+  if (!text || guides.length === 0) return [];
 
-  const matchedIds: string[] = [];
-
-  for (const guide of guides) {
-    if (!guide.keywords || guide.keywords.length === 0) continue;
-
-    const hasMatch = guide.keywords.some((keyword) => {
-      if (!keyword) return false;
-      if (isKorean(keyword)) {
-        return matchKorean(text, keyword);
-      }
-      return matchEnglish(text, keyword);
-    });
-
-    if (hasMatch) {
-      matchedIds.push(guide.id);
-    }
-  }
-
-  return matchedIds;
+  return guides
+    .filter((guide) => guide.keywords.some((keyword) => containsKeyword(text, keyword)))
+    .map((guide) => guide.id);
 }

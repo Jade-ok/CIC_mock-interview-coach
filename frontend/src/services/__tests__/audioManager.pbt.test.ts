@@ -4,8 +4,8 @@ import { createAudioManager, type AudioManager } from '../audioManager';
 
 /**
  * Feature: frontend-interview
- * Property 5: Barge-in 즉시 정지
- * Property 6: 텍스트 입력 시 음성 전송 정지
+ * Property 5: immediate stop on barge-in
+ * Property 6: stop voice transmission during text input
  */
 
 // Mock AudioBufferSourceNode
@@ -84,7 +84,7 @@ describe('AudioManager PBT', () => {
   });
 
   /**
-   * Feature: frontend-interview, Property 5: Barge-in 즉시 정지
+   * Feature: frontend-interview, Property 5: immediate stop on barge-in
    * Validates: Requirements 3.4
    *
    * For any sequence of enqueueAudio calls followed by stopPlayback(),
@@ -123,7 +123,7 @@ describe('AudioManager PBT', () => {
   });
 
   /**
-   * Feature: frontend-interview, Property 6: 텍스트 입력 시 음성 전송 정지
+   * Feature: frontend-interview, Property 6: stop voice transmission during text input
    * Validates: Requirements 3.7
    *
    * For any sequence of startCapture → pauseCapture → (simulated audio frames) →

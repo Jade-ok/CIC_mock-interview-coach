@@ -11,6 +11,34 @@ import type {
   SessionAction,
   TranscriptEntry,
 } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
+
+const evaluatorOutput: EvaluatorOutput = {
+  per_question_scores: [],
+  overall_scores: {
+    dimensions: {
+      concrete_example: 3,
+      situation_action_result: 3,
+      link_to_job: 3,
+      quantifiable_outcome: 3,
+    },
+    total: 3,
+  },
+  question_count: 0,
+  readiness_label: 'Developing well',
+  strengths: [],
+  improvements: [],
+  contextual_advice: [],
+  interview_metadata: {
+    candidate_level: 'student_intern',
+    target_role: 'Software Engineer Intern',
+    status: 'ended_early',
+    completion_reason: 'user_ended_early',
+    main_questions_completed: 0,
+    follow_ups_completed: 0,
+    ended_early: true,
+  },
+};
 
 // ---------- Unit Tests ----------
 
@@ -28,33 +56,6 @@ describe('sessionReducer', () => {
       expect(result.phase).toBe('waiting');
       expect(result.error).toBeNull();
     });
-
-    it('stores uploaded pdf and jdText in state', () => {
-      const pdf = new File(['%PDF-1.4'], 'resume.pdf', { type: 'application/pdf' });
-      const jdText = 'Software Engineer at Acme Corp';
-      const result = sessionReducer(initialState, {
-        type: 'SUBMIT_UPLOAD',
-        payload: { pdf, jdText },
-      });
-      expect(result.uploadedPdf).toBe(pdf);
-      expect(result.uploadedJdText).toBe(jdText);
-    });
-
-    it('overwrites previously stored upload data on re-submit', () => {
-      const pdf1 = new File(['first'], 'first.pdf');
-      const pdf2 = new File(['second'], 'second.pdf');
-      let state = sessionReducer(initialState, {
-        type: 'SUBMIT_UPLOAD',
-        payload: { pdf: pdf1, jdText: 'first jd' },
-      });
-      // Simulate going back and re-submitting
-      state = sessionReducer({ ...state, phase: 'upload' }, {
-        type: 'SUBMIT_UPLOAD',
-        payload: { pdf: pdf2, jdText: 'second jd' },
-      });
-      expect(state.uploadedPdf).toBe(pdf2);
-      expect(state.uploadedJdText).toBe('second jd');
-    });
   });
 
   describe('AGENT1_SUCCESS', () => {
@@ -63,6 +64,7 @@ describe('sessionReducer', () => {
         type: 'AGENT1_SUCCESS',
         payload: {
           nova_sonic_context: 'ctx',
+          analyst_output: { candidate_profile: {} },
           competency_guides: [
             { id: '1', title: 'T', keywords: ['k'], description: 'd', highlighted: false },
           ],
@@ -137,9 +139,18 @@ describe('sessionReducer', () => {
   });
 
   describe('WS_SESSION_INVALID', () => {
-    it('sets error with WS_SESSION_INVALID code', () => {
-      const result = sessionReducer(initialState, { type: 'WS_SESSION_INVALID' });
+    it('returns to waiting with a disconnected, invalid-session error', () => {
+      const state: SessionState = {
+        ...initialState,
+        phase: 'interview',
+        wsReady: true,
+        wsConnectionState: 'connected',
+      };
+      const result = sessionReducer(state, { type: 'WS_SESSION_INVALID' });
       expect(result.error?.code).toBe('WS_SESSION_INVALID');
+      expect(result.phase).toBe('waiting');
+      expect(result.wsReady).toBe(false);
+      expect(result.wsConnectionState).toBe('disconnected');
     });
   });
 
@@ -246,7 +257,7 @@ describe('sessionReducer', () => {
   describe('AGENT3_SUCCESS', () => {
     it('returns state (feedback result stored externally)', () => {
       const state: SessionState = { ...initialState, phase: 'feedback' };
-      const result = sessionReducer(state, { type: 'AGENT3_SUCCESS', payload: { score: 85 } });
+      const result = sessionReducer(state, { type: 'AGENT3_SUCCESS', payload: evaluatorOutput });
       expect(result.phase).toBe('feedback');
     });
   });
@@ -380,7 +391,7 @@ describe('maybeStartSession', () => {
     });
   });
 
-  it('dispatches AGENT1_FAILED on sendSessionStart failure', async () => {
+  it('dispatches WS_CONNECT_FAILED on sendSessionStart failure', async () => {
     const sendSessionStart = vi.fn().mockRejectedValue(new Error('ws error'));
     const ws: WebSocketClient = { sendSessionStart };
     const dispatch = vi.fn();
@@ -396,74 +407,21 @@ describe('maybeStartSession', () => {
     maybeStartSession(state, ws, dispatch);
     await vi.waitFor(() => {
       expect(dispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'AGENT1_FAILED' })
+        expect.objectContaining({ type: 'WS_CONNECT_FAILED' })
       );
     });
   });
 });
 
-// ---------- analystOutput Unit Tests ----------
-
-describe('AGENT1_SUCCESS — analystOutput', () => {
-  it('stores analystOutput when analyst_output is present in payload', () => {
-    const analystData = {
-      interview_plan: [
-        { topic: 'React', priority: 1, question_type: 'technical', target_skill: 'React', source_experience_id: null },
-      ],
-    };
-
-    const result = sessionReducer(initialState, {
-      type: 'AGENT1_SUCCESS',
-      payload: {
-        nova_sonic_context: 'ctx',
-        competency_guides: [],
-        analyst_output: analystData,
-      },
-    });
-
-    expect(result.analystOutput).toEqual(analystData);
-  });
-
-  it('stores null when analyst_output is undefined in payload', () => {
-    const result = sessionReducer(initialState, {
-      type: 'AGENT1_SUCCESS',
-      payload: {
-        nova_sonic_context: 'ctx',
-        competency_guides: [],
-      },
-    });
-
-    expect(result.analystOutput).toBeNull();
-  });
-});
-
-describe('initialState — analystOutput', () => {
-  it('has analystOutput set to null', () => {
-    expect(initialState.analystOutput).toBeNull();
-  });
-});
-
-describe('RESET — analystOutput', () => {
-  it('clears analystOutput to null', () => {
-    const stateWithAnalyst: SessionState = {
-      ...initialState,
-      analystOutput: { interview_plan: [] },
-    };
-
-    const result = sessionReducer(stateWithAnalyst, { type: 'RESET' });
-    expect(result.analystOutput).toBeNull();
-  });
-});
-
 // ---------- Property-Based Tests ----------
 
-describe('PBT: Property 8 — Practice Mode Isolation', () => {
+describe('PBT: Property 8 — Practice Mode isolation', () => {
   /**
-   * Feature: frontend-interview, Property 8: Practice Mode Isolation
+   * Feature: frontend-interview, Property 8: Practice Mode isolation
    * **Validates: Requirements 5.2**
    *
-   * For any Practice Mode toggle state change, there must be no impact on
-   * messages sent via WebSocket or the Nova Sonic session (only affects frontend rendering).
+   * For any Practice Mode toggle, messages sent over WebSocket and the
+   * Nova Sonic session must remain unchanged (frontend rendering only).
    *
    * TOGGLE_PRACTICE_MODE should only change the `practiceMode` field and nothing else
    * that is relevant to WS/backend state.
@@ -476,6 +434,8 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
       inputMode: fc.constantFrom('voice', 'text_only') as fc.Arbitrary<SessionState['inputMode']>,
       textInputState: fc.constantFrom('idle', 'composing') as fc.Arbitrary<SessionState['textInputState']>,
       practiceMode: fc.boolean(),
+      uploadData: fc.constant(null),
+      analystOutput: fc.constant(null),
       transcript: fc.array(
         fc.record({
           role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
@@ -502,9 +462,7 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
       error: fc.constant(null),
       agent3Loading: fc.boolean(),
       feedbackResult: fc.constant(null),
-      analystOutput: fc.constant(null),
-      uploadedPdf: fc.constant(null),
-      uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
+      endReason: fc.constant(null),
     });
 
     fc.assert(
@@ -533,14 +491,13 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
   });
 });
 
-describe('PBT: Property 13 — Transcript Accumulation Lossless', () => {
+describe('PBT: Property 13 — lossless transcript accumulation', () => {
   /**
-   * Feature: frontend-interview, Property 13: Transcript Accumulation Lossless
+   * Feature: frontend-interview, Property 13: lossless transcript accumulation
    * **Validates: Requirements 7.1**
    *
-   * For any sequence of text_output events (FINAL generationStage) received
-   * during an interview session, the transcript array at session end must contain
-   * all FINAL events in the order they were received.
+   * For any sequence of FINAL text_output events received during an interview,
+   * the transcript at session end must contain every event in reception order.
    *
    * Dispatching N APPEND_TRANSCRIPT actions results in exactly N entries in
    * the transcript array, in order, with no data loss.

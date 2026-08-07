@@ -1,118 +1,70 @@
-# Requirements: Interviewer Module
+# Requirements: Interviewer and Voice Runtime
 
-## Introduction
+> Maintained requirements. Last verified: 2026-08-07. A signing Lambda and direct browser-to-Bedrock access are retired. Amplify hosting and authenticated browser-to-AgentCore WSS are hosted-environment requirements.
 
-The Interviewer module has two Lambdas:
+## Interviewer Lambda
 
-1. **Interviewer Lambda** — Builds a runtime context for Nova Sonic from the Analyst output + S3 configs. Returns it to the frontend.
-2. **Signing Lambda** — Generates a presigned WebSocket URL so the frontend can connect directly to Nova Sonic without exposing AWS credentials.
+### R1. Accept Analyst Output
 
-The frontend connects to Nova Sonic directly using the presigned URL. There is no proxy server, no container, no AgentCore.
+1. Accept a payload containing a non-empty dictionary under `analyst_output`.
+2. Preserve the Analyst output when embedding it in the runtime context.
+3. Reject a missing, empty, or non-dictionary Analyst output with a descriptive error.
+4. Validate presence and basic type only; the Analyst owns contract conformance.
 
-## Scope Boundaries
+### R2. Load Configuration
 
-**Interviewer Lambda does:**
-- Accept Analyst output from the frontend
-- Load interview configs from S3
-- Assemble and return a runtime context string
+1. Read the S3 bucket and object keys from `S3_BUCKET`, `INTERVIEW_STRUCTURE_KEY`, and `INTERVIEW_PROFILE_KEY`.
+2. Load and parse both JSON objects.
+3. Identify the failed configuration in missing-object or invalid-JSON errors.
+4. Use `us-east-1` unless explicitly configured otherwise.
 
-**Signing Lambda does:**
-- Generate a SigV4-presigned WebSocket URL for Nova Sonic
-- Return the URL to the frontend
+### R3. Build Runtime Context
 
-**Neither component does:**
-- Conduct the interview (Nova Sonic does this, connected directly from the browser)
-- Score or evaluate answers
-- Track session state
+1. Combine Analyst output, interview structure, interview profile, and behavioral instructions into one deterministic string.
+2. Instruct Nova to speak first, ask one concise question at a time, use the configured tone, accept student experiences, avoid inventing details, avoid feedback/scoring, transition clearly, and stop gracefully.
+3. Define three main questions with one adaptive follow-up per main question.
 
-## Glossary
+### R4. Lambda Interface
 
-| Term | Definition |
-|------|------------|
-| **Analyst Output** | Structured JSON from the Analyst Lambda. Schema: `schemas/analyst_output.json` |
-| **Interview Structure** | S3 JSON config defining what the interview covers. File: `interview_structure.json` |
-| **Interview Profile** | S3 JSON config defining how the interviewer behaves. File: `student_interview_profile.json` |
-| **Runtime Context** | Combined string returned to the frontend. Becomes Nova Sonic's system instruction. |
-| **Presigned URL** | A time-limited SigV4-signed WebSocket URL that the frontend uses to connect to Nova Sonic |
-| **Nova Sonic** | Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`) — speech-to-speech model |
+1. Support direct payloads and Function URL bodies.
+2. Return HTTP 400 for malformed JSON.
+3. Return a success body shaped as `{"success": true, "runtime_context": "..."}`.
+4. Return errors with `success: false` and `error_message`.
+5. Leave CORS to the CDK Function URL configuration.
 
-## Infrastructure
+## AgentCore Voice Relay
 
-| Resource | Value |
-|----------|-------|
-| Region | `us-east-1` |
-| S3 Bucket | `cic-mock-interview-configs-002859476624` |
-| Structure Key | `interview_structure.json` |
-| Profile Key | `student_interview_profile.json` |
-| Lambda Runtime | Python 3.12 |
-| Nova Sonic Model | `amazon.nova-2-sonic-v1:0` |
-| Voice Connection | Frontend → Nova Sonic directly via presigned WSS URL |
+### R5. Runtime and Model
 
-## Requirements: Interviewer Lambda
+1. Run as the containerized FastAPI service in `backend/voice_agent/`.
+2. Open the Nova bidirectional stream with `amazon.nova-2-sonic-v1:0` in `us-east-1`.
+3. Hold only transient connection/session state.
+4. Close Nova resources when the browser disconnects or ends the session.
+5. Run on the AWS-managed serverless AgentCore Runtime; no project-managed EC2 instance or always-on application server is required.
 
-### Requirement 1: Accept Analyst Output
+### R6. Streaming
 
-#### Acceptance Criteria
+1. Accept browser WebSocket messages and forward valid Nova protocol events.
+2. Queue audio input to provide backpressure.
+3. Forward Nova audio, text, tool, content-end, and completion events to the browser.
+4. Use 16 kHz mono LPCM input and 24 kHz mono LPCM output.
 
-1. Accept a JSON payload containing an `analyst_output` field
-2. Do NOT modify the analyst_output — include it in the runtime context as-is
-3. If `analyst_output` is missing/empty/not a dict → return error immediately
-4. Validate presence only — do not validate schema conformance
+Current gap: the queue primitives exist, but `server.py` forwards audio through `send_event()` instead of `send_audio_chunk()`, so requirement 2 is not yet satisfied.
 
-### Requirement 2: Load S3 Configuration
+### R7. Integration Contract
 
-#### Acceptance Criteria
+1. The frontend and relay share the canonical application-level `{type, payload}` protocol.
+2. The relay must own Nova-specific prompt/content identifiers and event ordering rather than exposing them to the browser.
+3. The adapter must translate session, audio, text, transcript, tool-use, interruption, and completion events; live Nova behavior remains an end-to-end verification requirement.
 
-1. Load interview structure JSON from S3 using env vars
-2. Load interview profile JSON from S3 using env vars
-3. If either S3 object is missing or not valid JSON → return error identifying which config failed
-4. S3 client connects to `us-east-1`
-5. No retries on S3 failures
+### R8. Production Access Boundary
 
-### Requirement 3: Assemble Runtime Context
+1. Host the production React/Vite client on AWS Amplify Hosting.
+2. Require an authenticated `wss://` connection from the browser to AgentCore.
+3. Do not expose long-lived AWS credentials or direct Bedrock Nova invocation permissions to browser code.
+4. Supply the AgentCore endpoint and Lambda endpoints through deployment environment configuration.
+5. Treat Amplify/Auth provisioning, relay-side authentication validation, and production connection verification as pending until implemented and tested.
 
-#### Acceptance Criteria
+## Evaluator Handoff
 
-1. Produce a runtime context string combining: analyst_output, interview structure, interview profile, behavioral instructions
-2. Behavioral instructions MUST include:
-   - You MUST speak first — greet briefly and ask the first question immediately
-   - Keep all questions and responses to 1-2 sentences maximum
-   - Ask one question at a time
-   - Do not explain or narrate what you are about to do
-   - Follow the tone from the interview profile
-   - Accept all experience types in the profile
-   - Do not invent details not in the candidate data
-   - Do not give feedback or score during the interview
-   - Signal transitions briefly
-   - Stop gracefully when session ends
-3. Output is deterministic (same input → same output)
-
-### Requirement 4: Lambda Entry Point
-
-#### Acceptance Criteria
-
-1. Support Function URL (`event['body']`) and direct invocation (event = payload)
-2. Invalid JSON body → 400
-3. Success → 200 with runtime_context
-4. Unhandled exception → 500
-5. No CORS headers in code
-
-### Requirement 5: Response Shape
-
-#### Acceptance Criteria
-
-1. Success: `{"statusCode": 200, "body": "{\"success\": true, \"runtime_context\": \"...\"}"}`
-2. Error: `{"statusCode": N, "body": "{\"success\": false, \"error_message\": \"...\"}"}`
-
-## Nova Sonic Connection (Frontend Responsibility)
-
-The frontend connects to Nova Sonic using `@aws-sdk/client-bedrock-runtime` with credentials from Cognito Identity Pool (`us-east-1:be3da380-d032-46f4-b4a2-85846a61bc52`). The SDK handles SigV4 WebSocket signing internally. No signing Lambda needed.
-
-### Requirement 6: Cognito Authentication
-
-#### Acceptance Criteria
-
-1. A Cognito Identity Pool provides unauthenticated temporary credentials to the frontend
-2. Credentials are scoped to `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on the Nova Sonic model
-3. No user login is required
-4. The frontend uses `fromCognitoIdentityPool()` from `@aws-sdk/credential-providers`
+After the interview, the client must retain the complete Analyst output and transform the transcript into `schemas/interviewer_output.json`, including `conversation`, `interview_metadata`, and `analyst_output`.

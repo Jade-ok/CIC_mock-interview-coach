@@ -8,20 +8,10 @@ interface GuidePanelProps {
   currentInterviewerText: string | null;
 }
 
-/**
- * GuidePanel displays competency guides in the sidebar.
- *
- * - Always visible regardless of Practice Mode
- * - When Practice Mode ON + new interviewer text arrives: highlight matching guides
- * - When Practice Mode OFF: no highlighting, list only
- * - ON→OFF transition: immediately clear all highlights
- * - Highlight uses green accent color (#9AE05C) from design theme for card border
- */
+/** Displays all competency guides and highlights current keyword matches in Practice Mode. */
 export function GuidePanel({ guides, practiceMode, currentInterviewerText }: GuidePanelProps) {
   const highlightedIds = useMemo(() => {
-    if (!practiceMode || !currentInterviewerText) {
-      return new Set<string>();
-    }
+    if (!practiceMode || !currentInterviewerText) return new Set<string>();
     return new Set(matchKeywords(currentInterviewerText, guides));
   }, [practiceMode, currentInterviewerText, guides]);
 
@@ -48,8 +38,8 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
               </div>
               <span className="guide-panel__card-description">{guide.description}</span>
               <div className="guide-panel__pills">
-                {guide.keywords.map((kw, i) => (
-                  <span key={i} className="guide-panel__pill">{kw}</span>
+                {guide.keywords.map((keyword, index) => (
+                  <span key={`${keyword}-${index}`} className="guide-panel__pill">{keyword}</span>
                 ))}
               </div>
             </li>
@@ -83,7 +73,6 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
           gap: 12px;
         }
 
-        /* Card base */
         .guide-panel__card {
           padding: 14px 16px;
           border-radius: 10px;
@@ -92,14 +81,12 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
           transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
         }
 
-        /* Highlighted card */
         .guide-panel__card--highlighted {
           border-color: var(--color-accent, #9AE05C);
           background-color: rgba(154, 224, 92, 0.06);
           box-shadow: 0 0 0 1px rgba(154, 224, 92, 0.15);
         }
 
-        /* Card header row: title + badge */
         .guide-panel__card-header {
           display: flex;
           align-items: center;
@@ -113,7 +100,6 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
           color: var(--color-text-primary, #FFFFFF);
         }
 
-        /* KEY MATCH badge */
         .guide-panel__badge {
           font-size: 10px;
           font-weight: 700;
@@ -133,7 +119,6 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
           margin-bottom: 10px;
         }
 
-        /* Keyword pills row */
         .guide-panel__pills {
           display: flex;
           flex-wrap: wrap;

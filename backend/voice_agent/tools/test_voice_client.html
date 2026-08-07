@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nova Sonic Voice Test</title>
+    <style>
+        body { font-family: system-ui; max-width: 800px; margin: 40px auto; padding: 20px; }
+        button { padding: 12px 24px; margin: 8px; font-size: 16px; cursor: pointer; border-radius: 6px; border: none; }
+        #startBtn { background: #4CAF50; color: white; }
+        #stopBtn { background: #f44336; color: white; }
+        #status { margin: 20px 0; padding: 12px; background: #f5f5f5; border-radius: 6px; }
+        #transcript { white-space: pre-wrap; background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 6px; min-height: 200px; overflow-y: auto; max-height: 400px; }
+        .interviewer { color: #4FC3F7; }
+        .candidate { color: #81C784; }
+        .system { color: #FFB74D; }
+        select { padding: 8px; font-size: 14px; margin: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Nova Sonic Voice Test</h1>
+    <p>Tests the voice agent server running at <code>ws://localhost:8080/</code></p>
+    <p><small>System prompt is loaded from the Interviewer runtime context (analyst output + interview structure + profile + flow instructions).</small></p>
+
+    <details>
+        <summary>View/Edit System Prompt</summary>
+        <textarea id="systemPromptArea" rows="12" style="width:100%;font-size:12px;font-family:monospace;background:#1e1e1e;color:#d4d4d4;padding:8px;border-radius:4px;"></textarea>
+    </details>
+
+    <div>
+        <label>Voice: </label>
+        <select id="voiceSelect">
+            <option value="matthew">Matthew (male)</option>
+            <option value="tiffany">Tiffany (female)</option>
+            <option value="amy">Amy (female, British)</option>
+        </select>
+    </div>
+
+    <div>
+        <button id="startBtn" onclick="startInterview()">Start Interview</button>
+        <button id="stopBtn" onclick="stopInterview()" disabled>Stop</button>
+    </div>
+
+    <div id="status">Ready. Click Start to begin.</div>
+    <div id="transcript"></div>
+
+    <script src="test_runtime_context.js"></script>
+    <script>
+    // Load runtime context into textarea on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const area = document.getElementById('systemPromptArea');
+        if (window.RUNTIME_CONTEXT) {
+            area.value = window.RUNTIME_CONTEXT;
+        } else {
+            area.value = 'No runtime context loaded. Run: python3 backend/voice_agent/tools/generate_test_context.py';
+        }
+    });
+
+    let ws = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let scriptProcessor = null;
+    let isStreaming = false;
+    let nextStartTime = 0;
+
+    function log(msg, cls = 'system') {
+        const el = document.getElementById('transcript');
+        el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(msg) {
+        document.getElementById('status').textContent = msg;
+    }
+
+    async function startInterview() {
+        const voiceId = document.getElementById('voiceSelect').value;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+
+        try {
+            // Setup audio context for playback
+            audioContext = new AudioContext({ sampleRate: 24000 });
+            nextStartTime = 0;
+
+            // Get microphone
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true }
+            });
+            setStatus('Microphone active. Connecting...');
+
+            // Connect WebSocket
+            ws = new WebSocket('ws://localhost:8080/');
+            ws.onopen = () => onConnected(voiceId);
+            ws.onmessage = (e) => onMessage(e);
+            ws.onerror = (e) => { log(`WebSocket error: ${e}`, 'system'); setStatus('Error'); };
+            ws.onclose = () => { log('WebSocket closed', 'system'); setStatus('Disconnected'); };
+
+        } catch (err) {
+            log(`Error: ${err.message}`, 'system');
+            setStatus('Error: ' + err.message);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+    }
+
+    function onConnected(voiceId) {
+        setStatus('Connected! Sending setup...');
+        log('Connected to voice agent server');
+
+        ws.send(JSON.stringify({
+            type: 'session_start',
+            payload: {
+                novaSonicContext: document.getElementById('systemPromptArea').value
+                    || window.RUNTIME_CONTEXT
+                    || 'You are a mock interviewer. Greet the candidate and ask about their project.',
+                inferenceConfig: {
+                    maxTokens: 1024,
+                    topP: 0.9,
+                    temperature: 0.7,
+                    endpointingSensitivity: 'HIGH',
+                    voiceId
+                }
+            }
+        }));
+    }
+
+    function startMicStreaming() {
+        // Setup audio capture
+        const micContext = new AudioContext({ sampleRate: 16000 });
+        const source = micContext.createMediaStreamSource(mediaStream);
+        scriptProcessor = micContext.createScriptProcessor(1024, 1, 1);
+
+        scriptProcessor.onaudioprocess = (e) => {
+            if (!isStreaming || ws.readyState !== WebSocket.OPEN) return;
+            const pcm = e.inputBuffer.getChannelData(0);
+            const int16 = new Int16Array(pcm.length);
+            for (let i = 0; i < pcm.length; i++) {
+                int16[i] = Math.max(-32768, Math.min(32767, pcm[i] * 32768));
+            }
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(int16.buffer)));
+            ws.send(JSON.stringify({
+                type: 'audio_chunk',
+                payload: { content: base64 }
+            }));
+        };
+
+        source.connect(scriptProcessor);
+        scriptProcessor.connect(micContext.destination);
+        isStreaming = true;
+        setStatus('Listening... Speak now! Nova will respond after you pause.');
+    }
+
+    function onMessage(event) {
+        const data = JSON.parse(event.data);
+        const payload = data.payload || {};
+
+        if (data.type === 'session_start_ack') {
+            log('Session acknowledged; microphone streaming started.', 'system');
+            setStatus('Listening... Speak now!');
+            startMicStreaming();
+        } else if (data.type === 'text_output' && payload.generationStage === 'FINAL') {
+            if (payload.role === 'interviewer') {
+                const text = payload.content;
+                log(`Interviewer: ${text}`, 'interviewer');
+            } else if (payload.role === 'user') {
+                const text = payload.content;
+                log(`You: ${text}`, 'candidate');
+            }
+        } else if (data.type === 'audio_output') {
+            setStatus('Nova is speaking...');
+            playAudio(payload.content);
+        } else if (data.type === 'interrupted') {
+            setStatus('Your turn — speak now!');
+        } else if (data.type === 'session_invalid') {
+            log(`Session error: ${payload.reason}`, 'system');
+            setStatus('Error');
+        }
+    }
+
+    function playAudio(base64Content) {
+        const binaryString = atob(base64Content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+            float32[i] = int16[i] / 32768.0;
+        }
+
+        const buffer = audioContext.createBuffer(1, float32.length, 24000);
+        buffer.getChannelData(0).set(float32);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+
+        const now = audioContext.currentTime;
+        if (nextStartTime < now) nextStartTime = now;
+        source.start(nextStartTime);
+        nextStartTime += buffer.duration;
+    }
+
+    function stopInterview() {
+        isStreaming = false;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'session_end', payload: {} }));
+            ws.close();
+        }
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => t.stop());
+        }
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        setStatus('Stopped.');
+        log('Interview ended.', 'system');
+    }
+    </script>
+</body>
+</html>

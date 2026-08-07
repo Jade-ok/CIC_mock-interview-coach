@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
-import { PracticeBubbles } from '@/components/PracticeBubbles';
 import { GuidePanel } from '@/components/GuidePanel';
-import { callAgent3 } from '@/services/agent3Client';
+import { PracticeBubbles } from '@/components/PracticeBubbles';
+import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
+import type { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 // --- Sub-components ---
 
@@ -96,6 +97,7 @@ function PracticeModeToggle({
       onClick={onToggle}
       type="button"
       aria-label="Practice Mode toggle"
+      aria-pressed={practiceMode}
       data-testid="practice-mode-toggle"
     >
       Practice Mode {practiceMode ? '●' : '○'}
@@ -138,14 +140,13 @@ function ControlBar({
   );
 }
 
-function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => void; onInputChange?: (hasText: boolean) => void }) {
+function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => boolean; onInputChange?: (hasText: boolean) => void }) {
   const [value, setValue] = useState('');
   const hadTextRef = useRef(false);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
-    if (trimmed) {
-      onSubmit(trimmed);
+    if (trimmed && onSubmit(trimmed)) {
       setValue('');
       hadTextRef.current = false;
     }
@@ -202,7 +203,7 @@ function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => vo
 
 // --- Main Component ---
 
-export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
+export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | MockWebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -211,17 +212,25 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   const triggerAgent3 = useCallback(async () => {
     dispatch({ type: 'AGENT3_LOADING' });
     try {
-      const result = await callAgent3({
-        transcript: state.transcript,
-        competency_guides: state.competencyGuides,
-        analyst_output: state.analystOutput ?? undefined,
-      });
+      const request = buildAgent3Request(state);
+      if (request.conversation.length === 0) {
+        dispatch({
+          type: 'AGENT3_FAILED',
+          payload: {
+            message: 'Complete at least one interview answer before requesting feedback.',
+            retryable: false,
+          },
+        });
+        return;
+      }
+      const result = await callAgent3(request);
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
-      dispatch({ type: 'AGENT3_FAILED', payload: { message } });
+      const retryable = !message.includes('without Analyst output');
+      dispatch({ type: 'AGENT3_FAILED', payload: { message, retryable } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
+  }, [dispatch, state]);
 
   // Audio streaming integration
   const { audioManagerRef } = useInterviewStreaming({
@@ -296,15 +305,24 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
   const handleTextSubmit = useCallback(
     (text: string) => {
+      // Keep unsent text in the field while the socket reconnects.
+      if (!wsClient || wsClient.getState() !== 'connected') return false;
+
+      wsClient.sendTextInput(text, 'default', 'text-input');
       dispatch({ type: 'TEXT_INPUT_CLEAR' });
-      // Send text via WebSocket
-      if (wsClient && wsClient.getState() === 'connected') {
-        wsClient.sendTextInput(text, 'default', 'text-input');
-      }
+      dispatch({
+        type: 'APPEND_TRANSCRIPT',
+        payload: {
+          role: 'user',
+          text,
+          timestamp: new Date().toISOString(),
+        },
+      });
       // Resume capture after text submit (if audio manager available)
       if (audioManagerRef.current && state.inputMode === 'voice') {
         audioManagerRef.current.resumeCapture();
       }
+      return true;
     },
     [dispatch, wsClient, audioManagerRef, state.inputMode]
   );
@@ -328,12 +346,10 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     [dispatch, audioManagerRef, state.inputMode]
   );
 
-  // Derive the latest interviewer text from transcript (FINAL only)
   const latestInterviewerText = useMemo(() => {
-    for (let i = state.transcript.length - 1; i >= 0; i--) {
-      if (state.transcript[i].role === 'interviewer') {
-        return state.transcript[i].text;
-      }
+    for (let index = state.transcript.length - 1; index >= 0; index -= 1) {
+      const entry = state.transcript[index];
+      if (entry.role === 'interviewer') return entry.text;
     }
     return null;
   }, [state.transcript]);
@@ -489,25 +505,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           to { height: 32px; }
         }
 
-        /* Guide Panel */
-        .guide-panel {
-          background-color: var(--color-tile-bg, #1C1C1E);
-          border-radius: 8px;
-          height: 100%;
-          padding: 16px;
-        }
-
-        .guide-panel__title {
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--color-text-secondary, #A0A0A5);
-        }
-
-        /* Practice Bubbles */
-        .practice-bubbles {
-          min-height: 40px;
-        }
-
         /* Text Input */
         .text-input {
           display: flex;
@@ -603,6 +600,34 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         .control-bar__end-btn:hover {
           background-color: var(--color-error, #FF5C5C);
           color: var(--color-text-primary, #FFFFFF);
+        }
+
+        @media (max-width: 640px) {
+          .interview-screen__main {
+            flex-direction: column;
+            overflow-y: auto;
+          }
+
+          .interview-screen__left,
+          .interview-screen__right {
+            flex: none;
+            min-width: 0;
+            width: 100%;
+          }
+
+          .participant-tiles {
+            min-height: 360px;
+          }
+
+          .interview-screen__right {
+            max-height: 280px;
+          }
+
+          .control-bar {
+            gap: 10px;
+            padding: 10px 12px;
+            flex-wrap: wrap;
+          }
         }
       `}</style>
     </div>

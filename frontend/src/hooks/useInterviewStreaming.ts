@@ -18,13 +18,27 @@ import type { SessionAction, TranscriptEntry } from '@/types/session';
 
 export interface UseInterviewStreamingOptions {
   phase: string;
-  wsClient: WebSocketClient | null;
+  wsClient: InterviewWebSocketClient | null;
   dispatch: React.Dispatch<SessionAction>;
   /** Allows injection of a custom AudioManager factory (for testing) */
   audioManagerFactory?: () => AudioManager;
   /** Callback triggered when auto-end (end_interview tool_use) completes */
   onAutoEnd?: () => void;
 }
+
+/** Public socket surface shared by the real and development clients. */
+export type InterviewWebSocketClient = Pick<
+  WebSocketClient,
+  | 'onMessage'
+  | 'onDisconnect'
+  | 'onReconnectSuccess'
+  | 'onReconnectFailed'
+  | 'getState'
+  | 'send'
+  | 'sendAudioChunk'
+  | 'sendTextInput'
+  | 'disconnect'
+>;
 
 export function useInterviewStreaming({
   phase,
@@ -35,6 +49,10 @@ export function useInterviewStreaming({
 }: UseInterviewStreamingOptions) {
   const audioManagerRef = useRef<AudioManager | null>(null);
   const cleanedUpRef = useRef(false);
+  const endingRef = useRef(false);
+  const lifecycleIdRef = useRef(0);
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
 
   // Store dispatch in a ref to avoid effect re-runs
   const dispatchRef = useRef(dispatch);
@@ -51,6 +69,8 @@ export function useInterviewStreaming({
     if (phase !== 'interview') return;
 
     cleanedUpRef.current = false;
+    endingRef.current = false;
+    const lifecycleId = ++lifecycleIdRef.current;
 
     const factory = audioManagerFactory ?? createAudioManager;
     const am = factory();
@@ -93,6 +113,9 @@ export function useInterviewStreaming({
 
     return () => {
       cleanedUpRef.current = true;
+      if (lifecycleIdRef.current === lifecycleId) {
+        lifecycleIdRef.current += 1;
+      }
       am.destroy();
       audioManagerRef.current = null;
     };
@@ -137,34 +160,52 @@ export function useInterviewStreaming({
 
       // session_invalid → error + route to upload
       case 'session_invalid': {
+        wsClientRef.current?.disconnect();
         dispatchRef.current({ type: 'WS_SESSION_INVALID' });
         break;
       }
 
       // Sub-task 6: tool_use → handle end_interview
       case 'tool_use': {
-        if (event.payload.toolName === 'end_interview') {
+        if (event.payload.toolName === 'end_interview' && !endingRef.current) {
+          endingRef.current = true;
+          const lifecycleId = lifecycleIdRef.current;
+
           // Auto end sequence: wait for playback to finish → session_end → disconnect → feedback
           const autoEndSequence = async () => {
-            const am = audioManagerRef.current;
-            if (am) {
-              await am.waitForPlaybackEnd();
-            }
+            try {
+              const am = audioManagerRef.current;
+              if (am) {
+                await am.waitForPlaybackEnd();
+              }
 
-            const ws = wsClientRef.current;
-            if (ws && ws.getState() === 'connected') {
+              // The user may have manually ended, navigated away, or unmounted
+              // while the closing audio was still playing.
+              if (
+                cleanedUpRef.current
+                || lifecycleId !== lifecycleIdRef.current
+                || phaseRef.current !== 'interview'
+              ) {
+                return;
+              }
+
+              const ws = wsClientRef.current;
+              // Manual ending disconnects first. Treat a no-longer-connected
+              // socket as cancellation so evaluation cannot be triggered twice.
+              if (!ws || ws.getState() !== 'connected') return;
               ws.send({ type: 'session_end', payload: { promptName: 'default' } });
               ws.disconnect();
-            }
 
-            dispatchRef.current({ type: 'END_INTERVIEW', payload: { reason: 'auto' } });
-
-            // Trigger Agent 3 callback
-            if (onAutoEndRef.current) {
-              onAutoEndRef.current();
+              dispatchRef.current({ type: 'END_INTERVIEW', payload: { reason: 'auto' } });
+              onAutoEndRef.current?.();
+            } catch {
+              // Permit a later end_interview signal to retry if playback waiting fails.
+              if (lifecycleId === lifecycleIdRef.current && !cleanedUpRef.current) {
+                endingRef.current = false;
+              }
             }
           };
-          autoEndSequence();
+          void autoEndSequence();
         }
         break;
       }
@@ -178,12 +219,28 @@ export function useInterviewStreaming({
   useEffect(() => {
     if (phase !== 'interview' || !wsClient) return;
 
-    // Store the previous handler to restore on cleanup
+    // WaitingRoom owns these callbacks while connecting. Take ownership when
+    // the connected client is handed to the interview screen.
     const previousHandler = wsClient.onMessage;
+    const previousDisconnect = wsClient.onDisconnect;
+    const previousReconnectSuccess = wsClient.onReconnectSuccess;
+    const previousReconnectFailed = wsClient.onReconnectFailed;
     wsClient.onMessage = handleWsMessage;
+    wsClient.onDisconnect = (reason) => {
+      dispatchRef.current({ type: 'WS_DISCONNECTED', payload: { reason } });
+    };
+    wsClient.onReconnectSuccess = () => {
+      dispatchRef.current({ type: 'WS_RECONNECT_SUCCESS' });
+    };
+    wsClient.onReconnectFailed = () => {
+      dispatchRef.current({ type: 'WS_RECONNECT_FAILED' });
+    };
 
     return () => {
       wsClient.onMessage = previousHandler;
+      wsClient.onDisconnect = previousDisconnect;
+      wsClient.onReconnectSuccess = previousReconnectSuccess;
+      wsClient.onReconnectFailed = previousReconnectFailed;
     };
   }, [phase, wsClient, handleWsMessage]);
 

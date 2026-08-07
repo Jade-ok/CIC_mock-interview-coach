@@ -23,3 +23,12 @@
   --font-body: 1rem;
   --font-small: 0.875rem;
 }
+
+@media (max-width: 640px) {
+  :root {
+    --font-hero: 2.25rem;
+    --font-section-title: 1.25rem;
+    --font-body: 0.9375rem;
+    --font-small: 0.8125rem;
+  }
+}

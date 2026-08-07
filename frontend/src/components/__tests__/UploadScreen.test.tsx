@@ -30,7 +30,7 @@ describe('UploadScreen', () => {
       render(<UploadScreen onSubmit={onSubmit} />);
 
       const dropzone = screen.getByRole('button', {
-        name: /PDF 파일을 드래그앤드롭하거나 클릭하여 선택하세요/,
+        name: /Drag and drop a PDF file or click to select/,
       });
 
       const file = createMockFile('dropped.pdf', 2048, 'application/pdf');
@@ -50,23 +50,23 @@ describe('UploadScreen', () => {
 
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      expect(screen.getByText('PDF 파일만 업로드할 수 있습니다.')).toBeInTheDocument();
+      expect(screen.getByText('Only PDF files can be uploaded.')).toBeInTheDocument();
     });
 
-    it('shows error for file exceeding 10MB', () => {
+    it('shows error for file exceeding 4 MB', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
       const fileInput = screen.getByTestId('file-input') as HTMLInputElement;
       const file = createMockFile(
         'big.pdf',
-        11 * 1024 * 1024,
+        5 * 1024 * 1024,
         'application/pdf'
       );
 
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      expect(screen.getByText('파일 크기가 10MB를 초과합니다.')).toBeInTheDocument();
+      expect(screen.getByText('The file size exceeds 4 MB.')).toBeInTheDocument();
     });
 
     it('clears error when a valid file is selected after an invalid one', () => {
@@ -78,13 +78,13 @@ describe('UploadScreen', () => {
       // First select invalid file
       const invalidFile = createMockFile('doc.txt', 1024, 'text/plain');
       fireEvent.change(fileInput, { target: { files: [invalidFile] } });
-      expect(screen.getByText('PDF 파일만 업로드할 수 있습니다.')).toBeInTheDocument();
+      expect(screen.getByText('Only PDF files can be uploaded.')).toBeInTheDocument();
 
       // Then select valid file
       const validFile = createMockFile('resume.pdf', 1024, 'application/pdf');
       fireEvent.change(fileInput, { target: { files: [validFile] } });
 
-      expect(screen.queryByText('PDF 파일만 업로드할 수 있습니다.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Only PDF files can be uploaded.')).not.toBeInTheDocument();
       expect(screen.getByText('resume.pdf')).toBeInTheDocument();
     });
   });
@@ -94,7 +94,7 @@ describe('UploadScreen', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       expect(textarea).toBeInTheDocument();
       expect(textarea.tagName).toBe('TEXTAREA');
     });
@@ -103,7 +103,7 @@ describe('UploadScreen', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       fireEvent.change(textarea, { target: { value: 'Frontend Engineer' } });
 
       expect(textarea).toHaveValue('Frontend Engineer');
@@ -115,10 +115,10 @@ describe('UploadScreen', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       fireEvent.change(textarea, { target: { value: 'some JD' } });
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       expect(button).toBeDisabled();
     });
 
@@ -130,7 +130,7 @@ describe('UploadScreen', () => {
       const file = createMockFile('resume.pdf', 1024, 'application/pdf');
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       expect(button).toBeDisabled();
     });
 
@@ -142,10 +142,10 @@ describe('UploadScreen', () => {
       const file = createMockFile('resume.pdf', 1024, 'application/pdf');
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       fireEvent.change(textarea, { target: { value: 'JD text' } });
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       expect(button).not.toBeDisabled();
     });
 
@@ -157,10 +157,10 @@ describe('UploadScreen', () => {
       const file = createMockFile('resume.pdf', 1024, 'application/pdf');
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       fireEvent.change(textarea, { target: { value: '   ' } });
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       expect(button).not.toBeDisabled();
     });
 
@@ -172,10 +172,10 @@ describe('UploadScreen', () => {
       const file = createMockFile('resume.pdf', 1024, 'application/pdf');
       fireEvent.change(fileInput, { target: { files: [file] } });
 
-      const textarea = screen.getByPlaceholderText('채용공고 내용을 붙여넣으세요');
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
       fireEvent.change(textarea, { target: { value: 'My JD' } });
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       fireEvent.click(button);
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -186,7 +186,7 @@ describe('UploadScreen', () => {
       const onSubmit = vi.fn();
       render(<UploadScreen onSubmit={onSubmit} />);
 
-      const button = screen.getByRole('button', { name: '제출' });
+      const button = screen.getByRole('button', { name: 'Submit' });
       fireEvent.click(button);
 
       expect(onSubmit).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('UploadScreen', () => {
       render(<UploadScreen onSubmit={onSubmit} />);
 
       const dropzone = screen.getByRole('button', {
-        name: /PDF 파일을 드래그앤드롭하거나 클릭하여 선택하세요/,
+        name: /Drag and drop a PDF file or click to select/,
       });
 
       fireEvent.dragOver(dropzone);
@@ -212,7 +212,7 @@ describe('UploadScreen', () => {
       render(<UploadScreen onSubmit={onSubmit} />);
 
       const dropzone = screen.getByRole('button', {
-        name: /PDF 파일을 드래그앤드롭하거나 클릭하여 선택하세요/,
+        name: /Drag and drop a PDF file or click to select/,
       });
 
       fireEvent.dragOver(dropzone);

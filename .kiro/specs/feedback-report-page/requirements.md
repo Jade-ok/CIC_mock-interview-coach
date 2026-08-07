@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained requirements. Last verified: 2026-08-07. The component is integrated into `FeedbackScreen`; deployment with the React app on Amplify Hosting remains pending.
+
 ## Introduction
 
 The Feedback Report Page is a React component that renders the Evaluator agent's output as a student-friendly interview feedback report. It displays per-question scores, overall readiness assessment, qualitative feedback, and contextual advice.
@@ -12,7 +14,7 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 - **Readiness_Label**: One of five categorical labels ("Interview ready", "Strong foundation", "Developing well", "Needs more practice", "Needs clearer examples")
 - **Dimension_Score**: A per-dimension average (1.0-5.0) across all answered questions
 - **Score_Bar**: A visual 5-segment bar chart showing a score out of 5
-- **Question_Card**: A collapsible card showing one Q&A pair with its 4 dimension scores
+- **Question_Card**: A static card showing one Q&A pair with its 4 dimension scores
 
 ## Requirements
 
@@ -26,7 +28,8 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 2. THE page SHALL be a single vertically-scrollable layout with distinct visual sections
 3. THE page SHALL use CSS variables for all theme colors, not hard-coded values
 4. THE page SHALL use the system UI font stack as defined in the design theme
-5. THE page SHALL include a fixed top header with "CIC Mock Interview Coach" branding and navigation actions ("View full transcript", "Practice again")
+5. THE page SHALL include a sticky top header with "CIC Mock Interview Coach" branding and a "Practice again" action
+6. THE page SHALL show "View full transcript" only after a transcript-view callback is implemented
 
 ### Requirement 2: Readiness Label Hero Section
 
@@ -77,17 +80,6 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 3. EACH advice item SHALL be displayed as a numbered item with clear, readable formatting
 4. THE section SHALL be visually separated from the strengths/improvements section above
 
-### Requirement 5: Contextual Advice Section
-
-**User Story:** As a co-op student, I want resume-specific advice for future interviews, so I can prepare better next time.
-
-#### Acceptance Criteria
-
-1. THE page SHALL display a "For your next interview" section with all items from the contextual_advice array
-2. THE section SHALL include a subheading: "Advice based on your resume and the job you're aiming for."
-3. EACH advice item SHALL be displayed as a numbered item with clear, readable formatting
-4. THE section SHALL be visually separated from the strengths/improvements section above
-
 ### Requirement 6: Per-Question Breakdown Section
 
 **User Story:** As a co-op student, I want to see how each individual answer scored, so I can identify which specific responses need improvement.
@@ -108,10 +100,10 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 #### Acceptance Criteria
 
 1. THE page SHALL end with an encouraging motivational message (e.g. "Every practice round makes the real one easier.")
-2. THE footer SHALL include action buttons: "Practice again" and "View full transcript"
+2. THE footer SHALL include "Practice again" and SHALL include "View full transcript" only when a transcript-view callback is available
 3. THE footer SHALL use the accent color background to visually anchor the page bottom
 4. THE "Practice again" button SHALL be the primary action (filled button style)
-5. THE "View full transcript" button SHALL be a secondary action (outlined button style)
+5. WHEN shown, THE "View full transcript" button SHALL be a secondary action (outlined button style)
 
 ### Requirement 8: Data Consumption
 

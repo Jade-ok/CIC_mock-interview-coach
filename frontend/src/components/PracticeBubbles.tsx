@@ -5,15 +5,7 @@ interface PracticeBubblesProps {
   transcript: TranscriptEntry[];
 }
 
-/**
- * PracticeBubbles displays interviewer text as speech bubbles when Practice Mode is ON.
- *
- * Rules:
- * - ON: show interviewer transcript entries as bubbles
- * - OFF: hide all bubbles (render nothing)
- * - ON→OFF: existing bubbles immediately removed (React conditional render handles this)
- * - User answers are NEVER shown as bubbles (regardless of Practice Mode)
- */
+/** Shows interviewer text for practice support without exposing user answers. */
 export function PracticeBubbles({ practiceMode, transcript }: PracticeBubblesProps) {
   if (!practiceMode) {
     return <div className="practice-bubbles practice-bubbles--hidden" data-testid="practice-bubbles" />;
@@ -55,7 +47,7 @@ export function PracticeBubbles({ practiceMode, transcript }: PracticeBubblesPro
           font-size: 13px;
           line-height: 1.4;
           max-width: 80%;
-          word-wrap: break-word;
+          overflow-wrap: anywhere;
         }
       `}</style>
     </div>
