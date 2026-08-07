@@ -18,6 +18,12 @@
 <body>
     <h1>Nova Sonic Voice Test</h1>
     <p>Tests the voice agent server running at <code>ws://localhost:8080/</code></p>
+    <p><small>System prompt is loaded from the Interviewer runtime context (analyst output + interview structure + profile + flow instructions).</small></p>
+
+    <details>
+        <summary>View/Edit System Prompt</summary>
+        <textarea id="systemPromptArea" rows="12" style="width:100%;font-size:12px;font-family:monospace;background:#1e1e1e;color:#d4d4d4;padding:8px;border-radius:4px;"></textarea>
+    </details>
 
     <div>
         <label>Voice: </label>
@@ -36,7 +42,18 @@
     <div id="status">Ready. Click Start to begin.</div>
     <div id="transcript"></div>
 
+    <script src="test_runtime_context.js"></script>
     <script>
+    // Load runtime context into textarea on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const area = document.getElementById('systemPromptArea');
+        if (window.RUNTIME_CONTEXT) {
+            area.value = window.RUNTIME_CONTEXT;
+        } else {
+            area.value = 'No runtime context loaded. Run: python3 scripts/generate_test_context.py';
+        }
+    });
+
     let ws = null;
     let audioContext = null;
     let mediaStream = null;
@@ -122,9 +139,7 @@
             }}
         }));
 
-        const systemPrompt = "You are a mock interviewer. You MUST speak first immediately when the session starts. " +
-            "Keep all responses to 1-2 sentences max. Ask one short question at a time. " +
-            "Begin now by greeting the candidate and asking: What project are you most proud of?";
+        const systemPrompt = document.getElementById('systemPromptArea').value || window.RUNTIME_CONTEXT || "You are a mock interviewer. Greet the candidate and ask about their project.";
 
         ws.send(JSON.stringify({
             event: { textInput: { promptName, contentName, content: systemPrompt } }

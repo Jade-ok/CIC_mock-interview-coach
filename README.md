@@ -8,9 +8,9 @@ The browser manages all state. Each Lambda is stateless. No database, no S3 sess
 
 ```
 frontend/        → Browser UI (holds state)
-analyst/         → Resume analysis (Claude Fable 5)
+analyst/         → Resume analysis (Claude Sonnet 5)
 interviewer/     → Interview context builder (Nova Sonic via frontend WebSocket)
-evaluator/       → Answer evaluation (Claude Fable 5)
+evaluator/       → Answer evaluation (Claude Sonnet 5)
 polly/           → TTS synthesis (Amazon Polly)
 pdf_parser/      → PDF text extraction (pypdf)
 ```
@@ -54,9 +54,9 @@ interviewer/
 
 | Agent | Model / Service |
 |-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
 | interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) |
-| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
+| evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
 | polly | Amazon Polly only |
 | pdf_parser | pypdf only |
 

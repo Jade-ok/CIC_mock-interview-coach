@@ -14,13 +14,13 @@ Each agent uses a different model or service — this is intentional.
 
 | Agent | Model / Service |
 |-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-fable-5` |
+| analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
 | interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) — no Bedrock text model |
-| evaluator | Bedrock — `global.anthropic.claude-fable-5` |
+| evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
 | polly | Amazon Polly only — no Bedrock |
 | pdf_parser | pypdf only — no Bedrock |
 
-If a Bedrock model feels too slow during testing, swap to `global.anthropic.claude-sonnet-4-6` by changing the model ID string in that Lambda only. No other code changes needed.
+Both Bedrock agents use the same Sonnet 5 model to keep analysis and evaluation behavior consistent.
 
 ## Bedrock (analyst, evaluator only)
 

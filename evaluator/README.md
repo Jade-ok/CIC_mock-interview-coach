@@ -23,7 +23,7 @@ See `schemas/evaluator_output.json` for the full output schema.
 
 - **Runtime**: Python 3.12
 - **Region**: us-east-1
-- **Model**: global.anthropic.claude-fable-5
+- **Model**: global.anthropic.claude-sonnet-5
 - **Timeout**: 60 seconds
 
 ## IAM Permissions
@@ -32,7 +32,11 @@ See `schemas/evaluator_output.json` for the full output schema.
 {
   "Effect": "Allow",
   "Action": ["bedrock:InvokeModel"],
-  "Resource": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-*"
+  "Resource": [
+    "arn:aws:bedrock:us-east-1:<account-id>:inference-profile/global.anthropic.claude-sonnet-5",
+    "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-5",
+    "arn:aws:bedrock:::foundation-model/anthropic.claude-sonnet-5"
+  ]
 }
 ```
 

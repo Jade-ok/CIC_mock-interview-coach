@@ -99,7 +99,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE Analyst SHALL target the `us-east-1` region for all Bedrock Converse API calls.
-2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-4-6` as the default model for Bedrock calls.
+2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-5` as the default model for Bedrock calls.
 3. THE Analyst SHALL allow the model ID to be swapped by changing only the model ID string, with no other code changes required.
 
 ### Requirement 8: Analyst Input Validation

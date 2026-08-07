@@ -29,7 +29,10 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-*'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/global.anthropic.claude-sonnet-5'
+                - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/anthropic.claude-sonnet-5'
+                - !Sub 'arn:${AWS::Partition}:bedrock:::foundation-model/anthropic.claude-sonnet-5'
 
 Outputs:
   EvaluatorFunctionUrl:
