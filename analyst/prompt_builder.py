@@ -1,6 +1,6 @@
 """Prompt construction for the Analyst agent's Bedrock Converse API call."""
 
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"
+MODEL_ID = "us.anthropic.claude-sonnet-4-6"
 
 SYSTEM_PROMPT = """You are a resume analyst for a mock behavioral interview coaching application \
 designed for university students and new graduates.
@@ -75,7 +75,7 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
         ],
         "toolConfig": _build_tool_config(),
         "inferenceConfig": {
-            "maxTokens": 4096,
+            "maxTokens": 8192,
             "temperature": 0.0,
         },
     }

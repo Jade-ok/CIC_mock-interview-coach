@@ -60,12 +60,12 @@ export async function callAgent1(request: Agent1Request): Promise<Agent1Response
   });
 
   const interviewerResult = await interviewerResponse.json();
-  if (interviewerResult.status !== 'success') {
-    throw new Error(`Interviewer setup failed: ${interviewerResult.error}`);
+  if (!interviewerResult.success) {
+    throw new Error(`Interviewer setup failed: ${interviewerResult.error_message}`);
   }
 
-  const novaSonicContext = interviewerResult.data.runtime_context
-    || JSON.stringify(interviewerResult.data);
+  const novaSonicContext = interviewerResult.runtime_context
+    || JSON.stringify(interviewerResult);
 
   // Step 4: Map analyst output to competency_guides for the UI
   const competencyGuides: CompetencyGuide[] = mapToCompetencyGuides(analystOutput);

@@ -1,13 +1,22 @@
 """Bedrock Converse API wrapper with retry logic for the Analyst Lambda."""
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError, ReadTimeoutError
 
 REGION = "us-east-1"
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 1
+
+# Explicit timeout config: give Bedrock enough time for a full resume analysis
+# (large prompt + tool_use response). Single attempt within Lambda's 90s timeout.
+_bedrock_config = Config(
+    read_timeout=120,
+    connect_timeout=10,
+    retries={"max_attempts": 0},
+)
 
 # Module-level client for Lambda container reuse
-_client = boto3.client("bedrock-runtime", region_name=REGION)
+_client = boto3.client("bedrock-runtime", region_name=REGION, config=_bedrock_config)
 
 
 class BedrockCallFailed(Exception):

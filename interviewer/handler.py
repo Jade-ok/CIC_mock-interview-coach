@@ -2,13 +2,13 @@ import json
 import os
 import traceback
 
-from interviewer.validation import validate_input
-from interviewer.config_loader import (
+from validation import validate_input
+from config_loader import (
     load_interview_structure,
     load_interview_profile,
     ConfigLoadError,
 )
-from interviewer.context_builder import build_runtime_context
+from context_builder import build_runtime_context
 
 
 def lambda_handler(event: dict, context) -> dict:
