@@ -127,7 +127,7 @@ export function useInterviewStreaming({
         break;
       }
 
-      // Sub-task 4: text_output (FINAL only) → APPEND_TRANSCRIPT
+      // Sub-task 4: text_output → PARTIAL updates livePartial, FINAL commits to transcript
       case 'text_output': {
         if (event.payload.generationStage === 'FINAL') {
           const entry: TranscriptEntry = {
@@ -136,6 +136,12 @@ export function useInterviewStreaming({
             timestamp: new Date().toISOString(),
           };
           dispatchRef.current({ type: 'APPEND_TRANSCRIPT', payload: entry });
+        } else {
+          // PARTIAL — update live caption
+          dispatchRef.current({
+            type: 'UPDATE_LIVE_PARTIAL',
+            payload: { role: event.payload.role, text: event.payload.content },
+          });
         }
         break;
       }

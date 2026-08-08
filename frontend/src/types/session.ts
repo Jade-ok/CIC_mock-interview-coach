@@ -10,6 +10,7 @@ export interface SessionState {
   textInputState: TextInputState;
   practiceMode: boolean;
   transcript: TranscriptEntry[];
+  livePartial: { role: 'interviewer' | 'user'; text: string } | null;
   competencyGuides: CompetencyGuide[];
   novaSonicContext: string;
   elapsedSeconds: number;
@@ -67,6 +68,8 @@ export type SessionAction =
   | { type: 'USER_TURN' }
   | { type: 'BARGE_IN' }
   | { type: 'APPEND_TRANSCRIPT'; payload: TranscriptEntry }
+  | { type: 'UPDATE_LIVE_PARTIAL'; payload: { role: 'interviewer' | 'user'; text: string } }
+  | { type: 'CLEAR_LIVE_PARTIAL' }
   | { type: 'TOGGLE_PRACTICE_MODE' }
   | { type: 'TEXT_INPUT_START' }
   | { type: 'TEXT_INPUT_CLEAR' }

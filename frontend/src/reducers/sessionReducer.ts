@@ -10,6 +10,7 @@ export const initialState: SessionState = {
   textInputState: 'idle',
   practiceMode: true,
   transcript: [],
+  livePartial: null,
   competencyGuides: [],
   novaSonicContext: '',
   elapsedSeconds: 0,
@@ -134,6 +135,19 @@ export function sessionReducer(
       return {
         ...state,
         transcript: [...state.transcript, action.payload],
+        livePartial: null,
+      };
+
+    case 'UPDATE_LIVE_PARTIAL':
+      return {
+        ...state,
+        livePartial: action.payload,
+      };
+
+    case 'CLEAR_LIVE_PARTIAL':
+      return {
+        ...state,
+        livePartial: null,
       };
 
     case 'TOGGLE_PRACTICE_MODE':

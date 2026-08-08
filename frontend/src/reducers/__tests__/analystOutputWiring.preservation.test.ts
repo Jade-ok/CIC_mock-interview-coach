@@ -355,6 +355,13 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       ) as fc.Arbitrary<Record<string, unknown> | null>,
       uploadedPdf: fc.constant(null) as fc.Arbitrary<File | null>,
       uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
+      livePartial: fc.oneof(
+        fc.constant(null),
+        fc.record({
+          role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
+          text: fc.string({ minLength: 1, maxLength: 50 }),
+        })
+      ) as fc.Arbitrary<SessionState['livePartial']>,
     });
 
     fc.assert(
@@ -399,6 +406,7 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       analystOutput: { interview_plan: [{ topic: 'React' }] },
       uploadedPdf: null,
       uploadedJdText: 'Some JD text',
+      livePartial: { role: 'interviewer', text: 'partial text...' },
     };
 
     const result = sessionReducer(mutatedState, { type: 'RESET' });

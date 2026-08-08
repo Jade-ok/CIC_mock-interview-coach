@@ -505,6 +505,7 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
       analystOutput: fc.constant(null),
       uploadedPdf: fc.constant(null),
       uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
+      livePartial: fc.constant(null),
     });
 
     fc.assert(

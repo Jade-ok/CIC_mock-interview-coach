@@ -9,13 +9,13 @@ import type { WebSocketClient } from '@/services/webSocketClient';
 
 // --- Sub-components ---
 
-function AITile({ isActive }: { isActive: boolean }) {
+function AITile({ isActive, text }: { isActive: boolean; text: string | null }) {
   return (
     <div
       className={`participant-tile participant-tile--ai ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="ai-tile"
     >
-      <div className="participant-tile__content">
+      <div className="participant-tile__content participant-tile__content--captioned">
         {isActive && (
           <div className="waveform" data-testid="ai-waveform" aria-label="AI speaking waveform">
             <span className="waveform__bar" />
@@ -28,19 +28,27 @@ function AITile({ isActive }: { isActive: boolean }) {
         {!isActive && (
           <div className="participant-tile__icon" aria-hidden="true">🤖</div>
         )}
+        {text && (
+          <p
+            className={`tile-subtitle ${isActive ? 'tile-subtitle--active' : ''}`}
+            data-testid="ai-subtitle"
+          >
+            {text}
+          </p>
+        )}
       </div>
       <span className="participant-tile__label">AI Interviewer</span>
     </div>
   );
 }
 
-function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean }) {
+function UserTile({ isActive, textOnly, text }: { isActive: boolean; textOnly: boolean; text: string | null }) {
   return (
     <div
       className={`participant-tile participant-tile--user ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="user-tile"
     >
-      <div className="participant-tile__content">
+      <div className="participant-tile__content participant-tile__content--captioned">
         {isActive && !textOnly && (
           <div className="waveform" data-testid="user-waveform" aria-label="User speaking waveform">
             <span className="waveform__bar" />
@@ -56,17 +64,25 @@ function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean
         {!isActive && !textOnly && (
           <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
+        {text && (
+          <p
+            className={`tile-subtitle ${isActive ? 'tile-subtitle--active' : ''}`}
+            data-testid="user-subtitle"
+          >
+            {text}
+          </p>
+        )}
       </div>
       <span className="participant-tile__label">You{textOnly ? ' (Text Mode)' : ''}</span>
     </div>
   );
 }
 
-function ParticipantTiles({ turnState, textOnly }: { turnState: string; textOnly: boolean }) {
+function ParticipantTiles({ turnState, textOnly, latestInterviewerText, latestUserText }: { turnState: string; textOnly: boolean; latestInterviewerText: string | null; latestUserText: string | null }) {
   return (
     <div className="participant-tiles" data-testid="participant-tiles">
-      <AITile isActive={turnState === 'ai_speaking'} />
-      <UserTile isActive={turnState === 'user_turn'} textOnly={textOnly} />
+      <AITile isActive={turnState === 'ai_speaking'} text={latestInterviewerText} />
+      <UserTile isActive={turnState === 'user_turn'} textOnly={textOnly} text={latestUserText} />
     </div>
   );
 }
@@ -325,15 +341,27 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     setRecording((prev) => !prev);
   }, [state.turnState]);
 
-  // Derive the latest interviewer text from transcript (FINAL only)
+  // Derive the latest interviewer text: livePartial (if interviewer) takes priority, else last confirmed
   const latestInterviewerText = useMemo(() => {
+    if (state.livePartial?.role === 'interviewer') return state.livePartial.text;
     for (let i = state.transcript.length - 1; i >= 0; i--) {
       if (state.transcript[i].role === 'interviewer') {
         return state.transcript[i].text;
       }
     }
     return null;
-  }, [state.transcript]);
+  }, [state.transcript, state.livePartial]);
+
+  // Derive the latest user text: livePartial (if user) takes priority, else last confirmed
+  const latestUserText = useMemo(() => {
+    if (state.livePartial?.role === 'user') return state.livePartial.text;
+    for (let i = state.transcript.length - 1; i >= 0; i--) {
+      if (state.transcript[i].role === 'user') {
+        return state.transcript[i].text;
+      }
+    }
+    return null;
+  }, [state.transcript, state.livePartial]);
 
   const micDisabled = state.turnState === 'ai_speaking';
 
@@ -347,8 +375,8 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       )}
 
       <div className="interview-screen__main">
-        <div className="interview-screen__left">
-          <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
+        <div className={`interview-screen__left ${!state.practiceMode ? 'interview-screen__left--full' : ''}`}>
+          <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} latestInterviewerText={latestInterviewerText} latestUserText={latestUserText} />
           <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
           <MicButton
             disabled={micDisabled}
@@ -356,13 +384,15 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
             onClick={handleMicClick}
           />
         </div>
-        <div className="interview-screen__right">
-          <GuidePanel
-            guides={state.competencyGuides}
-            practiceMode={state.practiceMode}
-            currentInterviewerText={latestInterviewerText}
-          />
-        </div>
+        {state.practiceMode && (
+          <div className="interview-screen__right">
+            <GuidePanel
+              guides={state.competencyGuides}
+              practiceMode={state.practiceMode}
+              currentInterviewerText={latestInterviewerText}
+            />
+          </div>
+        )}
       </div>
       <ControlBar
         elapsedSeconds={state.elapsedSeconds}
@@ -412,6 +442,10 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           gap: 12px;
         }
 
+        .interview-screen__left--full {
+          flex: 1;
+        }
+
         .interview-screen__right {
           flex: 1;
           min-width: 200px;
@@ -447,6 +481,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           align-items: center;
           justify-content: center;
           min-height: 80px;
+        }
+
+        .participant-tile__content--captioned {
+          flex-direction: column;
+          gap: 12px;
+          padding: 16px 24px;
+          transition: all 0.3s ease;
         }
 
         .participant-tile__icon {
@@ -490,6 +531,28 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         @keyframes waveform-pulse {
           from { height: 8px; }
           to { height: 32px; }
+        }
+
+        /* Tile Subtitle (shared by AI and User tiles) */
+        .tile-subtitle {
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.4;
+          color: var(--color-text-secondary, #A0A0A5);
+          text-align: center;
+          max-width: 80%;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          background-color: rgba(0, 0, 0, 0.4);
+          padding: 6px 12px;
+          border-radius: 6px;
+          transition: opacity 0.3s ease, color 0.3s ease;
+        }
+
+        .tile-subtitle--active {
+          color: var(--color-text-primary, #FFFFFF);
         }
 
         /* Guide Panel */
