@@ -77,7 +77,6 @@ export function QuestionBreakdown({ questions, questionCount, transcript }: Ques
         <QuestionCard
           key={i}
           index={i + 1}
-          turnType={i % 2 === 0 ? 'main_question' : 'follow_up'}
           questionText={q.question_text}
           feedback={q.feedback}
           scores={q.scores}

@@ -8,16 +8,17 @@ describe('HeroSection', () => {
     totalScore: 3.0,
     questionCount: 4,
     targetRole: 'Software Engineering Intern',
+    dimensions: {
+      concrete_example: 3.5,
+      situation_action_result: 2.5,
+      link_to_job: 3.0,
+      quantifiable_outcome: 3.0,
+    },
   };
 
   it('displays neutral "Your Interview Report" heading', () => {
     render(<HeroSection {...defaultProps} />);
     expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
-  });
-
-  it('displays the supportive subheading', () => {
-    render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/building real interview skills/)).toBeTruthy();
   });
 
   it('displays the target role context', () => {
@@ -35,14 +36,15 @@ describe('HeroSection', () => {
     expect(screen.getByText(/4 questions answered/)).toBeTruthy();
   });
 
-  it('displays focus area tag', () => {
+  it('displays YOUR ONE THING TO FIX label', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText('Focus area: story structure')).toBeTruthy();
+    expect(screen.getByText('YOUR ONE THING TO FIX')).toBeTruthy();
   });
 
-  it('handles unknown readiness label gracefully', () => {
-    render(<HeroSection {...defaultProps} readinessLabel="Unknown label" />);
-    expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
+  it('shows weakest dimension chip', () => {
+    render(<HeroSection {...defaultProps} />);
+    // situation_action_result at 2.5 is weakest
+    expect(screen.getByText(/Action.*Result.*2\.5/)).toBeTruthy();
   });
 
   it('shows ring gauge with accessible label', () => {

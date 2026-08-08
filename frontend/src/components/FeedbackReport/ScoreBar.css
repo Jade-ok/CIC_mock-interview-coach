@@ -15,29 +15,12 @@
 .score-bar__segment {
   flex: 1;
   background-color: var(--score-bar-empty);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .score-bar__fill {
   height: 100%;
-  border-radius: 2px;
+  border-radius: 3px;
   background-color: var(--score-bar-filled);
-}
-
-/* Color tiers — aligned to Midnight Green theme */
-.score-bar--tier-high .score-bar__fill {
-  background-color: var(--accent-green);
-}
-
-.score-bar--tier-mid .score-bar__fill {
-  background-color: var(--accent-blue);
-}
-
-.score-bar--tier-low .score-bar__fill {
-  background-color: var(--accent-amber);
-}
-
-.score-bar--tier-minimal .score-bar__fill {
-  background-color: var(--accent-red);
 }

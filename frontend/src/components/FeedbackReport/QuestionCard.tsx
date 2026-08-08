@@ -6,18 +6,15 @@ import './QuestionCard.css';
 
 interface QuestionCardProps {
   index: number;
-  turnType: string;
   questionText: string;
   feedback?: { strength: string; improvement: string };
   scores: PerQuestionScore['scores'];
   fullAnswer?: string;
 }
 
-/** Find the weakest scoring dimension for this question. */
 function getWeakestDimension(scores: PerQuestionScore['scores']): { key: string; score: number } {
   let weakestKey = DIMENSION_KEYS[0] as string;
   let weakestScore = Infinity;
-
   for (const key of DIMENSION_KEYS) {
     const s = scores[key as keyof typeof scores];
     if (s < weakestScore) {
@@ -28,56 +25,49 @@ function getWeakestDimension(scores: PerQuestionScore['scores']): { key: string;
   return { key: weakestKey, score: weakestScore };
 }
 
-/** Color class for the chip based on score. */
-function getChipTier(score: number): string {
-  if (score >= 4) return 'question-card__chip--high';
-  if (score >= 3) return 'question-card__chip--mid';
-  if (score >= 2) return 'question-card__chip--low';
-  return 'question-card__chip--minimal';
-}
-
-export function QuestionCard({ index, turnType, questionText, feedback, scores, fullAnswer }: QuestionCardProps) {
+export function QuestionCard({ index, questionText, feedback, scores, fullAnswer }: QuestionCardProps) {
   const [showScores, setShowScores] = useState(false);
-  const badgeLabel = turnType === 'main_question' ? 'Main question' : 'Follow-up';
-  const badgeClass = turnType === 'main_question' ? 'question-card__badge--main' : 'question-card__badge--followup';
-
   const weakest = getWeakestDimension(scores);
   const weakestLabel = DIMENSION_LABELS[weakest.key]?.label || weakest.key;
-  const chipTier = getChipTier(weakest.score);
 
   return (
     <article className="question-card">
       <div className="question-card__header">
         <span className="question-card__number">Q{index}</span>
-        <span className={`question-card__badge ${badgeClass}`}>{badgeLabel}</span>
         <button
           type="button"
-          className={`question-card__chip ${chipTier}`}
+          className="question-card__chip"
           onClick={() => setShowScores((prev) => !prev)}
           aria-expanded={showScores}
           aria-label={`${weakestLabel}: ${weakest.score}/5. Click to ${showScores ? 'hide' : 'show'} all scores`}
         >
           {weakestLabel} {weakest.score}/5
         </button>
+        {fullAnswer !== undefined && (
+          <span className="question-card__show-answer-label">Show my answer</span>
+        )}
       </div>
       <h3 className="question-card__question">{questionText}</h3>
 
       {feedback && (
         <div className="question-card__feedback">
-          <p className="question-card__feedback-strength">
-            <span className="question-card__feedback-dot question-card__feedback-dot--green" aria-hidden="true" />
-            {feedback.strength}
-          </p>
-          <p className="question-card__feedback-improvement">
-            <span className="question-card__feedback-dot question-card__feedback-dot--amber" aria-hidden="true" />
-            {feedback.improvement}
-          </p>
+          {feedback.strength && (
+            <p className="question-card__feedback-item question-card__feedback-item--strength">
+              <span className="question-card__dot question-card__dot--filled" aria-hidden="true" />
+              {feedback.strength}
+            </p>
+          )}
+          {feedback.improvement && (
+            <p className="question-card__feedback-item question-card__feedback-item--improvement">
+              <span className="question-card__dot question-card__dot--outline" aria-hidden="true" />
+              {feedback.improvement}
+            </p>
+          )}
         </div>
       )}
 
       {fullAnswer && (
         <div className="question-card__transcript">
-          <p className="question-card__transcript-label">Your full answer:</p>
           <p className="question-card__transcript-text">{fullAnswer}</p>
         </div>
       )}

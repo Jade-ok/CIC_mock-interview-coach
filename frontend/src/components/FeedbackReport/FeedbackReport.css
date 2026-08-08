@@ -38,10 +38,11 @@
 }
 
 .feedback-report__nav-link--primary {
-  background: var(--accent-red);
-  color: var(--text-primary);
-  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 20px;
   font-weight: 600;
+  padding: 8px 18px;
 }
 
 .feedback-report__content {

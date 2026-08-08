@@ -1,7 +1,6 @@
 import type { EvaluatorOutput } from '../../types/evaluator';
 import type { TranscriptEntry } from '../../types/session';
 import { HeroSection } from './HeroSection';
-import { TldrCard } from './TldrCard';
 import { DimensionScoresGrid } from './DimensionScoresGrid';
 import { FeedbackColumns } from './FeedbackColumns';
 import { KeywordCoverage } from './KeywordCoverage';
@@ -41,9 +40,8 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
           totalScore={data.overall_scores.total}
           questionCount={data.question_count}
           targetRole={data.interview_metadata.target_role}
+          dimensions={data.overall_scores.dimensions}
         />
-
-        <TldrCard dimensions={data.overall_scores.dimensions} />
 
         <DimensionScoresGrid dimensions={data.overall_scores.dimensions} />
 
@@ -52,15 +50,15 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
           improvements={data.improvements}
         />
 
+        <KeywordCoverage
+          covered={data.keywords_covered || []}
+          notCovered={data.keywords_not_covered || []}
+        />
+
         <QuestionBreakdown
           questions={data.per_question_scores}
           questionCount={data.question_count}
           transcript={transcript}
-        />
-
-        <KeywordCoverage
-          covered={data.keywords_covered || []}
-          notCovered={data.keywords_not_covered || []}
         />
 
         <ContextualAdvice advice={data.contextual_advice} />

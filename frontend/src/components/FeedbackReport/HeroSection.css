@@ -1,11 +1,11 @@
 .hero-section {
-  padding: var(--section-gap) 0;
+  padding: var(--section-gap) 0 32px;
 }
 
 .hero-section__context {
   font-size: var(--font-small);
-  color: var(--text-secondary);
-  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
   margin: 0 0 8px;
 }
 
@@ -19,14 +19,14 @@
 .hero-section__body {
   display: flex;
   align-items: center;
-  gap: 40px;
+  gap: 32px;
 }
 
 /* Ring gauge */
 .hero-section__ring-container {
   position: relative;
-  width: 128px;
-  height: 128px;
+  width: 120px;
+  height: 120px;
   flex-shrink: 0;
 }
 
@@ -58,40 +58,52 @@
 
 .hero-section__ring-max {
   font-size: var(--font-small);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   margin-top: 2px;
 }
 
-/* Details column */
-.hero-section__details {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* Callout — one thing to fix */
+.hero-section__callout {
+  flex: 1;
 }
 
-.hero-section__focus-tag {
-  display: inline-block;
-  align-self: flex-start;
+.hero-section__callout-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.hero-section__callout-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
+.hero-section__callout-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-section__callout-chip {
   font-size: 13px;
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: 16px;
-  border: 1.5px solid;
-  background: transparent;
+  border-radius: 14px;
+  background: var(--accent-dim);
+  color: var(--accent);
 }
 
-.hero-section__subheading {
-  font-size: var(--font-body);
-  color: var(--text-secondary);
-  max-width: 480px;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.hero-section__meta {
+.hero-section__callout-count {
   font-size: var(--font-small);
-  color: var(--text-secondary);
-  margin: 0;
+  color: var(--text-tertiary);
 }
 
 @media (max-width: 640px) {
@@ -102,11 +114,15 @@
   }
 
   .hero-section__ring-container {
-    width: 100px;
-    height: 100px;
+    width: 96px;
+    height: 96px;
   }
 
   .hero-section__ring-value {
     font-size: 1.5rem;
+  }
+
+  .hero-section__callout-text {
+    font-size: 1.1rem;
   }
 }

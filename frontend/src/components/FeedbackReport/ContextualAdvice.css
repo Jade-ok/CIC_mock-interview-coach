@@ -20,13 +20,14 @@
   margin: 0;
   counter-reset: advice-counter;
   list-style: none;
+  max-width: 68ch;
 }
 
 .contextual-advice__item {
   font-size: var(--font-body);
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0 0 20px;
+  line-height: 1.7;
+  margin: 0 0 24px;
   padding-left: 32px;
   position: relative;
   counter-increment: advice-counter;
@@ -37,7 +38,7 @@
   position: absolute;
   left: 0;
   font-weight: 700;
-  color: var(--accent-blue);
+  color: var(--accent);
 }
 
 .contextual-advice__toggle {
@@ -47,7 +48,7 @@
   border-radius: 6px;
   border: 1px solid var(--bg-control);
   background: transparent;
-  color: var(--accent-blue);
+  color: var(--accent);
   font-size: var(--font-small);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;

@@ -54,7 +54,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-amber);
+  background: transparent;
+  border: 1.5px solid var(--text-tertiary);
 }
 
 @media (max-width: 640px) {
