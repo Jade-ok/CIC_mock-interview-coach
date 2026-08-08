@@ -1,10 +1,12 @@
 # Project Summary
 
+> Active product and implementation summary. Last verified: 2026-08-07.
+
 Build a voice-based résumé deep-dive mock interview app for students and internship candidates.
 
 The user uploads a résumé, pastes a target job description, completes a spoken interview, and receives student-appropriate feedback.
 
-The app should accept experience from internships, coursework, academic projects, personal projects, hackathons, student clubs, research, volunteering, and part-time work. It should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
+The Analyst currently accepts internships, coursework, academic projects, personal projects, hackathons, and student clubs as selected experience types. The interview profile also intends to support research, volunteering, and part-time work, but the Analyst enum must be expanded before those types work end to end. The app should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
 
 ## Interview Format
 
@@ -14,7 +16,7 @@ The interview includes:
 - 1 adaptive follow-up after each main question
 - up to 6 spoken answers
 - an option to end the interview early
-- no hints in the first version
+- a Practice Mode UI with interviewer bubbles, competency guides, and keyword highlighting
 
 The three interview areas are:
 
@@ -64,11 +66,11 @@ Nova Sonic should:
 - accept student-level experiences
 - provide both interviewer and candidate transcripts
 
-The application should separately track the current interview point, whether the current stage is a main question or follow-up, whether the follow-up has already been used, and whether the interview is complete.
+The Nova system context defines the expected three-question/three-follow-up sequence. Explicit application-side tracking of the current point, main/follow-up stage, follow-up usage, and completion remains planned rather than implemented.
 
 ### Evaluator Agent
 
-After the interview, the Evaluator receives:
+The Evaluator contract requires:
 
 - the full question-and-answer transcript
 - candidate level
@@ -78,25 +80,15 @@ After the interview, the Evaluator receives:
 - number of completed follow-ups
 - whether the interview ended early
 
-It should generate:
+When invoked with a valid request, it generates:
 
-- overall readiness
-- category scores
+- a score for each question across concrete example, situation/action/result, link to job, and quantifiable outcome
+- four aggregated dimension scores and an overall score
+- a readiness label
 - strengths
-- areas for improvement
-- strongest response
-- one response to practise
-- recommended next steps
-
-Suggested feedback categories:
-
-- Communication
-- Personal contribution
-- Problem-solving
-- Technical understanding
-- Learning and reflection
-- Teamwork
-- Role alignment
+- improvements
+- contextual advice
+- interview metadata passed through from the request
 
 ## Configuration Files in S3
 
@@ -144,17 +136,21 @@ The sequence is:
 - follow-up answer
 - move to the next interview point
 
-After the third follow-up answer, the interview ends and the transcript is sent to the Evaluator.
+The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The frontend now maps final transcript entries to `schemas/interviewer_output.json`; live end-to-end verification remains pending.
 
-If the user ends early, the Evaluator should score only what was covered and avoid penalizing areas with insufficient evidence.
+The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. Live deployed verification remains pending.
 
 ## AWS Services
 
-- Amazon S3 for résumé upload and configuration files
-- Amazon Bedrock for the Analyst and Evaluator
-- Amazon Nova 2 Sonic for the spoken interview (via Bedrock AgentCore Runtime)
-- Amazon Bedrock AgentCore Runtime for managed WebSocket proxy between the browser and Nova Sonic
-- AWS Lambda for résumé analysis, configuration loading, and evaluation
-- AWS Amplify Hosting for the frontend
+The agreed deployment architecture uses one AWS account:
 
-No database, authentication, hints, or permanent interview history are required for the first version.
+- AWS Amplify Hosting serves the React/Vite frontend.
+- An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
+- AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
+- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke Claude Sonnet 4.6 through Amazon Bedrock; the Interviewer Lambda builds context from configuration without making a model call.
+- Amazon S3 stores the interview structure and student interview profile configuration.
+- AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration resources. AgentCore remains a separate hosted container boundary.
+
+The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads its Lambda and AgentCore endpoints from environment configuration. The four hosted Lambda Function URLs are currently public and must be protected before the application is shared publicly.
+
+No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.

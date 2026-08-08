@@ -14,13 +14,13 @@
 
 .score-bar__segment {
   flex: 1;
-  background-color: var(--score-bar-empty, #2C2C2E);
-  border-radius: 2px;
+  background-color: var(--score-bar-empty);
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .score-bar__fill {
   height: 100%;
-  background-color: var(--score-bar-filled, #FF5C5C);
-  border-radius: 2px;
+  border-radius: 3px;
+  background-color: var(--score-bar-filled);
 }

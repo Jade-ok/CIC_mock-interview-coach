@@ -1,24 +1,38 @@
-# python
-__pycache__/
-*.pyc
-venv/
-*.zip
+# Dependencies
+node_modules/
 
-# OS
+# Virtual environments
+.venv/
+
+# Environment variables
+.env*
+!frontend/.env.example
+
+# Build and generated files
+.aws-sam/
+dist/
+cdk.out/
+.cdk.staging/
+*.zip
+bedrock_request.json
+backend/voice_agent/.bedrock_agentcore.yaml
+backend/voice_agent/agentcore/aws-targets.json
+backend/voice_agent/agentcore/.cli/
+backend/voice_agent/tools/test_runtime_context.js
+infrastructure/**/*.js
+!infrastructure/jest.config.js
+infrastructure/**/*.d.ts
+
+# Test and coverage files
+.pytest_cache/
+
+# Cache and compiled files
+.cache/
+__pycache__/
+*.py[cod]
+
+# Operating system files
 .DS_Store
 
-# node / frontend
-node_modules/
-dist/
-
-# CDK / SAM build artifacts
-cdk.out/
-.aws-sam/
-
-# env — but see note below
-.env
-frontend/.env
-
-# personal resume (PII)
+# Private and local files
 samples/resume-coop-jenachang-july31.pdf
-.venv/

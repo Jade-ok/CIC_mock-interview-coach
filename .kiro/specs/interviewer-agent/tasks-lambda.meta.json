@@ -579,7 +579,7 @@
         "timestamp": 1786047702887
       }
     ],
-    "Package: `zip -r interviewer.zip interviewer/`": [
+    "Historical Lambda packaging record": [
       {
         "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
         "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
@@ -591,7 +591,7 @@
         "timestamp": 1786047776689
       }
     ],
-    "Create Lambda (see `design.md` Deployment section for full command)": [
+    "Historical Lambda infrastructure record": [
       {
         "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
         "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
@@ -615,7 +615,7 @@
         "timestamp": 1786047778778
       }
     ],
-    "Enable Function URL with CORS": [
+    "Record the historical Function URL and CORS configuration": [
       {
         "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
         "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
@@ -627,7 +627,7 @@
         "timestamp": 1786047779541
       }
     ],
-    "Test with curl:": [
+    "Record the historical HTTP response check": [
       {
         "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
         "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",
@@ -651,7 +651,7 @@
         "timestamp": 1786047781612
       }
     ],
-    "Share the Function URL with the frontend person": [
+    "Record the historical frontend endpoint handoff": [
       {
         "executionId": "60e2e6de-4e9c-4a84-89ec-ac016c32d2d0",
         "chatSessionId": "sess_3684fb54-af5b-400d-876a-500de91aad00",

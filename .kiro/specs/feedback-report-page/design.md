@@ -1,12 +1,14 @@
 # Design Document — Feedback Report Page
 
+> Maintained component design. Last verified: 2026-08-07. The component is integrated into `FeedbackScreen`; deployment with the React/Vite app on Amplify Hosting remains pending. The Evaluator is a CDK-managed Lambda; live voice runs separately in the AgentCore serverless relay.
+
 ## Overview
 
 The Feedback Report Page is a read-only React page that renders the Evaluator agent's JSON output as a visually rich, student-friendly feedback report. It consumes the `EvaluatorOutput` type (matching `schemas/evaluator_output.json`) passed via props or session state, and renders it using the project's Midnight Green dark theme.
 
 Key technical decisions:
 - **Framework**: React 18 + TypeScript (consistent with existing frontend)
-- **Styling**: CSS Modules with CSS custom properties (theme tokens from `design-theme.md`)
+- **Styling**: component-scoped conventional CSS files with CSS custom properties (theme tokens from `design-theme.md`)
 - **Testing**: Vitest + React Testing Library
 - **Layout**: Single scrollable page with section-based composition
 - **No routing library**: Page rendered as a component within the existing `App.tsx` phase-based navigation (`phase === 'feedback'`)
@@ -20,7 +22,7 @@ Key technical decisions:
 ```
 FeedbackReport (page-level container)
 ├── FeedbackHeader
-│   └── NavActions ("View full transcript", "Practice again")
+│   └── NavActions ("Practice again"; optional "View full transcript")
 ├── HeroSection
 │   ├── ReadinessLabel
 │   └── ScoreSummary (total score + question count)
@@ -41,7 +43,7 @@ FeedbackReport (page-level container)
 │       └── ScoreBar (×4)
 └── FooterCTA
     ├── PracticeAgainButton (primary)
-    └── ViewTranscriptButton (secondary)
+    └── ViewTranscriptButton (secondary, only when callback exists)
 ```
 
 ---
@@ -54,7 +56,7 @@ FeedbackReport (page-level container)
 interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
-  onViewTranscript: () => void;
+  onViewTranscript?: () => void;
 }
 ```
 
@@ -184,14 +186,14 @@ interface QuestionCardProps {
 ```typescript
 interface FooterCTAProps {
   onPracticeAgain: () => void;
-  onViewTranscript: () => void;
+  onViewTranscript?: () => void;
 }
 ```
 
 **Visual design:**
 - Background: `#FF5C5C` (accent color) for the full-width footer band
 - "Practice again" button: filled white, dark text (primary)
-- "View full transcript" button: outlined white border, white text (secondary)
+- Optional "View full transcript" button: outlined white border, white text (secondary); hidden until a callback is supplied
 - Motivational text: "Every practice round makes the real one easier." in white
 
 ---
@@ -235,7 +237,7 @@ frontend/src/
 ├── components/
 │   └── FeedbackReport/
 │       ├── FeedbackReport.tsx        # Page container
-│       ├── FeedbackReport.module.css
+│       ├── FeedbackReport.css
 │       ├── HeroSection.tsx
 │       ├── DimensionScoresGrid.tsx
 │       ├── DimensionCard.tsx
@@ -297,7 +299,7 @@ SessionManager (phase: 'feedback')
 
 ### Integration Test
 
-- Pass a complete `EvaluatorOutput` fixture (from `evaluator/tests/fixtures/sample_input.json` mock response)
+- Pass a complete inline `EvaluatorOutput` fixture. The evaluator's `tests/fixtures/sample_input.json` is an input request, not an output fixture.
 - Verify all 6 questions render with correct scores
 - Verify overall scores display correctly
 - Verify readiness label and subheading match

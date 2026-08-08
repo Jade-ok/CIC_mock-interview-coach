@@ -1,67 +1,118 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { callAgent1 } from '@/services/agent1Client';
+import { VOICE_WS_URL } from '@/services/apiConfig';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
-const TIMEOUT_MS = 120000;
-const WS_URL = 'ws://localhost:8080';
+const WS_TIMEOUT_MS = 30000;
+// The Analyst Lambda allows two sequential 120-second Bedrock reads plus
+// parsing/Interviewer overhead. Do not report a false failure while it is live.
+const AGENT1_TIMEOUT_MS = 330000;
+const USE_MOCK_WEBSOCKET = import.meta.env.VITE_USE_MOCK_WEBSOCKET === 'true';
 
-// Use mock in dev mode so the demo transitions without a real backend
+// Mocking is opt-in so local development can exercise the real relay.
 const createWsClient = () =>
-  new WebSocketClient();
+  USE_MOCK_WEBSOCKET ? new MockWebSocketClient() : new WebSocketClient();
 
 export function WaitingRoom() {
   const { state, dispatch, setWebSocketClient } = useSession();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const agent1TimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wsClientRef = useRef<WebSocketClient | MockWebSocketClient | null>(null);
   const agent1CalledRef = useRef(false);
   const wsCalledRef = useRef(false);
-
-  // Guard: if no PDF was uploaded (e.g. direct navigation / refresh), redirect back
-  useEffect(() => {
-    if (!state.uploadedPdf) {
-      dispatch({ type: 'RESET' });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const activeRef = useRef(true);
+  const latestStateRef = useRef(state);
+  const agent1RequestIdRef = useRef(0);
+  const wsRequestIdRef = useRef(0);
+  const agent1AbortControllerRef = useRef<AbortController | null>(null);
+  latestStateRef.current = state;
 
   // Start parallel requests on mount
   useEffect(() => {
-    if (!state.uploadedPdf) return; // Don't start requests without upload data
+    activeRef.current = true;
+    if (state.error?.code === 'WS_SESSION_INVALID') {
+      return;
+    }
     startRequests();
-    startTimeout();
+    startTimeouts();
 
     return () => {
-      clearTimeoutTimer();
+      activeRef.current = false;
+      agent1RequestIdRef.current += 1;
+      if (!latestStateRef.current.agent1Ready) {
+        agent1AbortControllerRef.current?.abort();
+        agent1CalledRef.current = false;
+      }
+      if (latestStateRef.current.wsConnectionState !== 'connected') {
+        wsRequestIdRef.current += 1;
+        wsClientRef.current?.disconnect();
+        wsCalledRef.current = false;
+      }
+      clearTimeoutTimers();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Watch for both ready → dispatch INTERVIEW_READY
   useEffect(() => {
+    if (state.agent1Ready) clearAgent1Timeout();
+    if (state.wsConnectionState === 'connected') clearWsTimeout();
     if (state.agent1Ready && state.wsReady) {
-      clearTimeoutTimer();
+      clearTimeoutTimers();
       dispatch({ type: 'INTERVIEW_READY' });
     }
-  }, [state.agent1Ready, state.wsReady, dispatch]);
+  }, [state.agent1Ready, state.wsReady, state.wsConnectionState, dispatch]);
 
-  const startTimeout = useCallback(() => {
-    clearTimeoutTimer();
-    timeoutRef.current = setTimeout(() => {
-      if (!state.agent1Ready || !state.wsReady) {
-        dispatch({ type: 'TIMEOUT' });
-      }
-    }, TIMEOUT_MS);
+  const startTimeouts = useCallback(() => {
+    clearTimeoutTimers();
+    const currentState = latestStateRef.current;
+    if (!currentState.agent1Ready) {
+      agent1TimeoutRef.current = setTimeout(() => {
+        if (!activeRef.current) return;
+        agent1RequestIdRef.current += 1;
+        agent1CalledRef.current = false;
+        agent1AbortControllerRef.current?.abort();
+        dispatch({
+          type: 'AGENT1_FAILED',
+          payload: { message: 'Resume analysis timed out. Please try again.' },
+        });
+      }, AGENT1_TIMEOUT_MS);
+    }
+    if (currentState.wsConnectionState !== 'connected') {
+      wsTimeoutRef.current = setTimeout(() => {
+        if (!activeRef.current) return;
+        wsRequestIdRef.current += 1;
+        wsCalledRef.current = false;
+        wsClientRef.current?.disconnect();
+        dispatch({
+          type: 'WS_CONNECT_FAILED',
+          payload: { message: 'Server connection timed out. Please try again.' },
+        });
+      }, WS_TIMEOUT_MS);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const clearTimeoutTimer = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+  const clearAgent1Timeout = useCallback(() => {
+    if (agent1TimeoutRef.current) {
+      clearTimeout(agent1TimeoutRef.current);
+      agent1TimeoutRef.current = null;
     }
   }, []);
+
+  const clearWsTimeout = useCallback(() => {
+    if (wsTimeoutRef.current) {
+      clearTimeout(wsTimeoutRef.current);
+      wsTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearTimeoutTimers = useCallback(() => {
+    clearAgent1Timeout();
+    clearWsTimeout();
+  }, [clearAgent1Timeout, clearWsTimeout]);
 
   const startRequests = useCallback(() => {
     if (!state.agent1Ready && !agent1CalledRef.current) {
@@ -75,44 +126,68 @@ export function WaitingRoom() {
 
   const startAgent1 = useCallback(async () => {
     agent1CalledRef.current = true;
+    const requestId = ++agent1RequestIdRef.current;
+    const abortController = new AbortController();
+    agent1AbortControllerRef.current = abortController;
     try {
-      const pdf = state.uploadedPdf;
-      const jdText = state.uploadedJdText;
-
-      // This should not happen if the guard effect works, but defend anyway
-      if (!pdf) {
-        dispatch({
-          type: 'AGENT1_FAILED',
-          payload: { message: 'No resume file found. Please upload again.' },
-        });
-        return;
+      if (!state.uploadData) {
+        throw new Error('Upload data is missing. Please return and upload your résumé again.');
       }
-
-      const response = await callAgent1({ pdf, jdText });
+      const response = await callAgent1(state.uploadData, abortController.signal);
+      if (!activeRef.current || requestId !== agent1RequestIdRef.current) return;
       dispatch({ type: 'AGENT1_SUCCESS', payload: response });
     } catch (err) {
+      if (!activeRef.current || requestId !== agent1RequestIdRef.current) return;
       agent1CalledRef.current = false;
       dispatch({
         type: 'AGENT1_FAILED',
         payload: { message: err instanceof Error ? err.message : 'Agent 1 request failed.' },
       });
+    } finally {
+      if (requestId === agent1RequestIdRef.current) {
+        agent1AbortControllerRef.current = null;
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, state.uploadedPdf, state.uploadedJdText]);
+  }, [dispatch]);
 
   const startWebSocket = useCallback(async () => {
     wsCalledRef.current = true;
+    const requestId = ++wsRequestIdRef.current;
     const wsClient = createWsClient();
     wsClientRef.current = wsClient;
-    setWebSocketClient(wsClient);
+    setWebSocketClient(wsClient as any);
+    const isCurrentRequest = () => (
+      activeRef.current
+      && requestId === wsRequestIdRef.current
+      && wsClientRef.current === wsClient
+    );
+    wsClient.onDisconnect = (reason) => {
+      if (!isCurrentRequest()) return;
+      dispatch({ type: 'WS_DISCONNECTED', payload: { reason } });
+    };
+    wsClient.onReconnectSuccess = () => {
+      if (!isCurrentRequest()) return;
+      dispatch({ type: 'WS_RECONNECT_SUCCESS' });
+    };
+    wsClient.onReconnectFailed = () => {
+      if (!isCurrentRequest()) return;
+      dispatch({ type: 'WS_RECONNECT_FAILED' });
+    };
+    wsClient.onSessionInvalid = () => {
+      if (!isCurrentRequest()) return;
+      dispatch({ type: 'WS_SESSION_INVALID' });
+    };
 
     try {
-      await wsClient.connect({ url: WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
+      await wsClient.connect({ url: VOICE_WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
+      if (!isCurrentRequest()) return;
       dispatch({ type: 'WS_CONNECTED' });
     } catch (err) {
+      if (!isCurrentRequest()) return;
       wsCalledRef.current = false;
       dispatch({
-        type: 'AGENT1_FAILED',
+        type: 'WS_CONNECT_FAILED',
         payload: { message: err instanceof Error ? err.message : 'WebSocket connection failed.' },
       });
     }
@@ -122,28 +197,56 @@ export function WaitingRoom() {
   const handleRetry = useCallback(() => {
     // Clear error
     // Partial retry: only retry failed items
-    if (!state.agent1Ready) {
+    if (!state.agent1Ready && state.error?.code === 'AGENT1_FAILED') {
       agent1CalledRef.current = false;
       startAgent1();
     }
     if (!state.wsReady && state.wsConnectionState !== 'connected') {
       wsCalledRef.current = false;
       startWebSocket();
+    } else if (
+      !state.wsReady
+      && state.wsConnectionState === 'connected'
+      && state.agent1Ready
+      && wsClientRef.current
+    ) {
+      wsClientRef.current
+        .sendSessionStart(state.novaSonicContext, {})
+        .then(() => dispatch({ type: 'SESSION_START_ACKED' }))
+        .catch(() => dispatch({
+          type: 'WS_CONNECT_FAILED',
+          payload: { message: 'Failed to start session via WebSocket.' },
+        }));
     }
-    // Restart timeout
-    startTimeout();
+    // Restart only the timeout for the dependency being retried.
+    startTimeouts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.agent1Ready, state.wsReady, state.wsConnectionState]);
+  }, [
+    state.agent1Ready,
+    state.wsReady,
+    state.wsConnectionState,
+    state.novaSonicContext,
+    state.error,
+    dispatch,
+    startAgent1,
+    startWebSocket,
+    startTimeouts,
+  ]);
 
   const handleBack = useCallback(() => {
+    activeRef.current = false;
+    agent1RequestIdRef.current += 1;
+    wsRequestIdRef.current += 1;
+    agent1AbortControllerRef.current?.abort();
     // Clean up WS if connected
     if (wsClientRef.current) {
       wsClientRef.current.disconnect();
       wsClientRef.current = null;
     }
-    clearTimeoutTimer();
+    setWebSocketClient(null);
+    clearTimeoutTimers();
     dispatch({ type: 'RESET' });
-  }, [dispatch, clearTimeoutTimer]);
+  }, [dispatch, clearTimeoutTimers, setWebSocketClient]);
 
   const hasError = state.error !== null;
 

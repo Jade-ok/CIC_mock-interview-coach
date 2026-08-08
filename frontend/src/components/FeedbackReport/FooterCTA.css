@@ -1,5 +1,5 @@
 .footer-cta {
-  background: var(--accent-red);
+  background: var(--accent);
   padding: 48px var(--card-padding);
   text-align: center;
   border-radius: var(--card-radius) var(--card-radius) 0 0;
@@ -9,7 +9,7 @@
 .footer-cta__message {
   font-size: var(--font-section-title);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent-ink);
   margin: 0 0 24px;
 }
 
@@ -29,12 +29,26 @@
 }
 
 .footer-cta__button--primary {
-  background: var(--text-primary);
-  color: #0A0A0A;
+  background: var(--accent-ink);
+  color: var(--accent);
 }
 
 .footer-cta__button--secondary {
   background: transparent;
   color: var(--text-primary);
   border: 2px solid var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .footer-cta {
+    padding: 32px 16px;
+  }
+
+  .footer-cta__actions {
+    flex-direction: column;
+  }
+
+  .footer-cta__button {
+    width: 100%;
+  }
 }

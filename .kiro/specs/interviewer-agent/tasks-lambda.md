@@ -1,19 +1,21 @@
 # Tasks: Interviewer Lambda (1 person)
 
+> Historical implementation record for the context-builder Lambda. Paths were refreshed on 2026-08-07; use `tasks-nova-sonic-conversation.md` for active voice integration work. Historical deployment checkmarks do not verify any current hosted environment.
+
 ## What You're Building
 
 A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, assembles a runtime context string, and returns it. No LLM calls, no audio, no state.
 
 **Reference docs:**
-- `design.md` — full architecture, function signatures, deployment commands
+- `design.md` — full architecture and function signatures
 - `requirements.md` — acceptance criteria and error messages
-- `schemas/interview_structure.json` — what the interview covers
-- `schemas/student_interview.json` — how the interviewer behaves
-- `schemas/analyst_output.json` (at repo root: `schemas/`) — what you receive as input
+- `backend/config/interview_structure.json` — what the interview covers
+- `backend/config/student_interview_profile.json` — how the interviewer behaves
+- `schemas/analyst_output.json` — what you receive as input
 
 **Environment:**
 - Region: `us-east-1`
-- S3 Bucket: `cic-mock-interview-configs-002859476624`
+- S3 Bucket: CDK-generated configuration bucket for the active deployment account
 - Keys: `interview_structure.json`, `student_interview_profile.json`
 
 ---
@@ -22,13 +24,13 @@ A Python 3.12 Lambda that receives the Analyst output, loads two S3 configs, ass
 
 ### Task 1: Create package structure
 
-- [x] Create `interviewer/__init__.py` (empty)
-- [x] Create `interviewer/tests/__init__.py` (empty)
-- [x] Delete `interviewer/.gitkeep` if it exists
+- [x] Create `backend/functions/interviewer/__init__.py` (empty)
+- [x] Create `backend/functions/interviewer/tests/__init__.py` (empty)
+- [x] Delete `backend/functions/interviewer/.gitkeep` if it exists
 
 ---
 
-### Task 2: Implement `interviewer/validation.py`
+### Task 2: Implement `backend/functions/interviewer/validation.py`
 
 - [x] Implement `validate_input(payload)` function
 - [x] Check payload is a dict
@@ -44,7 +46,7 @@ def validate_input(payload: dict) -> tuple[dict | None, str | None]:
 
 ---
 
-### Task 3: Implement `interviewer/config_loader.py`
+### Task 3: Implement `backend/functions/interviewer/config_loader.py`
 
 - [x] Define `ConfigLoadError(Exception)` class
 - [x] Create module-level S3 client: `boto3.client("s3", region_name=os.environ.get("AWS_REGION", "us-east-1"))`
@@ -64,7 +66,7 @@ def load_interview_profile(bucket: str, key: str) -> dict:
 
 ---
 
-### Task 4: Implement `interviewer/context_builder.py`
+### Task 4: Implement `backend/functions/interviewer/context_builder.py`
 
 - [x] Implement `build_runtime_context(analyst_output, interview_structure, interview_profile)` → returns string
 - [x] Format with sections: `[CANDIDATE DATA]`, `[INTERVIEW STRUCTURE]`, `[INTERVIEW PROFILE]`, `[BEHAVIORAL INSTRUCTIONS]`
@@ -87,7 +89,7 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
 
 ---
 
-### Task 5: Implement `interviewer/handler.py`
+### Task 5: Implement `backend/functions/interviewer/handler.py`
 
 - [x] Implement `lambda_handler(event, context)`
 - [x] Mode detection: `event` has `body` key → parse JSON; otherwise use event as payload
@@ -105,20 +107,20 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
 
 ### Task 6: Write tests
 
-- [x] `interviewer/tests/test_validation.py`
+- [x] `backend/functions/interviewer/tests/test_validation.py`
   - Valid payload → returns (analyst_output, None)
   - Missing key → returns (None, error)
   - Empty dict → returns (None, error)
   - Non-dict analyst_output → returns (None, error)
-- [x] `interviewer/tests/test_config_loader.py`
+- [x] `backend/functions/interviewer/tests/test_config_loader.py`
   - Mock boto3, valid JSON → returns dict
   - Mock NoSuchKey → raises ConfigLoadError with config name in message
   - Invalid JSON → raises ConfigLoadError
-- [x] `interviewer/tests/test_context_builder.py`
+- [x] `backend/functions/interviewer/tests/test_context_builder.py`
   - Output contains all 4 section headers
   - analyst_output JSON appears in output
   - Idempotent (same input → same output)
-- [x] `interviewer/tests/test_handler.py`
+- [x] `backend/functions/interviewer/tests/test_handler.py`
   - Function URL mode → 200 success
   - Invalid body → 400
   - Direct mode → 200 success
@@ -126,27 +128,8 @@ def build_runtime_context(analyst_output: dict, interview_structure: dict, inter
   - Config error → 200 + success=false
   - Unhandled exception → 500
 
-**Run:** `python3 -m pytest interviewer/tests/ -v`
-
----
-
-### Task 7: Deploy and verify
-
-- [x] Package: `zip -r interviewer.zip interviewer/`
-- [x] Create Lambda (see `design.md` Deployment section for full command)
-- [x] Set env vars on the Lambda
-- [x] Enable Function URL with CORS
-- [x] Test with curl:
-  ```bash
-  curl -X POST <function-url> \
-    -H "Content-Type: application/json" \
-    -d '{"analyst_output": {"schema_version": "1.0", "candidate_profile": {"candidate_level": "student_intern"}, "target_role": {"title": "SDE Intern"}, "resume_job_alignment": {}, "interview_plan": [], "selected_experiences": [], "analysis_warnings": []}}'
-  ```
-- [x] Verify: 200 response, `success: true`, non-empty `runtime_context`
-- [x] Share the Function URL with the frontend person
-
----
+**Run:** `python3 -m pytest backend/functions/interviewer/tests/ -v`
 
 ## Done Criteria
 
-The Lambda is deployed, returns a valid runtime_context when called with analyst_output, and the Function URL is accessible. The other person can now use this runtime_context as the system instruction for their Voice Agent Server on AgentCore Runtime.
+The context-builder accepts Analyst output and returns a non-empty `runtime_context` for the voice relay. Local tests cover validation, configuration errors, and successful response construction.

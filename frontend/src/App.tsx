@@ -5,13 +5,13 @@ import { WaitingRoom } from '@/components/WaitingRoom';
 import { InterviewScreen } from '@/components/InterviewScreen';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
 import { FeedbackPreview } from '@/pages/FeedbackPreview';
-import { callAgent3 } from '@/services/agent3Client';
+import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 
 function AppContent() {
   const { state, dispatch, webSocketClient } = useSession();
 
   // Dev-only: /feedback-preview shows FeedbackReport with mock data
-  if (window.location.pathname === '/feedback-preview') {
+  if (import.meta.env.DEV && window.location.pathname === '/feedback-preview') {
     return <FeedbackPreview />;
   }
 
@@ -25,16 +25,13 @@ function AppContent() {
   const handleFeedbackRetry = useCallback(async () => {
     dispatch({ type: 'AGENT3_LOADING' });
     try {
-      const result = await callAgent3({
-        transcript: state.transcript,
-        analyst_output: state.analystOutput ?? undefined,
-      });
+      const result = await callAgent3(buildAgent3Request(state));
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.analystOutput]);
+  }, [dispatch, state]);
 
   const handleNewSession = useCallback(() => {
     dispatch({ type: 'RESET' });
@@ -53,6 +50,7 @@ function AppContent() {
           loading={state.agent3Loading}
           error={state.phase === 'feedback' ? state.error : null}
           feedbackResult={state.feedbackResult}
+          transcript={state.transcript}
           onRetry={handleFeedbackRetry}
           onNewSession={handleNewSession}
         />

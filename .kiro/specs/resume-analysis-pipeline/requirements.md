@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Maintained requirements. Last verified: 2026-08-07. In the hosted architecture, an Amplify-hosted React client invokes this CDK-managed Lambda pipeline; live voice uses authenticated WSS to AgentCore rather than direct browser-to-Bedrock access.
+
 ## Introduction
 
 The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coaching app. It handles document intake (resume PDFs and job postings) via the `pdf_parser` Lambda, then produces a structured JSON analysis via the `analyst` Lambda. The analyst output serves as the interface contract consumed by downstream Lambdas (interviewer, evaluator) and the frontend. The target audience is university students preparing for behavioral job interviews.
@@ -33,6 +35,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 3. IF the base64 content cannot be decoded into a valid PDF, THEN THE PDF_Parser SHALL return a JSON error response with a descriptive error message and a 400 status indicator.
 4. IF the PDF contains zero extractable text, THEN THE PDF_Parser SHALL return a JSON error response indicating that no text could be extracted from the document.
 
+**Current gap:** extraction failures are currently returned inside a successful HTTP 200 envelope as `resume_error` or `job_posting_error`, even when the request contains only the failed document. The 400 behavior above is not implemented.
+
 ### Requirement 2: Job Posting Intake (Dual Format)
 
 **User Story:** As a frontend application, I want to send a job posting as either a PDF or plain text, so that the pdf_parser Lambda can handle both formats based on a format flag.
@@ -61,7 +65,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE PDF_Parser SHALL validate that the request payload contains at least one document (resume or job_posting) before processing.
-2. IF the request payload exceeds 4 MB for any single PDF document, THEN THE PDF_Parser SHALL return a JSON error response indicating the document exceeds the size limit.
+2. IF any decoded PDF document exceeds 4 MiB (4,194,304 bytes), THEN THE PDF_Parser SHALL return a JSON error response indicating the document exceeds the size limit.
 3. IF the request payload is missing required fields, THEN THE PDF_Parser SHALL return a JSON error response listing the missing fields.
 4. WHEN a request is received in Function_URL_Mode, THE PDF_Parser SHALL parse the JSON string from `event['body']` before validation.
 5. WHEN a request is received in Direct_Mode, THE PDF_Parser SHALL use the event payload directly for validation.
@@ -86,11 +90,12 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE Analyst SHALL include the field `schema_version` set to `"1.0"` in every Analyst_Output response.
-2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, selected_experiences, analysis_warnings) in every Analyst_Output response.
+2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, analysis_warnings) in every Analyst_Output response.
 3. THE Analyst SHALL set `experience_type` to one of the allowed values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, or `"student_club"`.
 4. THE Analyst SHALL use the Converse_API with tool_use to force Claude to produce JSON conforming to the defined schema.
 5. WHEN the Converse_API response does not conform to the expected schema, THE Analyst SHALL retry the Bedrock call once (maximum 2 total attempts).
 6. IF the Analyst_Output still does not conform after the retry, THEN THE Analyst SHALL return an error response indicating schema validation failure.
+7. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
 
 ### Requirement 7: Analyst Bedrock Configuration
 
@@ -99,7 +104,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. THE Analyst SHALL target the `us-east-1` region for all Bedrock Converse API calls.
-2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-5` as the default model for Bedrock calls.
+2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-4-6` as the default model for Bedrock calls.
 3. THE Analyst SHALL allow the model ID to be swapped by changing only the model ID string, with no other code changes required.
 
 ### Requirement 8: Analyst Input Validation
@@ -119,9 +124,11 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 #### Acceptance Criteria
 
-1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL retry the call once (maximum 2 total attempts).
-2. IF the Converse_API call fails on both attempts, THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator.
-3. IF the Converse_API call returns an invalid or unparseable response, THEN THE Analyst SHALL treat it as a failure and retry once.
+1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator after the single transport attempt.
+2. IF the Converse_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh Bedrock call (maximum 2 total calls).
+3. The Bedrock client SHALL use a 120-second read timeout, a 10-second connect timeout, and no SDK retries so the 300-second Lambda budget remains predictable.
+
+**Current behavior:** transport errors are not retried. A schema-invalid model response receives one recovery call, for a maximum of two Bedrock calls.
 
 ### Requirement 10: Analysis Warnings
 

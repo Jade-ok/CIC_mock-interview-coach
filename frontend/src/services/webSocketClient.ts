@@ -73,6 +73,8 @@ export class WebSocketClient {
   private state: WebSocketConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectResolve: (() => void) | null = null;
+  private connectReject: ((reason: Error) => void) | null = null;
   private sessionStartResolve: (() => void) | null = null;
   private sessionStartReject: ((reason: Error) => void) | null = null;
 
@@ -85,6 +87,10 @@ export class WebSocketClient {
   onSessionInvalid: () => void = () => {};
 
   connect(config: WebSocketClientConfig): Promise<void> {
+    this.clearReconnectTimer();
+    this.rejectPendingConnect('Connection replaced');
+    this.rejectPendingSessionStart('Connection replaced');
+    this.closeCurrentSocket();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.reconnectAttempts = 0;
     return this.createConnection();
@@ -93,15 +99,9 @@ export class WebSocketClient {
   disconnect(): void {
     this.clearReconnectTimer();
     this.state = 'disconnected';
+    this.rejectPendingConnect('Connection closed');
     this.rejectPendingSessionStart('Connection closed');
-    if (this.ws) {
-      this.ws.onclose = null; // Prevent reconnection on intentional disconnect
-      this.ws.onerror = null;
-      this.ws.onmessage = null;
-      this.ws.onopen = null;
-      this.ws.close();
-      this.ws = null;
-    }
+    this.closeCurrentSocket();
   }
 
   getState(): WebSocketConnectionState {
@@ -158,34 +158,44 @@ export class WebSocketClient {
 
   private createConnection(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      this.connectResolve = resolve;
+      this.connectReject = reject;
       this.state = 'connecting';
 
+      let socket: WebSocket;
       try {
-        this.ws = new WebSocket(this.config.url);
+        socket = new WebSocket(this.config.url);
+        this.ws = socket;
       } catch (err) {
         this.state = 'disconnected';
-        reject(err);
+        this.rejectPendingConnect(
+          err instanceof Error ? err.message : 'WebSocket connection failed'
+        );
         return;
       }
 
-      this.ws.onopen = () => {
+      socket.onopen = () => {
+        if (this.ws !== socket) return;
         this.state = 'connected';
         this.reconnectAttempts = 0;
-        resolve();
+        this.resolvePendingConnect();
       };
 
-      this.ws.onclose = (event) => {
+      socket.onclose = (event) => {
+        if (this.ws !== socket) return;
         this.handleDisconnect(event.reason || 'Connection closed');
       };
 
-      this.ws.onerror = () => {
+      socket.onerror = () => {
+        if (this.ws !== socket) return;
         if (this.state === 'connecting') {
           this.state = 'disconnected';
-          reject(new Error('WebSocket connection failed'));
+          this.rejectPendingConnect('WebSocket connection failed');
         }
       };
 
-      this.ws.onmessage = (event) => {
+      socket.onmessage = (event) => {
+        if (this.ws !== socket) return;
         this.handleMessage(event.data as string);
       };
     });
@@ -226,6 +236,7 @@ export class WebSocketClient {
       this.attemptReconnect();
     } else if (this.state === 'connecting') {
       this.state = 'disconnected';
+      this.rejectPendingConnect(reason);
     }
   }
 
@@ -299,10 +310,32 @@ export class WebSocketClient {
     }
   }
 
+  private resolvePendingConnect(): void {
+    this.connectResolve?.();
+    this.connectResolve = null;
+    this.connectReject = null;
+  }
+
+  private rejectPendingConnect(reason: string): void {
+    this.connectReject?.(new Error(reason));
+    this.connectResolve = null;
+    this.connectReject = null;
+  }
+
   private clearReconnectTimer(): void {
     if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+  }
+
+  private closeCurrentSocket(): void {
+    if (!this.ws) return;
+    this.ws.onopen = null;
+    this.ws.onclose = null;
+    this.ws.onerror = null;
+    this.ws.onmessage = null;
+    this.ws.close();
+    this.ws = null;
   }
 }

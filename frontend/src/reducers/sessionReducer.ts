@@ -9,6 +9,8 @@ export const initialState: SessionState = {
   inputMode: 'voice',
   textInputState: 'idle',
   practiceMode: true,
+  uploadData: null,
+  analystOutput: null,
   transcript: [],
   livePartial: null,
   novaSonicContext: '',
@@ -19,9 +21,7 @@ export const initialState: SessionState = {
   error: null,
   agent3Loading: false,
   feedbackResult: null,
-  analystOutput: null,
-  uploadedPdf: null,
-  uploadedJdText: '',
+  endReason: null,
 };
 
 export function sessionReducer(
@@ -33,9 +33,8 @@ export function sessionReducer(
       return {
         ...state,
         phase: 'waiting',
+        uploadData: action.payload,
         error: null,
-        uploadedPdf: action.payload.pdf,
-        uploadedJdText: action.payload.jdText,
       };
 
     case 'AGENT1_SUCCESS':
@@ -63,6 +62,17 @@ export function sessionReducer(
         wsConnectionState: 'connected',
       };
 
+    case 'WS_CONNECT_FAILED':
+      return {
+        ...state,
+        wsConnectionState: 'disconnected',
+        error: {
+          code: 'WS_CONNECT_FAILED',
+          message: action.payload.message,
+          retryable: true,
+        },
+      };
+
     case 'SESSION_START_ACKED':
       return {
         ...state,
@@ -72,6 +82,7 @@ export function sessionReducer(
     case 'WS_DISCONNECTED':
       return {
         ...state,
+        wsReady: false,
         wsConnectionState:
           state.phase === 'interview' ? 'reconnecting' : 'disconnected',
       };
@@ -97,6 +108,9 @@ export function sessionReducer(
     case 'WS_SESSION_INVALID':
       return {
         ...state,
+        phase: 'waiting',
+        wsReady: false,
+        wsConnectionState: 'disconnected',
         error: {
           code: 'WS_SESSION_INVALID',
           message: 'Session is no longer valid. Please start a new session.',
@@ -170,6 +184,7 @@ export function sessionReducer(
       return {
         ...state,
         phase: 'feedback',
+        endReason: action.payload.reason,
       };
 
     case 'AGENT3_LOADING':
@@ -193,7 +208,7 @@ export function sessionReducer(
         error: {
           code: 'AGENT3_FAILED',
           message: action.payload.message,
-          retryable: true,
+          retryable: action.payload.retryable ?? true,
         },
       };
 
@@ -259,7 +274,7 @@ export function maybeStartSession(
       .then(() => dispatch({ type: 'SESSION_START_ACKED' }))
       .catch(() =>
         dispatch({
-          type: 'AGENT1_FAILED',
+          type: 'WS_CONNECT_FAILED',
           payload: { message: 'Failed to start session via WebSocket.' },
         })
       );

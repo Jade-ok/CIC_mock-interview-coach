@@ -8,35 +8,47 @@ describe('HeroSection', () => {
     totalScore: 3.0,
     questionCount: 4,
     targetRole: 'Software Engineering Intern',
+    dimensions: {
+      concrete_example: 3.5,
+      situation_action_result: 2.5,
+      link_to_job: 3.0,
+      quantifiable_outcome: 3.0,
+    },
   };
 
-  it('displays the readiness label as heading', () => {
+  it('displays neutral "Your Interview Report" heading', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByRole('heading', { name: 'Developing well' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
   });
 
-  it('displays the supportive subheading', () => {
+  it('displays the target role context', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/building real interview skills/)).toBeTruthy();
+    expect(screen.getByText(/SOFTWARE ENGINEERING INTERN/)).toBeTruthy();
   });
 
-  it('displays the context line with target role', () => {
-    render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/INTERVIEW FEEDBACK · SOFTWARE ENGINEERING INTERN/)).toBeTruthy();
-  });
-
-  it('displays the total score formatted to 1 decimal', () => {
+  it('displays the total score in the ring gauge', () => {
     render(<HeroSection {...defaultProps} />);
     expect(screen.getByText('3.0')).toBeTruthy();
   });
 
   it('displays question count', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/4 of 6 questions answered/)).toBeTruthy();
+    expect(screen.getByText(/4 questions answered/)).toBeTruthy();
   });
 
-  it('handles unknown readiness label gracefully', () => {
-    render(<HeroSection {...defaultProps} readinessLabel="Unknown label" />);
-    expect(screen.getByRole('heading', { name: 'Unknown label' })).toBeTruthy();
+  it('displays YOUR ONE THING TO FIX label', () => {
+    render(<HeroSection {...defaultProps} />);
+    expect(screen.getByText('YOUR ONE THING TO FIX')).toBeTruthy();
+  });
+
+  it('shows weakest dimension chip', () => {
+    render(<HeroSection {...defaultProps} />);
+    // situation_action_result at 2.5 is weakest
+    expect(screen.getByText(/Action.*Result.*2\.5/)).toBeTruthy();
+  });
+
+  it('shows ring gauge with accessible label', () => {
+    render(<HeroSection {...defaultProps} />);
+    expect(screen.getByLabelText('Score: 3.0 out of 5')).toBeTruthy();
   });
 });

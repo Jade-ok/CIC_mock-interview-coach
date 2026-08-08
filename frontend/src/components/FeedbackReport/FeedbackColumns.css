@@ -16,6 +16,19 @@
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 16px;
+  padding-left: 16px;
+  position: relative;
+}
+
+.feedback-columns__strength::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-green);
 }
 
 .feedback-columns__list {
@@ -40,7 +53,9 @@
   top: 8px;
   width: 6px;
   height: 6px;
-  background: var(--accent-red);
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--text-tertiary);
 }
 
 @media (max-width: 640px) {
