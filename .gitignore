@@ -36,3 +36,4 @@ __pycache__/
 
 # Private and local files
 samples/resume-coop-jenachang-july31.pdf
+.vite/
