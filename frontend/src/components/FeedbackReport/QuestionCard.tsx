@@ -9,7 +9,7 @@ interface QuestionCardProps {
   questionText: string;
   feedback?: { strength: string; improvement: string };
   scores: PerQuestionScore['scores'];
-  fullAnswer?: string;
+  transcriptAnswer?: string;
 }
 
 function getWeakestDimension(scores: PerQuestionScore['scores']): { key: string; score: number } {
@@ -25,8 +25,9 @@ function getWeakestDimension(scores: PerQuestionScore['scores']): { key: string;
   return { key: weakestKey, score: weakestScore };
 }
 
-export function QuestionCard({ index, questionText, feedback, scores, fullAnswer }: QuestionCardProps) {
+export function QuestionCard({ index, questionText, feedback, scores, transcriptAnswer }: QuestionCardProps) {
   const [showScores, setShowScores] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false);
   const weakest = getWeakestDimension(scores);
   const weakestLabel = DIMENSION_LABELS[weakest.key]?.label || weakest.key;
 
@@ -43,11 +44,24 @@ export function QuestionCard({ index, questionText, feedback, scores, fullAnswer
         >
           {weakestLabel} {weakest.score}/5
         </button>
-        {fullAnswer !== undefined && (
-          <span className="question-card__show-answer-label">Show my answer</span>
+        {transcriptAnswer && (
+          <button
+            type="button"
+            className="question-card__answer-toggle"
+            onClick={() => setShowAnswer((prev) => !prev)}
+            aria-expanded={showAnswer}
+          >
+            {showAnswer ? 'Hide my answer' : 'Show my answer'}
+          </button>
         )}
       </div>
       <h3 className="question-card__question">{questionText}</h3>
+
+      {showAnswer && transcriptAnswer && (
+        <div className="question-card__transcript">
+          <p className="question-card__transcript-text">{transcriptAnswer}</p>
+        </div>
+      )}
 
       {feedback && (
         <div className="question-card__feedback">
@@ -63,12 +77,6 @@ export function QuestionCard({ index, questionText, feedback, scores, fullAnswer
               {feedback.improvement}
             </p>
           )}
-        </div>
-      )}
-
-      {fullAnswer && (
-        <div className="question-card__transcript">
-          <p className="question-card__transcript-text">{fullAnswer}</p>
         </div>
       )}
 

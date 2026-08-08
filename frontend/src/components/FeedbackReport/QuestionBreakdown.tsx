@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { PerQuestionScore } from '../../types/evaluator';
 import type { TranscriptEntry } from '../../types/session';
 import { QuestionCard } from './QuestionCard';
@@ -17,7 +16,6 @@ interface QuestionBreakdownProps {
 function buildTranscriptPairs(transcript: TranscriptEntry[]): Array<{ question: string; answer: string }> {
   if (!transcript || transcript.length === 0) return [];
 
-  // Merge consecutive same-role entries
   const merged: TranscriptEntry[] = [];
   let current = { ...transcript[0] };
   for (let i = 1; i < transcript.length; i++) {
@@ -31,7 +29,6 @@ function buildTranscriptPairs(transcript: TranscriptEntry[]): Array<{ question: 
   }
   merged.push(current);
 
-  // Pair interviewer → user
   const pairs: Array<{ question: string; answer: string }> = [];
   let pendingQuestion: string | null = null;
   for (const entry of merged) {
@@ -48,29 +45,15 @@ function buildTranscriptPairs(transcript: TranscriptEntry[]): Array<{ question: 
 }
 
 export function QuestionBreakdown({ questions, questionCount, transcript }: QuestionBreakdownProps) {
-  const [showTranscript, setShowTranscript] = useState(false);
   const transcriptPairs = transcript ? buildTranscriptPairs(transcript) : [];
-  const hasTranscript = transcriptPairs.length > 0;
 
   return (
     <section className="question-breakdown">
       <div className="question-breakdown__header">
-        <div>
-          <h2 className="question-breakdown__title">Question by question</h2>
-          <p className="question-breakdown__intro">
-            You answered {questionCount} question{questionCount !== 1 ? 's' : ''} — you're scored only on what you answered, so ending early never counts against you.
-          </p>
-        </div>
-        {hasTranscript && (
-          <button
-            type="button"
-            className="question-breakdown__transcript-toggle"
-            onClick={() => setShowTranscript((prev) => !prev)}
-            aria-expanded={showTranscript}
-          >
-            {showTranscript ? 'Hide transcript' : 'Show my answers'}
-          </button>
-        )}
+        <h2 className="question-breakdown__title">Question by question</h2>
+        <p className="question-breakdown__intro">
+          You answered {questionCount} question{questionCount !== 1 ? 's' : ''} — you're scored only on what you answered, so ending early never counts against you.
+        </p>
       </div>
 
       {questions.map((q, i) => (
@@ -80,7 +63,7 @@ export function QuestionBreakdown({ questions, questionCount, transcript }: Ques
           questionText={q.question_text}
           feedback={q.feedback}
           scores={q.scores}
-          fullAnswer={showTranscript ? transcriptPairs[i]?.answer : undefined}
+          transcriptAnswer={transcriptPairs[i]?.answer}
         />
       ))}
     </section>
