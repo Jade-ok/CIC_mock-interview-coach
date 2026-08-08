@@ -87,13 +87,19 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
 
     # SUPPLEMENTARY: Target role context
     sections.append("---")
-    sections.append("## Supplementary Context (for contextual_advice only)")
+    sections.append("## Supplementary Context (for keywords and contextual_advice)")
     sections.append("\n### Target Role")
     sections.append(f"Title: {target_role.get('title', 'N/A')}")
     if target_role.get("required_skills"):
         sections.append(f"Required skills: {', '.join(target_role['required_skills'])}")
     if target_role.get("preferred_skills"):
         sections.append(f"Preferred skills: {', '.join(target_role['preferred_skills'])}")
+    sections.append("")
+    sections.append(
+        "Use the required_skills and preferred_skills above to populate "
+        "keywords_covered (skills the student mentioned or demonstrated in the conversation) "
+        "and keywords_not_covered (skills they did not mention)."
+    )
     if target_role.get("evaluation_priorities"):
         sections.append(f"Evaluation priorities: {', '.join(target_role['evaluation_priorities'])}")
 
