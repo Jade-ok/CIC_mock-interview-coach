@@ -1,6 +1,7 @@
 import type { EvaluatorOutput } from '../../types/evaluator';
 import type { TranscriptEntry } from '../../types/session';
 import { HeroSection } from './HeroSection';
+import { TldrCard } from './TldrCard';
 import { DimensionScoresGrid } from './DimensionScoresGrid';
 import { FeedbackColumns } from './FeedbackColumns';
 import { ContextualAdvice } from './ContextualAdvice';
@@ -40,6 +41,8 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
           questionCount={data.question_count}
           targetRole={data.interview_metadata.target_role}
         />
+
+        <TldrCard dimensions={data.overall_scores.dimensions} />
 
         <DimensionScoresGrid dimensions={data.overall_scores.dimensions} />
 

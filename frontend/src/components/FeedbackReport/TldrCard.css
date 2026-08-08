@@ -1,0 +1,38 @@
+.tldr-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-tile);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--card-radius);
+  padding: 16px 20px;
+  margin-bottom: 8px;
+}
+
+.tldr-card__icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.tldr-card__text {
+  font-size: var(--font-body);
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.tldr-card__text strong {
+  color: var(--accent-amber);
+}
+
+.tldr-card__chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--bg-control);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

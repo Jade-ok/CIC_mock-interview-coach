@@ -39,3 +39,21 @@
   font-weight: 700;
   color: var(--accent-blue);
 }
+
+.contextual-advice__toggle {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--bg-control);
+  background: transparent;
+  color: var(--accent-blue);
+  font-size: var(--font-small);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.contextual-advice__toggle:hover {
+  background: var(--bg-control);
+  border-color: var(--text-secondary);
+}
