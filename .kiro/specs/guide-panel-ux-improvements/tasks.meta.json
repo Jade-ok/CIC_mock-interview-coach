@@ -1,0 +1,254 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Replace all Korean `reasoning` values in `STAR_CATEGORIES` array with English equivalents per the design document translation table": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166250722
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166258657
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166408417
+      }
+    ],
+    "1.2 Write property test: all reasoning strings contain no Korean characters": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166250817
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166413985
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166557270
+      }
+    ],
+    "1.3 Write property test: classification is independent of reasoning text": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166250959
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166414872
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166558154
+      }
+    ],
+    "2.1 Add section labels to STAR card structure in GuidePanel": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166250992
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166415653
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166559197
+      }
+    ],
+    "2.2 Rename card label from Korean to English and change accent color to green": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251024
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166564625
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166653744
+      }
+    ],
+    "2.3 Write property test: rendered GuidePanel contains no Korean text": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251063
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166658628
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166843097
+      }
+    ],
+    "2.4 Write unit tests for section labels and color changes": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251123
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166659458
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166842162
+      }
+    ],
+    "3. Checkpoint — Verify starCategoryMatcher and GuidePanel changes": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251169
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166847622
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786167027662
+      }
+    ],
+    "4.1 Remove `textOnly` prop from UserTile and ParticipantTiles": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251225
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166416597
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166559891
+      }
+    ],
+    "4.2 Update mic-denied error banner condition and message in InterviewScreen": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251276
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166565494
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166654323
+      }
+    ],
+    "4.3 Write unit tests for UserTile, ParticipantTiles, and mic-denied banner": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251317
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166660499
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166841329
+      }
+    ],
+    "5.1 Update CSS layout in InterviewScreen for even vertical distribution": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251362
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166259454
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166409351
+      }
+    ],
+    "6. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166251405
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786167031498
+      },
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786167282968
+      }
+    ],
+    "5. Adjust vertical layout spacing for participant tiles and mic button": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166409464
+      }
+    ],
+    "1. Translate reasoning strings to English in starCategoryMatcher.ts": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166558198
+      }
+    ],
+    "4. Fix mic-denied flow and remove text-mode UI from UserTile and ParticipantTiles": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166841379
+      }
+    ],
+    "2. Add descriptive section labels and update accent color in GuidePanel.tsx": [
+      {
+        "executionId": "c5d369f7-5e16-4a53-9115-cc13ac171f1b",
+        "chatSessionId": "sess_31081e8b-b034-46cc-9748-353f99d3288e",
+        "timestamp": 1786166843128
+      }
+    ]
+  }
+}

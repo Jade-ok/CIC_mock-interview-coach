@@ -42,14 +42,14 @@ function AITile({ isActive, text }: { isActive: boolean; text: string | null }) 
   );
 }
 
-function UserTile({ isActive, textOnly, text }: { isActive: boolean; textOnly: boolean; text: string | null }) {
+function UserTile({ isActive, text }: { isActive: boolean; text: string | null }) {
   return (
     <div
       className={`participant-tile participant-tile--user ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="user-tile"
     >
       <div className="participant-tile__content participant-tile__content--captioned">
-        {isActive && !textOnly && (
+        {isActive && (
           <div className="waveform" data-testid="user-waveform" aria-label="User speaking waveform">
             <span className="waveform__bar" />
             <span className="waveform__bar" />
@@ -58,10 +58,7 @@ function UserTile({ isActive, textOnly, text }: { isActive: boolean; textOnly: b
             <span className="waveform__bar" />
           </div>
         )}
-        {textOnly && (
-          <div className="participant-tile__icon" aria-hidden="true" data-testid="text-mode-icon">⌨️</div>
-        )}
-        {!isActive && !textOnly && (
+        {!isActive && (
           <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
         {text && (
@@ -73,16 +70,16 @@ function UserTile({ isActive, textOnly, text }: { isActive: boolean; textOnly: b
           </p>
         )}
       </div>
-      <span className="participant-tile__label">You{textOnly ? ' (Text Mode)' : ''}</span>
+      <span className="participant-tile__label">You</span>
     </div>
   );
 }
 
-function ParticipantTiles({ turnState, textOnly, latestInterviewerText, latestUserText }: { turnState: string; textOnly: boolean; latestInterviewerText: string | null; latestUserText: string | null }) {
+function ParticipantTiles({ turnState, latestInterviewerText, latestUserText }: { turnState: string; latestInterviewerText: string | null; latestUserText: string | null }) {
   return (
     <div className="participant-tiles" data-testid="participant-tiles">
       <AITile isActive={turnState === 'ai_speaking'} text={latestInterviewerText} />
-      <UserTile isActive={turnState === 'user_turn'} textOnly={textOnly} text={latestUserText} />
+      <UserTile isActive={turnState === 'user_turn'} text={latestUserText} />
     </div>
   );
 }
@@ -367,15 +364,15 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   return (
     <div className="interview-screen" data-testid="interview-screen">
       {/* Mic denied error message */}
-      {state.inputMode === 'text_only' && state.error?.code === 'MIC_DENIED' && (
+      {state.error?.code === 'MIC_DENIED' && (
         <div className="interview-screen__mic-error" data-testid="mic-denied-error" role="alert">
-          {state.error.message}
+          Microphone access is required. Please allow microphone permission in your browser settings and refresh the page.
         </div>
       )}
 
       <div className="interview-screen__main">
         <div className={`interview-screen__left ${!state.practiceMode ? 'interview-screen__left--full' : ''}`}>
-          <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} latestInterviewerText={latestInterviewerText} latestUserText={latestUserText} />
+          <ParticipantTiles turnState={state.turnState} latestInterviewerText={latestInterviewerText} latestUserText={latestUserText} />
           <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
           <MicButton
             disabled={micDisabled}
@@ -434,7 +431,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           flex: 2;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
         }
 
         .interview-screen__left--full {
@@ -444,11 +441,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         .interview-screen__right {
           flex: 1;
           min-width: 200px;
+          overflow-y: auto;
         }
 
         /* Participant Tiles */
         .participant-tiles {
           flex: 1;
+          min-height: 0;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -456,6 +455,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
         .participant-tile {
           flex: 1;
+          min-height: 120px;
           background-color: var(--color-tile-bg, #1C1C1E);
           border-radius: 8px;
           display: flex;
@@ -576,7 +576,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           align-items: center;
           justify-content: center;
           gap: 10px;
-          padding: 24px 0;
+          padding: 12px 0 24px;
           margin-top: auto;
         }
 

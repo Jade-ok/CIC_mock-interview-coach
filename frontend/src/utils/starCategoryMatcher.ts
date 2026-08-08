@@ -20,56 +20,56 @@ export const STAR_CATEGORIES: StarCategory[] = [
     label: 'Above & Beyond / Problem Solving',
     triggerKeywords: ['beyond', 'extra', 'above'],
     starElements: ['Task', 'Action'],
-    reasoning: '왜 그게 필요했는지(기대 이상의 기준을 스스로 설정) + 어떻게 풀었는지',
+    reasoning: 'Why you set a higher bar than expected + how you solved it',
   },
   {
     label: 'Team Experience',
     triggerKeywords: ['team', 'conflict', 'collaborat', 'disagreement'],
     starElements: ['Action', 'Result'],
-    reasoning: '팀 내에서 실제로 어떻게 행동했는지, 그 결과 관계/성과가 어떻게 됐는지',
+    reasoning: 'What you actually did within the team and how it affected outcomes',
   },
   {
     label: 'Initiative',
     triggerKeywords: ['initiative', 'self-motivat', 'own idea', 'ownership', 'autonom'],
     starElements: ['Task'],
-    reasoning: '"시키지 않았는데 스스로 목표를 설정했다"는 판단 지점이 핵심',
+    reasoning: 'Show that you set your own goal without being told to',
   },
   {
     label: 'Leadership',
     triggerKeywords: ['lead', 'leadership', 'mentor', 'delegate'],
     starElements: ['Action', 'Result'],
-    reasoning: '어떻게 팀을 움직였고, 결과적으로 무엇이 바뀌었는지',
+    reasoning: 'How you moved the team and what changed as a result',
   },
   {
     label: 'Failure / Mistake',
     triggerKeywords: ['failure', 'mistake', 'fail', 'wrong'],
     starElements: ['Learning', 'Action'],
-    reasoning: '무엇을 했는지보다 "실패를 인정하고 무엇을 배워 바꿨는지"가 핵심. 이 카테고리는 유일하게 L이 R보다 중요',
+    reasoning: 'Focus on acknowledging the failure and what you learned — Learning matters more than Result here',
   },
   {
     label: 'Pressure and Time Management',
     triggerKeywords: ['deadline', 'pressure', 'time management', 'prioritiz'],
     starElements: ['Action'],
-    reasoning: '우선순위 판단 과정, 즉 무엇을 먼저 처리하기로 판단했는지, 그 판단 기준이 핵심',
+    reasoning: 'Your prioritization process — what you chose to do first and why',
   },
   {
     label: 'Problem Solving',
     triggerKeywords: ['problem', 'solve', 'debug', 'issue', 'implement', 'technical', 'develop', 'design'],
     starElements: ['Action'],
-    reasoning: '접근 방식, 시도와 조정 과정이 핵심',
+    reasoning: 'Your approach, iterations, and adjustments',
   },
   {
     label: 'Communication',
     triggerKeywords: ['communicat', 'explain', 'non-technical'],
     starElements: ['Situation', 'Action'],
-    reasoning: '상대가 누구였는지를 짧게라도 짚어야 번역의 의미가 살고, 실제로 어떻게 설명/조정했는지가 핵심',
+    reasoning: 'Briefly establish who the audience was, then explain how you adapted your communication',
   },
 ];
 
 export const DEFAULT_CLASSIFICATION: StarClassification = {
   label: 'General',
   starElements: ['Situation', 'Task', 'Action', 'Result'],
-  reasoning: '일반적인 행동 질문입니다. 상황과 과제를 짧게, 본인의 행동과 결과를 구체적으로 답하세요.',
+  reasoning: 'General behavioral question. Keep Situation and Task brief; focus on your Actions and Results.',
 };
 
 /**

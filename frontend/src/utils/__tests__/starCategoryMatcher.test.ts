@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as fc from 'fast-check';
 import {
   classifyStarCategory,
   deriveKeywordChips,
@@ -99,10 +100,10 @@ describe('classifyStarCategory', () => {
       expect(result.starElements).toEqual(['Situation', 'Task', 'Action', 'Result']);
     });
 
-    it('default has Korean reasoning text', () => {
+    it('default has English reasoning text', () => {
       const result = classifyStarCategory('no match', 'at all');
       expect(result.reasoning).toBe(
-        '일반적인 행동 질문입니다. 상황과 과제를 짧게, 본인의 행동과 결과를 구체적으로 답하세요.'
+        'General behavioral question. Keep Situation and Task brief; focus on your Actions and Results.'
       );
     });
   });
@@ -268,5 +269,60 @@ describe('deriveKeywordChips', () => {
     const item = { target_skill: 'AWS', topic: 'cloud deployment' };
     const chips = deriveKeywordChips(item, {});
     expect(chips).toEqual(['AWS']);
+  });
+});
+
+
+describe('Property-based tests', () => {
+  /**
+   * Feature: guide-panel-ux-improvements, Property 3: Classification is independent of reasoning text
+   *
+   * Validates: Requirements 1.5
+   *
+   * For any random (topic, targetSkill) pair, classifyStarCategory returns a deterministic
+   * StarClassification where label and starElements are determined solely by keyword matching
+   * against STAR_CATEGORIES[].triggerKeywords — the content of reasoning fields does not
+   * influence the returned label or starElements.
+   *
+   * Approach: Temporarily mutate all STAR_CATEGORIES reasoning fields with random strings,
+   * call classifyStarCategory, restore original reasoning, then compare the result against
+   * a baseline call. label and starElements must be identical.
+   */
+  it('Property 3: classification label and starElements are independent of reasoning text content', () => {
+    fc.assert(
+      fc.property(
+        fc.string({ minLength: 0, maxLength: 100 }),
+        fc.string({ minLength: 0, maxLength: 100 }),
+        fc.array(fc.string({ minLength: 1, maxLength: 50 }), { minLength: 9, maxLength: 9 }),
+        (topic, targetSkill, randomReasonings) => {
+          // Baseline: call with current reasoning values
+          const baseline = classifyStarCategory(topic, targetSkill);
+
+          // Save original reasoning strings
+          const originalReasonings = STAR_CATEGORIES.map((c) => c.reasoning);
+          const originalDefault = DEFAULT_CLASSIFICATION.reasoning;
+
+          // Mutate all reasoning fields with random strings
+          STAR_CATEGORIES.forEach((category, i) => {
+            category.reasoning = randomReasonings[i];
+          });
+          (DEFAULT_CLASSIFICATION as { reasoning: string }).reasoning = randomReasonings[8];
+
+          // Call with mutated reasoning
+          const mutated = classifyStarCategory(topic, targetSkill);
+
+          // Restore original reasoning
+          STAR_CATEGORIES.forEach((category, i) => {
+            category.reasoning = originalReasonings[i];
+          });
+          (DEFAULT_CLASSIFICATION as { reasoning: string }).reasoning = originalDefault;
+
+          // label and starElements must be identical regardless of reasoning content
+          expect(mutated.label).toBe(baseline.label);
+          expect(mutated.starElements).toEqual(baseline.starElements);
+        }
+      ),
+      { numRuns: 100 }
+    );
   });
 });

@@ -14,6 +14,72 @@ import {
 const ALL_TRIGGER_KEYWORDS = STAR_CATEGORIES.flatMap((c) => c.triggerKeywords);
 
 /**
+ * Regex matching Korean Unicode ranges:
+ * - Hangul Syllables: U+AC00–U+D7AF
+ * - Hangul Jamo: U+1100–U+11FF
+ * - Hangul Compatibility Jamo: U+3130–U+318F
+ */
+const KOREAN_CHAR_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/;
+
+/**
+ * Feature: guide-panel-ux-improvements
+ * Property 1: All reasoning strings contain no Korean characters
+ *
+ * For any entry in STAR_CATEGORIES and for DEFAULT_CLASSIFICATION, the `reasoning`
+ * field SHALL contain zero characters in the Korean Unicode ranges (Hangul Syllables
+ * U+AC00–U+D7AF, Hangul Jamo U+1100–U+11FF, Hangul Compatibility Jamo U+3130–U+318F).
+ *
+ * **Validates: Requirements 1.1, 1.2**
+ */
+describe('Feature: guide-panel-ux-improvements, Property 1: All reasoning strings contain no Korean characters', () => {
+  it('no STAR_CATEGORIES entry has Korean characters in reasoning', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...STAR_CATEGORIES),
+        (category) => {
+          expect(KOREAN_CHAR_REGEX.test(category.reasoning)).toBe(false);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('DEFAULT_CLASSIFICATION.reasoning contains no Korean characters', () => {
+    fc.assert(
+      fc.property(
+        fc.constant(DEFAULT_CLASSIFICATION),
+        (classification) => {
+          expect(KOREAN_CHAR_REGEX.test(classification.reasoning)).toBe(false);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  it('all reasoning strings (categories + default) are non-empty English text', () => {
+    const allReasonings = [
+      ...STAR_CATEGORIES.map((c) => c.reasoning),
+      DEFAULT_CLASSIFICATION.reasoning,
+    ];
+
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...allReasonings),
+        (reasoning) => {
+          // Must not contain Korean
+          expect(KOREAN_CHAR_REGEX.test(reasoning)).toBe(false);
+          // Must be non-empty
+          expect(reasoning.length).toBeGreaterThan(0);
+          // Must contain at least some ASCII letters (confirming it's English text)
+          expect(/[a-zA-Z]/.test(reasoning)).toBe(true);
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+/**
  * Property 1: Classification uses lowercased concatenation
  *
  * For any topic string and target_skill string, classifyStarCategory(topic, targetSkill)

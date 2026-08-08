@@ -352,6 +352,104 @@ describe('InterviewScreen', () => {
     });
   });
 
+  describe('UserTile — no text-mode UI (Req 4.2, 4.3, 4.4)', () => {
+    it('does not render "(Text Mode)" text anywhere in the user tile', () => {
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('(Text Mode)');
+      expect(userTile.textContent).not.toContain('Text Mode');
+    });
+
+    it('does not render the keyboard icon (⌨️) in the user tile', () => {
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('⌨️');
+    });
+
+    it('shows waveform when turnState is user_turn (isActive=true)', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      expect(screen.getByTestId('user-waveform')).toBeInTheDocument();
+      // Should NOT show the 👤 icon when active
+      const userTile = screen.getByTestId('user-tile');
+      const icons = userTile.querySelectorAll('.participant-tile__icon');
+      expect(icons.length).toBe(0);
+    });
+
+    it('shows 👤 icon when turnState is not user_turn (isActive=false)', () => {
+      mockState = { ...mockState, turnState: 'idle' };
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      const icon = userTile.querySelector('.participant-tile__icon');
+      expect(icon).toBeInTheDocument();
+      expect(icon?.textContent).toBe('👤');
+      // Should NOT show waveform
+      expect(screen.queryByTestId('user-waveform')).not.toBeInTheDocument();
+    });
+
+    it('does not render "(Text Mode)" even when error is MIC_DENIED', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('(Text Mode)');
+      expect(userTile.textContent).not.toContain('⌨️');
+    });
+  });
+
+  describe('ParticipantTiles — no textOnly prop (Req 4.5)', () => {
+    it('renders ParticipantTiles without textOnly prop (TypeScript compilation proof)', () => {
+      // If this test compiles and renders, it proves ParticipantTiles no longer requires textOnly
+      render(<InterviewScreen />);
+      const tiles = screen.getByTestId('participant-tiles');
+      expect(tiles).toBeInTheDocument();
+      expect(screen.getByTestId('ai-tile')).toBeInTheDocument();
+      expect(screen.getByTestId('user-tile')).toBeInTheDocument();
+    });
+  });
+
+  describe('Mic-denied error banner (Req 4.1, 4.6, 4.7)', () => {
+    it('renders error banner with correct message when MIC_DENIED', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const errorBanner = screen.getByTestId('mic-denied-error');
+      expect(errorBanner).toBeInTheDocument();
+      expect(errorBanner.textContent).toBe(
+        'Microphone access is required. Please allow microphone permission in your browser settings and refresh the page.'
+      );
+    });
+
+    it('error banner has role="alert" for accessibility', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const errorBanner = screen.getByTestId('mic-denied-error');
+      expect(errorBanner).toHaveAttribute('role', 'alert');
+    });
+
+    it('does not render mic-denied error banner when no error', () => {
+      mockState = { ...mockState, error: null };
+      render(<InterviewScreen />);
+      expect(screen.queryByTestId('mic-denied-error')).not.toBeInTheDocument();
+    });
+
+    it('does not render mic-denied error banner for other error codes', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'WS_RECONNECT_FAILED', message: 'Connection failed', retryable: false },
+      };
+      render(<InterviewScreen />);
+      expect(screen.queryByTestId('mic-denied-error')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Property 16: End Button Always Enabled', () => {
     /**
      * Feature: frontend-interview, Property 16: End Button Always Enabled
