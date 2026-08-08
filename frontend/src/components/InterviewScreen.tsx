@@ -138,64 +138,69 @@ function ControlBar({
   );
 }
 
-function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => void; onInputChange?: (hasText: boolean) => void }) {
-  const [value, setValue] = useState('');
-  const hadTextRef = useRef(false);
-
-  const handleSubmit = useCallback(() => {
-    const trimmed = value.trim();
-    if (trimmed) {
-      onSubmit(trimmed);
-      setValue('');
-      hadTextRef.current = false;
-    }
-  }, [value, onSubmit]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit]
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setValue(newValue);
-
-      const hasText = newValue.length > 0;
-      if (hasText !== hadTextRef.current) {
-        hadTextRef.current = hasText;
-        onInputChange?.(hasText);
-      }
-    },
-    [onInputChange]
-  );
+/**
+ * MicButton — click-toggle mic recording button.
+ *
+ * States:
+ * - disabled (AI speaking): button is non-interactive
+ * - idle (user turn, not recording): ready to start
+ * - recording (user turn, actively sending audio): pulsing indicator
+ */
+function MicButton({
+  disabled,
+  recording,
+  onClick,
+}: {
+  disabled: boolean;
+  recording: boolean;
+  onClick: () => void;
+}) {
+  const ariaLabel = disabled
+    ? 'Waiting for AI'
+    : recording
+      ? 'Stop recording'
+      : 'Start recording your answer';
 
   return (
-    <div className="text-input" data-testid="text-input">
-      <input
-        className="text-input__field"
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Type your answer..."
-        aria-label="Text input fallback"
-      />
-      <button
-        className="text-input__send-btn"
-        onClick={handleSubmit}
-        type="button"
-        disabled={!value.trim()}
-        aria-label="Send"
-        data-testid="text-send-button"
-      >
-        Send
-      </button>
+    <div className="mic-button-wrapper" data-testid="mic-button-wrapper">
+      <div className={`mic-button-container ${recording ? 'mic-button-container--recording' : ''}`}>
+        {recording && (
+          <>
+            <span className="mic-pulse mic-pulse--1" />
+            <span className="mic-pulse mic-pulse--2" />
+          </>
+        )}
+        <button
+          className={`mic-button ${recording ? 'mic-button--recording' : ''}`}
+          type="button"
+          disabled={disabled}
+          onClick={onClick}
+          aria-label={ariaLabel}
+          aria-pressed={recording}
+          data-testid="mic-button"
+        >
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+              fill="currentColor"
+            />
+            <path
+              d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <span className="mic-button__status" data-testid="mic-status">
+        {disabled ? '' : recording ? 'Recording...' : 'Click to speak'}
+      </span>
     </div>
   );
 }
@@ -206,6 +211,24 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
+
+  // --- Mic toggle recording state ---
+  const [recording, setRecording] = useState(false);
+  const isRecordingRef = useRef(false);
+
+  // Keep ref in sync with state (ref is read inside audio callback for zero-lag gating)
+  useEffect(() => {
+    isRecordingRef.current = recording;
+  }, [recording]);
+
+  // Reset recording when a new user turn starts (turnState transitions to user_turn)
+  const prevTurnStateRef = useRef(state.turnState);
+  useEffect(() => {
+    if (state.turnState === 'user_turn' && prevTurnStateRef.current !== 'user_turn') {
+      setRecording(false);
+    }
+    prevTurnStateRef.current = state.turnState;
+  }, [state.turnState]);
 
   /** Trigger Agent 3 with current transcript */
   const triggerAgent3 = useCallback(async () => {
@@ -223,12 +246,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     }
   }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
 
-  // Audio streaming integration
+  // Audio streaming integration — pass isRecordingRef for gating
   const { audioManagerRef } = useInterviewStreaming({
     phase: state.phase,
     wsClient: wsClient ?? null,
     dispatch,
     onAutoEnd: triggerAgent3,
+    isRecordingRef,
   });
 
   // beforeunload effect — only active during interview phase
@@ -266,6 +290,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   /** Manual end confirmed: stop playback → session_end → disconnect → feedback */
   const handleEndConfirm = useCallback(() => {
     setShowEndModal(false);
+    setRecording(false);
 
     // Stop playback immediately (user-intentional, no wait)
     if (audioManagerRef.current) {
@@ -294,39 +319,11 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     dispatch({ type: 'TOGGLE_PRACTICE_MODE' });
   }, [dispatch]);
 
-  const handleTextSubmit = useCallback(
-    (text: string) => {
-      dispatch({ type: 'TEXT_INPUT_CLEAR' });
-      // Send text via WebSocket
-      if (wsClient && wsClient.getState() === 'connected') {
-        wsClient.sendTextInput(text, 'default', 'text-input');
-      }
-      // Resume capture after text submit (if audio manager available)
-      if (audioManagerRef.current && state.inputMode === 'voice') {
-        audioManagerRef.current.resumeCapture();
-      }
-    },
-    [dispatch, wsClient, audioManagerRef, state.inputMode]
-  );
-
-  const handleTextInputChange = useCallback(
-    (hasText: boolean) => {
-      if (hasText) {
-        dispatch({ type: 'TEXT_INPUT_START' });
-        // Pause capture while composing text
-        if (audioManagerRef.current && state.inputMode === 'voice') {
-          audioManagerRef.current.pauseCapture();
-        }
-      } else {
-        dispatch({ type: 'TEXT_INPUT_CLEAR' });
-        // Resume capture when text cleared
-        if (audioManagerRef.current && state.inputMode === 'voice') {
-          audioManagerRef.current.resumeCapture();
-        }
-      }
-    },
-    [dispatch, audioManagerRef, state.inputMode]
-  );
+  /** Mic button click: toggle recording on/off */
+  const handleMicClick = useCallback(() => {
+    if (state.turnState === 'ai_speaking') return; // safety guard
+    setRecording((prev) => !prev);
+  }, [state.turnState]);
 
   // Derive the latest interviewer text from transcript (FINAL only)
   const latestInterviewerText = useMemo(() => {
@@ -337,6 +334,8 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     }
     return null;
   }, [state.transcript]);
+
+  const micDisabled = state.turnState === 'ai_speaking';
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
@@ -351,7 +350,11 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         <div className="interview-screen__left">
           <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
           <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
-          <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
+          <MicButton
+            disabled={micDisabled}
+            recording={recording}
+            onClick={handleMicClick}
+          />
         </div>
         <div className="interview-screen__right">
           <GuidePanel
@@ -508,52 +511,94 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           min-height: 40px;
         }
 
-        /* Text Input */
-        .text-input {
+        /* Mic Button */
+        .mic-button-wrapper {
           display: flex;
-          gap: 8px;
-          padding: 8px 0;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 24px 0;
+          margin-top: auto;
         }
 
-        .text-input__field {
-          flex: 1;
+        .mic-button-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 88px;
+          height: 88px;
+        }
+
+        .mic-pulse {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 2px solid var(--color-accent, #9AE05C);
+          opacity: 0;
+        }
+
+        .mic-button-container--recording .mic-pulse--1 {
+          animation: mic-pulse-anim 1.5s ease-out infinite;
+        }
+
+        .mic-button-container--recording .mic-pulse--2 {
+          animation: mic-pulse-anim 1.5s ease-out infinite 0.75s;
+        }
+
+        @keyframes mic-pulse-anim {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1.8);
+            opacity: 0;
+          }
+        }
+
+        .mic-button {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          border: 2px solid var(--color-accent, #9AE05C);
           background-color: var(--color-tile-bg, #1C1C1E);
-          border: 1px solid var(--color-control-bar, #2C2C2E);
-          border-radius: 8px;
-          padding: 10px 14px;
-          color: var(--color-text-primary, #FFFFFF);
-          font-size: 14px;
-          outline: none;
-          transition: border-color 0.2s;
+          color: var(--color-accent, #9AE05C);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+          position: relative;
+          z-index: 1;
         }
 
-        .text-input__field:focus {
-          border-color: var(--color-accent, #9AE05C);
+        .mic-button--recording {
+          background-color: var(--color-accent, #9AE05C);
+          color: var(--color-canvas, #0A0A0A);
         }
 
-        .text-input__field::placeholder {
+        .mic-button:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+          border-color: var(--color-text-secondary, #A0A0A5);
           color: var(--color-text-secondary, #A0A0A5);
         }
 
-        .text-input__send-btn {
+        .mic-button:not(:disabled):hover {
+          background-color: rgba(154, 224, 92, 0.15);
+        }
+
+        .mic-button--recording:not(:disabled):hover {
           background-color: var(--color-accent, #9AE05C);
-          color: var(--color-canvas, #0A0A0A);
-          border: none;
-          border-radius: 8px;
-          padding: 10px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.2s;
+          opacity: 0.85;
         }
 
-        .text-input__send-btn:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-        }
-
-        .text-input__send-btn:not(:disabled):hover {
-          opacity: 0.9;
+        .mic-button__status {
+          font-size: 12px;
+          color: var(--color-text-secondary, #A0A0A5);
+          min-height: 16px;
         }
 
         /* Control Bar */
