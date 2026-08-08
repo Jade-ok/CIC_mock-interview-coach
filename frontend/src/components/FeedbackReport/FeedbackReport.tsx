@@ -1,7 +1,9 @@
 import type { EvaluatorOutput } from '../../types/evaluator';
+import type { TranscriptEntry } from '../../types/session';
 import { HeroSection } from './HeroSection';
 import { DimensionScoresGrid } from './DimensionScoresGrid';
 import { FeedbackColumns } from './FeedbackColumns';
+import { KeywordCoverage } from './KeywordCoverage';
 import { ContextualAdvice } from './ContextualAdvice';
 import { QuestionBreakdown } from './QuestionBreakdown';
 import { FooterCTA } from './FooterCTA';
@@ -12,9 +14,10 @@ interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
   onViewTranscript?: () => void;
+  transcript?: TranscriptEntry[];
 }
 
-export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: FeedbackReportProps) {
+export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transcript }: FeedbackReportProps) {
   return (
     <div className="feedback-report">
       <header className="feedback-report__header">
@@ -37,6 +40,7 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: Feed
           totalScore={data.overall_scores.total}
           questionCount={data.question_count}
           targetRole={data.interview_metadata.target_role}
+          dimensions={data.overall_scores.dimensions}
         />
 
         <DimensionScoresGrid dimensions={data.overall_scores.dimensions} />
@@ -46,12 +50,18 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: Feed
           improvements={data.improvements}
         />
 
-        <ContextualAdvice advice={data.contextual_advice} />
+        <KeywordCoverage
+          covered={data.keywords_covered || []}
+          notCovered={data.keywords_not_covered || []}
+        />
 
         <QuestionBreakdown
           questions={data.per_question_scores}
           questionCount={data.question_count}
+          transcript={transcript}
         />
+
+        <ContextualAdvice advice={data.contextual_advice} />
       </main>
 
       <FooterCTA

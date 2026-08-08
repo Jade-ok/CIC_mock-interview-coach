@@ -184,7 +184,7 @@ def test_tool_config_has_forced_choice():
 
 
 def test_schema_has_required_fields():
-    """Verify EVALUATION_TOOL_SCHEMA has all 4 required top-level output fields."""
+    """Verify EVALUATION_TOOL_SCHEMA has all required top-level output fields."""
     schema = EVALUATION_TOOL_SCHEMA
     assert schema["name"] == "submit_evaluation"
 
@@ -194,4 +194,6 @@ def test_schema_has_required_fields():
     assert "per_question_scores" in required_fields
     assert "strengths" in required_fields
     assert "improvements" in required_fields
+    assert "keywords_covered" in required_fields
+    assert "keywords_not_covered" in required_fields
     assert "contextual_advice" in required_fields

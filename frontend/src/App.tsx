@@ -50,6 +50,7 @@ function AppContent() {
           loading={state.agent3Loading}
           error={state.phase === 'feedback' ? state.error : null}
           feedbackResult={state.feedbackResult}
+          transcript={state.transcript}
           onRetry={handleFeedbackRetry}
           onNewSession={handleNewSession}
         />

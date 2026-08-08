@@ -50,7 +50,10 @@ def _mock_llm_response(num_questions=2):
         "per_question_scores": [
             {
                 "question_text": f"Question {i}?",
-                "answer_summary": f"Answer {i}.",
+                "feedback": {
+                    "strength": f"Good answer {i}.",
+                    "improvement": f"Add detail {i}.",
+                },
                 "scores": {
                     "concrete_example": 4,
                     "situation_action_result": 3,
@@ -62,6 +65,8 @@ def _mock_llm_response(num_questions=2):
         ],
         "strengths": ["Good example provided."],
         "improvements": ["Add more measurable outcomes."],
+        "keywords_covered": ["Python", "Flask"],
+        "keywords_not_covered": ["AWS"],
         "contextual_advice": ["Consider mentioning your hackathon project."],
     }
 

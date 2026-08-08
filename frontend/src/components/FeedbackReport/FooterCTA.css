@@ -1,5 +1,5 @@
 .footer-cta {
-  background: var(--accent-red);
+  background: var(--accent);
   padding: 48px var(--card-padding);
   text-align: center;
   border-radius: var(--card-radius) var(--card-radius) 0 0;
@@ -9,7 +9,7 @@
 .footer-cta__message {
   font-size: var(--font-section-title);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--accent-ink);
   margin: 0 0 24px;
 }
 
@@ -29,8 +29,8 @@
 }
 
 .footer-cta__button--primary {
-  background: var(--text-primary);
-  color: var(--bg-canvas);
+  background: var(--accent-ink);
+  color: var(--accent);
 }
 
 .footer-cta__button--secondary {

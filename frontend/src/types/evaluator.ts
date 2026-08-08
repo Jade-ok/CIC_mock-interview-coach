@@ -1,12 +1,19 @@
+export interface QuestionFeedback {
+  strength: string;
+  improvement: string;
+}
+
 export interface PerQuestionScore {
   question_text: string;
-  answer_summary: string;
+  feedback: QuestionFeedback;
   scores: {
     concrete_example: number;
     situation_action_result: number;
     link_to_job: number;
     quantifiable_outcome: number;
   };
+  /** @deprecated Kept for backward compat with older evaluator responses */
+  answer_summary?: string;
 }
 
 export interface OverallScores {
@@ -36,6 +43,8 @@ export interface EvaluatorOutput {
   readiness_label: string;
   strengths: string[];
   improvements: string[];
+  keywords_covered: string[];
+  keywords_not_covered: string[];
   contextual_advice: string[];
   interview_metadata: InterviewMetadata;
 }

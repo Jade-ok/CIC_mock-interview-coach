@@ -15,12 +15,12 @@
 .score-bar__segment {
   flex: 1;
   background-color: var(--score-bar-empty);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .score-bar__fill {
   height: 100%;
+  border-radius: 3px;
   background-color: var(--score-bar-filled);
-  border-radius: 2px;
 }

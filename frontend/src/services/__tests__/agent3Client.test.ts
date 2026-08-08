@@ -94,7 +94,7 @@ describe('callAgent3', () => {
     const feedback = {
       per_question_scores: [{
         question_text: 'Question 1',
-        answer_summary: 'Answer 1',
+        feedback: { strength: 'Good example.', improvement: 'Add metrics.' },
         scores: {
           concrete_example: 3,
           situation_action_result: 3,
@@ -115,6 +115,8 @@ describe('callAgent3', () => {
       readiness_label: 'Developing well',
       strengths: ['Clear example'],
       improvements: ['Add metrics'],
+      keywords_covered: ['React'],
+      keywords_not_covered: ['AWS'],
       contextual_advice: ['Connect to the role'],
       interview_metadata: request.interview_metadata,
     };

@@ -5,7 +5,7 @@
  * Validates: Requirements 4.5, 4.7
  */
 
-import type { SessionError } from '@/types/session';
+import type { SessionError, TranscriptEntry } from '@/types/session';
 import type { EvaluatorOutput } from '@/types/evaluator';
 import { FeedbackReport } from './FeedbackReport';
 
@@ -13,6 +13,7 @@ export interface FeedbackScreenProps {
   loading: boolean;
   error: SessionError | null;
   feedbackResult: EvaluatorOutput | null;
+  transcript?: TranscriptEntry[];
   onRetry: () => void;
   onNewSession: () => void;
 }
@@ -21,6 +22,7 @@ export function FeedbackScreen({
   loading,
   error,
   feedbackResult,
+  transcript,
   onRetry,
   onNewSession,
 }: FeedbackScreenProps) {
@@ -66,6 +68,7 @@ export function FeedbackScreen({
           <FeedbackReport
             data={feedbackResult}
             onPracticeAgain={onNewSession}
+            transcript={transcript}
           />
         </div>
       )}

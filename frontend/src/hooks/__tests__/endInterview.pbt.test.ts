@@ -29,6 +29,8 @@ const evaluatorOutput: EvaluatorOutput = {
   readiness_label: 'Developing well',
   strengths: [],
   improvements: [],
+  keywords_covered: [],
+  keywords_not_covered: [],
   contextual_advice: [],
   interview_metadata: {
     candidate_level: 'student_intern',

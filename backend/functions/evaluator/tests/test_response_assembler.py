@@ -36,6 +36,8 @@ def _sample_llm_response():
         "per_question_scores": _sample_per_question_scores(),
         "strengths": ["Good specific example from SE course project."],
         "improvements": ["Include measurable outcomes next time."],
+        "keywords_covered": ["Python", "Flask"],
+        "keywords_not_covered": ["AWS", "Docker"],
         "contextual_advice": ["Consider mentioning your hackathon experience."],
     }
 
@@ -68,6 +70,8 @@ class TestBuild:
         assert "readiness_label" in result
         assert "strengths" in result
         assert "improvements" in result
+        assert "keywords_covered" in result
+        assert "keywords_not_covered" in result
         assert "contextual_advice" in result
         assert "interview_metadata" in result
 

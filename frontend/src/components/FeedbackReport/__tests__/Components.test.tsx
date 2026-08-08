@@ -60,36 +60,39 @@ describe('ContextualAdvice', () => {
 });
 
 describe('QuestionCard', () => {
-  it('displays question, answer, and turn badge', () => {
+  it('displays question and feedback', () => {
     const scores = { concrete_example: 4, situation_action_result: 3, link_to_job: 4, quantifiable_outcome: 2 };
+    const feedback = { strength: 'Great specific example.', improvement: 'Add a measurable outcome.' };
     render(
-      <QuestionCard index={1} turnType="main_question" questionText="Tell me about a project." answerSummary="Built a REST API." scores={scores} />
+      <QuestionCard index={1} questionText="Tell me about a project." feedback={feedback} scores={scores} />
     );
-    expect(screen.getByText('Main question')).toBeTruthy();
+    expect(screen.getByText('Q1')).toBeTruthy();
     expect(screen.getByText('Tell me about a project.')).toBeTruthy();
-    expect(screen.getByText('Built a REST API.')).toBeTruthy();
+    expect(screen.getByText('Great specific example.')).toBeTruthy();
+    expect(screen.getByText('Add a measurable outcome.')).toBeTruthy();
   });
 
-  it('displays Follow-up badge for follow_up type', () => {
-    const scores = { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 };
+  it('shows weakest dimension chip', () => {
+    const scores = { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 2 };
+    const feedback = { strength: 'Good.', improvement: 'More detail.' };
     render(
-      <QuestionCard index={2} turnType="follow_up" questionText="What was hard?" answerSummary="Merge conflicts." scores={scores} />
+      <QuestionCard index={2} questionText="What was hard?" feedback={feedback} scores={scores} />
     );
-    expect(screen.getByText('Follow-up')).toBeTruthy();
+    expect(screen.getByText(/Quantifiable outcome 2\/5/)).toBeTruthy();
   });
 });
 
 describe('QuestionBreakdown', () => {
   it('renders intro line with question count', () => {
-    const questions = [{ question_text: 'Q1?', answer_summary: 'A1.', scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 } }];
+    const questions = [{ question_text: 'Q1?', feedback: { strength: 'Good.', improvement: 'More detail.' }, scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 } }];
     render(<QuestionBreakdown questions={questions} questionCount={1} />);
-    expect(screen.getByText(/1 of 6 questions/)).toBeTruthy();
+    expect(screen.getByText(/1 question/)).toBeTruthy();
   });
 
   it('renders correct number of question cards', () => {
     const questions = Array.from({ length: 4 }, (_, i) => ({
       question_text: `Question ${i + 1}?`,
-      answer_summary: `Answer ${i + 1}.`,
+      feedback: { strength: `Good ${i + 1}.`, improvement: `Improve ${i + 1}.` },
       scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 },
     }));
     render(<QuestionBreakdown questions={questions} questionCount={4} />);

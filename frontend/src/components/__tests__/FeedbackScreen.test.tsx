@@ -7,7 +7,7 @@ describe('FeedbackScreen', () => {
     per_question_scores: [
       {
         question_text: 'Tell me about a project.',
-        answer_summary: 'Built a service.',
+        feedback: { strength: 'Named a specific project clearly.', improvement: 'Add measurable outcomes.' },
         scores: {
           concrete_example: 4,
           situation_action_result: 3,
@@ -27,8 +27,10 @@ describe('FeedbackScreen', () => {
     },
     question_count: 1,
     readiness_label: 'Developing well',
-    strengths: ['Used a concrete example.'],
-    improvements: ['Add measurable outcomes.'],
+    strengths: ['Consistently used concrete examples across answers.'],
+    improvements: ['Add measurable outcomes to strengthen answers.'],
+    keywords_covered: ['React'],
+    keywords_not_covered: ['AWS'],
     contextual_advice: ['Connect the example to the target role.'],
     interview_metadata: {
       candidate_level: 'new_grad',
@@ -124,13 +126,13 @@ describe('FeedbackScreen', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
       expect(screen.getByText('CIC Mock Interview Coach')).toBeInTheDocument();
-      expect(screen.getByRole('heading', { name: 'Developing well' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeInTheDocument();
     });
 
     it('renders evaluator details through the feedback report', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByText('Tell me about a project.')).toBeInTheDocument();
-      expect(screen.getByText('Used a concrete example.')).toBeInTheDocument();
+      expect(screen.getByText('Named a specific project clearly.')).toBeInTheDocument();
     });
 
     it('starts a new session from the feedback report', () => {
