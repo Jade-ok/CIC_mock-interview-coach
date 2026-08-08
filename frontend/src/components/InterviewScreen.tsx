@@ -1,22 +1,21 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
-import { GuidePanel } from '@/components/GuidePanel';
 import { PracticeBubbles } from '@/components/PracticeBubbles';
+import { GuidePanel } from '@/components/GuidePanel';
 import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
-import type { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 // --- Sub-components ---
 
-function AITile({ isActive }: { isActive: boolean }) {
+function AITile({ isActive, text }: { isActive: boolean; text: string | null }) {
   return (
     <div
       className={`participant-tile participant-tile--ai ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="ai-tile"
     >
-      <div className="participant-tile__content">
+      <div className="participant-tile__content participant-tile__content--captioned">
         {isActive && (
           <div className="waveform" data-testid="ai-waveform" aria-label="AI speaking waveform">
             <span className="waveform__bar" />
@@ -29,20 +28,28 @@ function AITile({ isActive }: { isActive: boolean }) {
         {!isActive && (
           <div className="participant-tile__icon" aria-hidden="true">🤖</div>
         )}
+        {text && (
+          <p
+            className={`tile-subtitle ${isActive ? 'tile-subtitle--active' : ''}`}
+            data-testid="ai-subtitle"
+          >
+            {text}
+          </p>
+        )}
       </div>
       <span className="participant-tile__label">AI Interviewer</span>
     </div>
   );
 }
 
-function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean }) {
+function UserTile({ isActive, text }: { isActive: boolean; text: string | null }) {
   return (
     <div
       className={`participant-tile participant-tile--user ${isActive ? 'participant-tile--active' : ''}`}
       data-testid="user-tile"
     >
-      <div className="participant-tile__content">
-        {isActive && !textOnly && (
+      <div className="participant-tile__content participant-tile__content--captioned">
+        {isActive && (
           <div className="waveform" data-testid="user-waveform" aria-label="User speaking waveform">
             <span className="waveform__bar" />
             <span className="waveform__bar" />
@@ -51,23 +58,28 @@ function UserTile({ isActive, textOnly }: { isActive: boolean; textOnly: boolean
             <span className="waveform__bar" />
           </div>
         )}
-        {textOnly && (
-          <div className="participant-tile__icon" aria-hidden="true" data-testid="text-mode-icon">⌨️</div>
-        )}
-        {!isActive && !textOnly && (
+        {!isActive && (
           <div className="participant-tile__icon" aria-hidden="true">👤</div>
         )}
+        {text && (
+          <p
+            className={`tile-subtitle ${isActive ? 'tile-subtitle--active' : ''}`}
+            data-testid="user-subtitle"
+          >
+            {text}
+          </p>
+        )}
       </div>
-      <span className="participant-tile__label">You{textOnly ? ' (Text Mode)' : ''}</span>
+      <span className="participant-tile__label">You</span>
     </div>
   );
 }
 
-function ParticipantTiles({ turnState, textOnly }: { turnState: string; textOnly: boolean }) {
+function ParticipantTiles({ turnState, latestInterviewerText, latestUserText }: { turnState: string; latestInterviewerText: string | null; latestUserText: string | null }) {
   return (
     <div className="participant-tiles" data-testid="participant-tiles">
-      <AITile isActive={turnState === 'ai_speaking'} />
-      <UserTile isActive={turnState === 'user_turn'} textOnly={textOnly} />
+      <AITile isActive={turnState === 'ai_speaking'} text={latestInterviewerText} />
+      <UserTile isActive={turnState === 'user_turn'} text={latestUserText} />
     </div>
   );
 }
@@ -97,7 +109,6 @@ function PracticeModeToggle({
       onClick={onToggle}
       type="button"
       aria-label="Practice Mode toggle"
-      aria-pressed={practiceMode}
       data-testid="practice-mode-toggle"
     >
       Practice Mode {practiceMode ? '●' : '○'}
@@ -115,7 +126,7 @@ function EndButton({ onEnd }: { onEnd: () => void }) {
       aria-label="End"
       data-testid="end-button"
     >
-      End 🔴
+      End
     </button>
   );
 }
@@ -140,73 +151,97 @@ function ControlBar({
   );
 }
 
-function TextInput({ onSubmit, onInputChange }: { onSubmit: (text: string) => boolean; onInputChange?: (hasText: boolean) => void }) {
-  const [value, setValue] = useState('');
-  const hadTextRef = useRef(false);
-
-  const handleSubmit = useCallback(() => {
-    const trimmed = value.trim();
-    if (trimmed && onSubmit(trimmed)) {
-      setValue('');
-      hadTextRef.current = false;
-    }
-  }, [value, onSubmit]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit]
-  );
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setValue(newValue);
-
-      const hasText = newValue.length > 0;
-      if (hasText !== hadTextRef.current) {
-        hadTextRef.current = hasText;
-        onInputChange?.(hasText);
-      }
-    },
-    [onInputChange]
-  );
+/**
+ * MicButton — click-toggle mic recording button.
+ *
+ * States:
+ * - disabled (AI speaking): button is non-interactive
+ * - idle (user turn, not recording): ready to start
+ * - recording (user turn, actively sending audio): pulsing indicator
+ */
+function MicButton({
+  disabled,
+  recording,
+  onClick,
+}: {
+  disabled: boolean;
+  recording: boolean;
+  onClick: () => void;
+}) {
+  const ariaLabel = disabled
+    ? 'Waiting for AI'
+    : recording
+      ? 'Stop recording'
+      : 'Start recording your answer';
 
   return (
-    <div className="text-input" data-testid="text-input">
-      <input
-        className="text-input__field"
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Type your answer..."
-        aria-label="Text input fallback"
-      />
-      <button
-        className="text-input__send-btn"
-        onClick={handleSubmit}
-        type="button"
-        disabled={!value.trim()}
-        aria-label="Send"
-        data-testid="text-send-button"
-      >
-        Send
-      </button>
+    <div className="mic-button-wrapper" data-testid="mic-button-wrapper">
+      <div className={`mic-button-container ${recording ? 'mic-button-container--recording' : ''}`}>
+        {recording && (
+          <>
+            <span className="mic-pulse mic-pulse--1" />
+            <span className="mic-pulse mic-pulse--2" />
+          </>
+        )}
+        <button
+          className={`mic-button ${recording ? 'mic-button--recording' : ''}`}
+          type="button"
+          disabled={disabled}
+          onClick={onClick}
+          aria-label={ariaLabel}
+          aria-pressed={recording}
+          data-testid="mic-button"
+        >
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+              fill="currentColor"
+            />
+            <path
+              d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
+      <span className="mic-button__status" data-testid="mic-status">
+        {disabled ? '' : recording ? 'Recording...' : 'Click to speak'}
+      </span>
     </div>
   );
 }
 
 // --- Main Component ---
 
-export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | MockWebSocketClient | null }) {
+export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | null }) {
   const { state, dispatch } = useSession();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
+
+  // --- Mic toggle recording state ---
+  const [recording, setRecording] = useState(false);
+  const isRecordingRef = useRef(false);
+
+  // Keep ref in sync with state (ref is read inside audio callback for zero-lag gating)
+  useEffect(() => {
+    isRecordingRef.current = recording;
+  }, [recording]);
+
+  // Reset recording when a new user turn starts (turnState transitions to user_turn)
+  const prevTurnStateRef = useRef(state.turnState);
+  useEffect(() => {
+    if (state.turnState === 'user_turn' && prevTurnStateRef.current !== 'user_turn') {
+      setRecording(false);
+    }
+    prevTurnStateRef.current = state.turnState;
+  }, [state.turnState]);
 
   /** Trigger Agent 3 with current transcript */
   const triggerAgent3 = useCallback(async () => {
@@ -232,12 +267,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
     }
   }, [dispatch, state]);
 
-  // Audio streaming integration
+  // Audio streaming integration — pass isRecordingRef for gating
   const { audioManagerRef } = useInterviewStreaming({
     phase: state.phase,
     wsClient: wsClient ?? null,
     dispatch,
     onAutoEnd: triggerAgent3,
+    isRecordingRef,
   });
 
   // beforeunload effect — only active during interview phase
@@ -275,6 +311,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
   /** Manual end confirmed: stop playback → session_end → disconnect → feedback */
   const handleEndConfirm = useCallback(() => {
     setShowEndModal(false);
+    setRecording(false);
 
     // Stop playback immediately (user-intentional, no wait)
     if (audioManagerRef.current) {
@@ -303,79 +340,44 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
     dispatch({ type: 'TOGGLE_PRACTICE_MODE' });
   }, [dispatch]);
 
-  const handleTextSubmit = useCallback(
-    (text: string) => {
-      // Keep unsent text in the field while the socket reconnects.
-      if (!wsClient || wsClient.getState() !== 'connected') return false;
+  /** Mic button click: toggle recording on/off */
+  const handleMicClick = useCallback(() => {
+    if (state.turnState === 'ai_speaking') return; // safety guard
+    setRecording((prev) => !prev);
+  }, [state.turnState]);
 
-      wsClient.sendTextInput(text, 'default', 'text-input');
-      dispatch({ type: 'TEXT_INPUT_CLEAR' });
-      dispatch({
-        type: 'APPEND_TRANSCRIPT',
-        payload: {
-          role: 'user',
-          text,
-          timestamp: new Date().toISOString(),
-        },
-      });
-      // Resume capture after text submit (if audio manager available)
-      if (audioManagerRef.current && state.inputMode === 'voice') {
-        audioManagerRef.current.resumeCapture();
-      }
-      return true;
-    },
-    [dispatch, wsClient, audioManagerRef, state.inputMode]
-  );
-
-  const handleTextInputChange = useCallback(
-    (hasText: boolean) => {
-      if (hasText) {
-        dispatch({ type: 'TEXT_INPUT_START' });
-        // Pause capture while composing text
-        if (audioManagerRef.current && state.inputMode === 'voice') {
-          audioManagerRef.current.pauseCapture();
-        }
-      } else {
-        dispatch({ type: 'TEXT_INPUT_CLEAR' });
-        // Resume capture when text cleared
-        if (audioManagerRef.current && state.inputMode === 'voice') {
-          audioManagerRef.current.resumeCapture();
-        }
-      }
-    },
-    [dispatch, audioManagerRef, state.inputMode]
-  );
-
-  const latestInterviewerText = useMemo(() => {
-    for (let index = state.transcript.length - 1; index >= 0; index -= 1) {
-      const entry = state.transcript[index];
-      if (entry.role === 'interviewer') return entry.text;
-    }
-    return null;
-  }, [state.transcript]);
+  const micDisabled = state.turnState === 'ai_speaking';
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
       {/* Mic denied error message */}
-      {state.inputMode === 'text_only' && state.error?.code === 'MIC_DENIED' && (
+      {state.error?.code === 'MIC_DENIED' && (
         <div className="interview-screen__mic-error" data-testid="mic-denied-error" role="alert">
-          {state.error.message}
+          Microphone access is required. Please allow microphone permission in your browser settings and refresh the page.
         </div>
       )}
 
       <div className="interview-screen__main">
-        <div className="interview-screen__left">
-          <ParticipantTiles turnState={state.turnState} textOnly={state.inputMode === 'text_only'} />
-          <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
-          <TextInput onSubmit={handleTextSubmit} onInputChange={handleTextInputChange} />
-        </div>
-        <div className="interview-screen__right">
-          <GuidePanel
-            guides={state.competencyGuides}
-            practiceMode={state.practiceMode}
-            currentInterviewerText={latestInterviewerText}
+        <div className={`interview-screen__left ${!state.practiceMode ? 'interview-screen__left--full' : ''}`}>
+          {/* Practice Mode OFF → Tile view, no text (real interview mode) */}
+          {!state.practiceMode && (
+            <ParticipantTiles turnState={state.turnState} latestInterviewerText={null} latestUserText={null} />
+          )}
+          {/* Practice Mode ON → Chat log view */}
+          {state.practiceMode && (
+            <PracticeBubbles transcript={state.transcript} livePartial={state.livePartial} turnState={state.turnState} />
+          )}
+          <MicButton
+            disabled={micDisabled}
+            recording={recording}
+            onClick={handleMicClick}
           />
         </div>
+        {state.practiceMode && (
+          <div className="interview-screen__right">
+            <GuidePanel analystOutput={state.analystOutput} />
+          </div>
+        )}
       </div>
       <ControlBar
         elapsedSeconds={state.elapsedSeconds}
@@ -392,7 +394,9 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
 
       <style>{`
         .interview-screen {
-          min-height: 100vh;
+          height: 100vh;
+          max-height: 100vh;
+          overflow: hidden;
           background-color: var(--color-canvas, #0A0A0A);
           display: flex;
           flex-direction: column;
@@ -402,6 +406,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
 
         .interview-screen__main {
           flex: 1;
+          min-height: 0;
           display: flex;
           gap: 12px;
           padding: 12px;
@@ -420,19 +425,26 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
 
         .interview-screen__left {
           flex: 2;
+          min-height: 0;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
+        }
+
+        .interview-screen__left--full {
+          flex: 1;
         }
 
         .interview-screen__right {
           flex: 1;
           min-width: 200px;
+          overflow-y: auto;
         }
 
         /* Participant Tiles */
         .participant-tiles {
           flex: 1;
+          min-height: 0;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -440,6 +452,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
 
         .participant-tile {
           flex: 1;
+          min-height: 120px;
           background-color: var(--color-tile-bg, #1C1C1E);
           border-radius: 8px;
           display: flex;
@@ -460,6 +473,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
           align-items: center;
           justify-content: center;
           min-height: 80px;
+        }
+
+        .participant-tile__content--captioned {
+          flex-direction: column;
+          gap: 12px;
+          padding: 16px 24px;
+          transition: all 0.3s ease;
         }
 
         .participant-tile__icon {
@@ -505,52 +525,132 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
           to { height: 32px; }
         }
 
-        /* Text Input */
-        .text-input {
-          display: flex;
-          gap: 8px;
-          padding: 8px 0;
-        }
-
-        .text-input__field {
-          flex: 1;
-          background-color: var(--color-tile-bg, #1C1C1E);
-          border: 1px solid var(--color-control-bar, #2C2C2E);
-          border-radius: 8px;
-          padding: 10px 14px;
-          color: var(--color-text-primary, #FFFFFF);
+        /* Tile Subtitle (shared by AI and User tiles) */
+        .tile-subtitle {
+          margin: 0;
           font-size: 14px;
-          outline: none;
-          transition: border-color 0.2s;
+          line-height: 1.4;
+          color: var(--color-text-secondary, #A0A0A5);
+          text-align: center;
+          max-width: 80%;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          background-color: rgba(0, 0, 0, 0.4);
+          padding: 6px 12px;
+          border-radius: 6px;
+          transition: opacity 0.3s ease, color 0.3s ease;
         }
 
-        .text-input__field:focus {
-          border-color: var(--color-accent, #9AE05C);
+        .tile-subtitle--active {
+          color: var(--color-text-primary, #FFFFFF);
         }
 
-        .text-input__field::placeholder {
+        /* Guide Panel */
+        .guide-panel {
+          background-color: var(--color-tile-bg, #1C1C1E);
+          border-radius: 8px;
+          height: 100%;
+          padding: 16px;
+        }
+
+        .guide-panel__title {
+          font-size: 14px;
+          font-weight: 500;
           color: var(--color-text-secondary, #A0A0A5);
         }
 
-        .text-input__send-btn {
+
+
+        /* Mic Button */
+        .mic-button-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          padding: 12px 0 24px;
+          margin-top: auto;
+        }
+
+        .mic-button-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 88px;
+          height: 88px;
+        }
+
+        .mic-pulse {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 2px solid var(--color-accent, #9AE05C);
+          opacity: 0;
+        }
+
+        .mic-button-container--recording .mic-pulse--1 {
+          animation: mic-pulse-anim 1.5s ease-out infinite;
+        }
+
+        .mic-button-container--recording .mic-pulse--2 {
+          animation: mic-pulse-anim 1.5s ease-out infinite 0.75s;
+        }
+
+        @keyframes mic-pulse-anim {
+          0% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(1.8);
+            opacity: 0;
+          }
+        }
+
+        .mic-button {
+          width: 72px;
+          height: 72px;
+          border-radius: 50%;
+          border: 2px solid var(--color-accent, #9AE05C);
+          background-color: var(--color-tile-bg, #1C1C1E);
+          color: var(--color-accent, #9AE05C);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+          position: relative;
+          z-index: 1;
+        }
+
+        .mic-button--recording {
           background-color: var(--color-accent, #9AE05C);
           color: var(--color-canvas, #0A0A0A);
-          border: none;
-          border-radius: 8px;
-          padding: 10px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: opacity 0.2s;
         }
 
-        .text-input__send-btn:disabled {
-          opacity: 0.4;
+        .mic-button:disabled {
+          opacity: 0.35;
           cursor: not-allowed;
+          border-color: var(--color-text-secondary, #A0A0A5);
+          color: var(--color-text-secondary, #A0A0A5);
         }
 
-        .text-input__send-btn:not(:disabled):hover {
-          opacity: 0.9;
+        .mic-button:not(:disabled):hover {
+          background-color: rgba(154, 224, 92, 0.15);
+        }
+
+        .mic-button--recording:not(:disabled):hover {
+          background-color: var(--color-accent, #9AE05C);
+          opacity: 0.85;
+        }
+
+        .mic-button__status {
+          font-size: 12px;
+          color: var(--color-text-secondary, #A0A0A5);
+          min-height: 16px;
         }
 
         /* Control Bar */
@@ -600,34 +700,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | Moc
         .control-bar__end-btn:hover {
           background-color: var(--color-error, #FF5C5C);
           color: var(--color-text-primary, #FFFFFF);
-        }
-
-        @media (max-width: 640px) {
-          .interview-screen__main {
-            flex-direction: column;
-            overflow-y: auto;
-          }
-
-          .interview-screen__left,
-          .interview-screen__right {
-            flex: none;
-            min-width: 0;
-            width: 100%;
-          }
-
-          .participant-tiles {
-            min-height: 360px;
-          }
-
-          .interview-screen__right {
-            max-height: 280px;
-          }
-
-          .control-bar {
-            gap: 10px;
-            padding: 10px 12px;
-            flex-wrap: wrap;
-          }
         }
       `}</style>
     </div>

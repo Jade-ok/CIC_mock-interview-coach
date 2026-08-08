@@ -62,8 +62,6 @@ describe('WaitingRoom', () => {
     // Default: agent1 succeeds after a small delay
     mockedCallAgent1.mockResolvedValue({
       nova_sonic_context: 'test-context',
-      competency_guides: [],
-      analyst_output: {},
     });
   });
 
@@ -162,7 +160,6 @@ describe('WaitingRoom', () => {
       await act(async () => {
         resolveAgent1({
           nova_sonic_context: 'stale-context',
-          competency_guides: [],
           analyst_output: { stale: true },
         });
       });

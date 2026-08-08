@@ -11,7 +11,7 @@
  * Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.9, 3.10
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, type MutableRefObject } from 'react';
 import { createAudioManager, type AudioManager } from '@/services/audioManager';
 import type { WebSocketClient, NovaSonicOutputEvent } from '@/services/webSocketClient';
 import type { SessionAction, TranscriptEntry } from '@/types/session';
@@ -24,6 +24,8 @@ export interface UseInterviewStreamingOptions {
   audioManagerFactory?: () => AudioManager;
   /** Callback triggered when auto-end (end_interview tool_use) completes */
   onAutoEnd?: () => void;
+  /** When provided, audio chunks are only sent to WS when this ref is true (mic toggle gate) */
+  isRecordingRef?: MutableRefObject<boolean>;
 }
 
 /** Public socket surface shared by the real and development clients. */
@@ -46,6 +48,7 @@ export function useInterviewStreaming({
   dispatch,
   audioManagerFactory,
   onAutoEnd,
+  isRecordingRef,
 }: UseInterviewStreamingOptions) {
   const audioManagerRef = useRef<AudioManager | null>(null);
   const cleanedUpRef = useRef(false);
@@ -76,9 +79,11 @@ export function useInterviewStreaming({
     const am = factory();
     audioManagerRef.current = am;
 
-    // Wire onAudioChunk: PCM chunk → base64 → sendAudioChunk
+    // Wire onAudioChunk: PCM chunk → base64 → sendAudioChunk (gated by isRecordingRef)
     am.onAudioChunk = (chunk: ArrayBuffer) => {
       if (cleanedUpRef.current) return;
+      // Audio gate: only forward chunks when recording is active
+      if (isRecordingRef && !isRecordingRef.current) return;
       const ws = wsClientRef.current;
       if (!ws || ws.getState() !== 'connected') return;
 
@@ -145,7 +150,7 @@ export function useInterviewStreaming({
         break;
       }
 
-      // Sub-task 4: text_output (FINAL only) → APPEND_TRANSCRIPT
+      // Sub-task 4: text_output → PARTIAL updates livePartial, FINAL commits to transcript
       case 'text_output': {
         if (event.payload.generationStage === 'FINAL') {
           const entry: TranscriptEntry = {
@@ -154,6 +159,12 @@ export function useInterviewStreaming({
             timestamp: new Date().toISOString(),
           };
           dispatchRef.current({ type: 'APPEND_TRANSCRIPT', payload: entry });
+        } else {
+          // PARTIAL — update live caption
+          dispatchRef.current({
+            type: 'UPDATE_LIVE_PARTIAL',
+            payload: { role: event.payload.role, text: event.payload.content },
+          });
         }
         break;
       }

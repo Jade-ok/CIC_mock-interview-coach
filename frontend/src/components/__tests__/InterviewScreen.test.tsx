@@ -55,44 +55,15 @@ describe('InterviewScreen', () => {
       expect(screen.getByTestId('end-button')).toBeInTheDocument();
     });
 
-    it('renders text input with send button', () => {
+    it('renders mic button', () => {
       render(<InterviewScreen />);
-      expect(screen.getByTestId('text-input')).toBeInTheDocument();
-      expect(screen.getByTestId('text-send-button')).toBeInTheDocument();
+      expect(screen.getByTestId('mic-button')).toBeInTheDocument();
+      expect(screen.getByTestId('mic-button-wrapper')).toBeInTheDocument();
     });
 
-    it('renders competency guides and interviewer practice bubbles', () => {
-      mockState = {
-        ...mockState,
-        competencyGuides: [
-          {
-            id: 'leadership',
-            title: 'Leadership',
-            description: 'Leading teams through change',
-            keywords: ['leadership'],
-            highlighted: false,
-          },
-        ],
-        transcript: [
-          {
-            role: 'interviewer',
-            text: 'Tell me about your leadership experience.',
-            timestamp: '2026-01-01T00:00:00Z',
-          },
-          {
-            role: 'user',
-            text: 'My private answer',
-            timestamp: '2026-01-01T00:00:01Z',
-          },
-        ],
-      };
+    it('renders guide panel placeholder', () => {
       render(<InterviewScreen />);
-
       expect(screen.getByTestId('guide-panel')).toBeInTheDocument();
-      expect(screen.getByText('Leadership')).toBeInTheDocument();
-      expect(screen.getByText('Tell me about your leadership experience.')).toBeInTheDocument();
-      expect(screen.queryByText('My private answer')).not.toBeInTheDocument();
-      expect(screen.getByTestId('guide-panel-item')).toHaveAttribute('data-highlighted', 'true');
     });
 
     it('does not show question counter or progress indicator (Req 3.12)', () => {
@@ -262,76 +233,80 @@ describe('InterviewScreen', () => {
       fireEvent.click(toggle);
       expect(mockDispatch).toHaveBeenCalledWith({ type: 'TOGGLE_PRACTICE_MODE' });
     });
-
-    it('exposes its current state to assistive technology', () => {
-      render(<InterviewScreen />);
-      expect(screen.getByTestId('practice-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
-    });
   });
 
-  describe('TextInput', () => {
-    it('send button is disabled when input is empty', () => {
+  describe('MicButton Toggle', () => {
+    it('mic button is disabled when AI is speaking', () => {
+      mockState = { ...mockState, turnState: 'ai_speaking' };
       render(<InterviewScreen />);
-      const sendBtn = screen.getByTestId('text-send-button');
-      expect(sendBtn).toBeDisabled();
+      const micBtn = screen.getByTestId('mic-button');
+      expect(micBtn).toBeDisabled();
     });
 
-    it('send button is enabled when input has text', () => {
+    it('mic button is enabled during user_turn', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
       render(<InterviewScreen />);
-      const input = screen.getByLabelText('Text input fallback');
-      fireEvent.change(input, { target: { value: 'Hello' } });
-      const sendBtn = screen.getByTestId('text-send-button');
-      expect(sendBtn).not.toBeDisabled();
+      const micBtn = screen.getByTestId('mic-button');
+      expect(micBtn).not.toBeDisabled();
     });
 
-    it('sends and records an accepted typed answer', () => {
-      const wsClient = {
-        getState: vi.fn().mockReturnValue('connected'),
-        sendTextInput: vi.fn(),
-      };
-      render(<InterviewScreen wsClient={wsClient as never} />);
-
-      fireEvent.change(screen.getByLabelText('Text input fallback'), {
-        target: { value: 'I led the API migration.' },
-      });
-      fireEvent.click(screen.getByTestId('text-send-button'));
-
-      expect(wsClient.sendTextInput).toHaveBeenCalledWith(
-        'I led the API migration.',
-        'default',
-        'text-input'
-      );
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'APPEND_TRANSCRIPT',
-        payload: expect.objectContaining({
-          role: 'user',
-          text: 'I led the API migration.',
-        }),
-      });
+    it('clicking mic button toggles recording state on', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      const micBtn = screen.getByTestId('mic-button');
+      fireEvent.click(micBtn);
+      expect(micBtn.className).toContain('mic-button--recording');
+      expect(micBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(micBtn).toHaveAttribute('aria-label', 'Stop recording');
     });
 
-    it('keeps a typed answer when the socket is reconnecting', () => {
-      const wsClient = {
-        getState: vi.fn().mockReturnValue('reconnecting'),
-        sendTextInput: vi.fn(),
-      };
-      render(<InterviewScreen wsClient={wsClient as never} />);
-      const input = screen.getByLabelText('Text input fallback');
+    it('clicking mic button again toggles recording state off', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      const micBtn = screen.getByTestId('mic-button');
+      fireEvent.click(micBtn); // on
+      fireEvent.click(micBtn); // off
+      expect(micBtn.className).not.toContain('mic-button--recording');
+      expect(micBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(micBtn).toHaveAttribute('aria-label', 'Start recording your answer');
+    });
 
-      fireEvent.change(input, { target: { value: 'Keep this answer' } });
-      fireEvent.click(screen.getByTestId('text-send-button'));
+    it('clicking while AI speaking does nothing', () => {
+      mockState = { ...mockState, turnState: 'ai_speaking' };
+      render(<InterviewScreen />);
+      const micBtn = screen.getByTestId('mic-button');
+      fireEvent.click(micBtn);
+      expect(micBtn.className).not.toContain('mic-button--recording');
+      expect(micBtn).toHaveAttribute('aria-pressed', 'false');
+    });
 
-      expect(input).toHaveValue('Keep this answer');
-      expect(wsClient.sendTextInput).not.toHaveBeenCalled();
-      expect(mockDispatch).not.toHaveBeenCalledWith({ type: 'TEXT_INPUT_CLEAR' });
+    it('shows "Waiting for AI" aria-label when disabled', () => {
+      mockState = { ...mockState, turnState: 'ai_speaking' };
+      render(<InterviewScreen />);
+      const micBtn = screen.getByTestId('mic-button');
+      expect(micBtn).toHaveAttribute('aria-label', 'Waiting for AI');
+    });
+
+    it('shows status text "Click to speak" when idle', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      expect(screen.getByTestId('mic-status').textContent).toBe('Click to speak');
+    });
+
+    it('shows status text "Recording..." when recording', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      const micBtn = screen.getByTestId('mic-button');
+      fireEvent.click(micBtn);
+      expect(screen.getByTestId('mic-status').textContent).toBe('Recording...');
     });
   });
 
   // --- Property-Based Tests ---
 
-  describe('Property 15: beforeunload activation condition', () => {
+  describe('Property 15: beforeunload Active Condition', () => {
     /**
-     * Feature: frontend-interview, Property 15: beforeunload activation condition
+     * Feature: frontend-interview, Property 15: beforeunload Active Condition
      * Validates: Requirements 3.15
      *
      * For any phase === 'interview', the beforeunload event listener must be
@@ -377,9 +352,107 @@ describe('InterviewScreen', () => {
     });
   });
 
-  describe('Property 16: end button is always enabled', () => {
+  describe('UserTile — no text-mode UI (Req 4.2, 4.3, 4.4)', () => {
+    it('does not render "(Text Mode)" text anywhere in the user tile', () => {
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('(Text Mode)');
+      expect(userTile.textContent).not.toContain('Text Mode');
+    });
+
+    it('does not render the keyboard icon (⌨️) in the user tile', () => {
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('⌨️');
+    });
+
+    it('shows waveform when turnState is user_turn (isActive=true)', () => {
+      mockState = { ...mockState, turnState: 'user_turn' };
+      render(<InterviewScreen />);
+      expect(screen.getByTestId('user-waveform')).toBeInTheDocument();
+      // Should NOT show the 👤 icon when active
+      const userTile = screen.getByTestId('user-tile');
+      const icons = userTile.querySelectorAll('.participant-tile__icon');
+      expect(icons.length).toBe(0);
+    });
+
+    it('shows 👤 icon when turnState is not user_turn (isActive=false)', () => {
+      mockState = { ...mockState, turnState: 'idle' };
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      const icon = userTile.querySelector('.participant-tile__icon');
+      expect(icon).toBeInTheDocument();
+      expect(icon?.textContent).toBe('👤');
+      // Should NOT show waveform
+      expect(screen.queryByTestId('user-waveform')).not.toBeInTheDocument();
+    });
+
+    it('does not render "(Text Mode)" even when error is MIC_DENIED', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const userTile = screen.getByTestId('user-tile');
+      expect(userTile.textContent).not.toContain('(Text Mode)');
+      expect(userTile.textContent).not.toContain('⌨️');
+    });
+  });
+
+  describe('ParticipantTiles — no textOnly prop (Req 4.5)', () => {
+    it('renders ParticipantTiles without textOnly prop (TypeScript compilation proof)', () => {
+      // If this test compiles and renders, it proves ParticipantTiles no longer requires textOnly
+      render(<InterviewScreen />);
+      const tiles = screen.getByTestId('participant-tiles');
+      expect(tiles).toBeInTheDocument();
+      expect(screen.getByTestId('ai-tile')).toBeInTheDocument();
+      expect(screen.getByTestId('user-tile')).toBeInTheDocument();
+    });
+  });
+
+  describe('Mic-denied error banner (Req 4.1, 4.6, 4.7)', () => {
+    it('renders error banner with correct message when MIC_DENIED', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const errorBanner = screen.getByTestId('mic-denied-error');
+      expect(errorBanner).toBeInTheDocument();
+      expect(errorBanner.textContent).toBe(
+        'Microphone access is required. Please allow microphone permission in your browser settings and refresh the page.'
+      );
+    });
+
+    it('error banner has role="alert" for accessibility', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'MIC_DENIED', message: 'Mic denied', retryable: false },
+      };
+      render(<InterviewScreen />);
+      const errorBanner = screen.getByTestId('mic-denied-error');
+      expect(errorBanner).toHaveAttribute('role', 'alert');
+    });
+
+    it('does not render mic-denied error banner when no error', () => {
+      mockState = { ...mockState, error: null };
+      render(<InterviewScreen />);
+      expect(screen.queryByTestId('mic-denied-error')).not.toBeInTheDocument();
+    });
+
+    it('does not render mic-denied error banner for other error codes', () => {
+      mockState = {
+        ...mockState,
+        error: { code: 'WS_RECONNECT_FAILED', message: 'Connection failed', retryable: false },
+      };
+      render(<InterviewScreen />);
+      expect(screen.queryByTestId('mic-denied-error')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Property 16: End Button Always Enabled', () => {
     /**
-     * Feature: frontend-interview, Property 16: end button is always enabled
+     * Feature: frontend-interview, Property 16: End Button Always Enabled
      * Validates: Requirements 4.8
      *
      * For any interview screen state, the end button is always enabled

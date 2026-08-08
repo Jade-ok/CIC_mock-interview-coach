@@ -73,70 +73,88 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
 
   return (
     <div className="upload-screen">
+      <div className="upload-screen__hero-icon" aria-hidden="true">
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+          <circle cx="28" cy="28" r="27" stroke="var(--color-accent, #9AE05C)" strokeWidth="2" opacity="0.3" />
+          <circle cx="28" cy="28" r="20" stroke="var(--color-accent, #9AE05C)" strokeWidth="1.5" opacity="0.15" />
+          <path d="M28 16v12m0 0l-4-4m4 4l4-4M20 36h16" stroke="var(--color-accent, #9AE05C)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
       <h1 className="upload-screen__title">AI Mock Interview Coach</h1>
+      <p className="upload-screen__tagline">
+        Not how to answer the question — how to read what it's really asking.
+      </p>
+      <p className="upload-screen__subtitle">
+        Upload your resume and a job description to get a personalized mock interview based on your background.
+      </p>
 
-      <div className="upload-screen__content">
-        {/* FileUploader */}
-        <div className="upload-screen__section">
-          <label className="upload-screen__label">Resume (PDF)</label>
-          <div
-            className={`upload-screen__dropzone ${isDragOver ? 'upload-screen__dropzone--dragover' : ''}`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={handleDropZoneClick}
-            role="button"
-            tabIndex={0}
-            aria-label="Drag and drop a PDF file or click to select"
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileChange}
-              className="upload-screen__file-input"
-              data-testid="file-input"
-              aria-hidden="true"
-            />
-            {file ? (
-              <p className="upload-screen__filename">{file.name}</p>
-            ) : (
-              <p className="upload-screen__placeholder">
-                Drag and drop a PDF file or click to select
+      <div className="upload-screen__card">
+        <div className="upload-screen__content">
+          {/* FileUploader */}
+          <div className="upload-screen__section">
+            <label className="upload-screen__label">Resume (PDF)</label>
+            <span className="upload-screen__hint">
+              We'll analyze your experience to ask relevant, tailored questions.
+            </span>
+            <div
+              className={`upload-screen__dropzone ${isDragOver ? 'upload-screen__dropzone--dragover' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={handleDropZoneClick}
+              role="button"
+              tabIndex={0}
+              aria-label="Drag and drop a PDF file or click to select"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileChange}
+                className="upload-screen__file-input"
+                data-testid="file-input"
+                aria-hidden="true"
+              />
+              {file ? (
+                <p className="upload-screen__filename">{file.name}</p>
+              ) : (
+                <p className="upload-screen__placeholder">
+                  Drag and drop a PDF file or click to select
+                </p>
+              )}
+            </div>
+            {error && (
+              <p className="upload-screen__error" role="alert">
+                {error}
               </p>
             )}
           </div>
-          {error && (
-            <p className="upload-screen__error" role="alert">
-              {error}
-            </p>
-          )}
-        </div>
 
-        {/* JDTextarea */}
-        <div className="upload-screen__section">
-          <label className="upload-screen__label" htmlFor="jd-textarea">
-            Job Description (JD)
-          </label>
-          <textarea
-            id="jd-textarea"
-            className="upload-screen__textarea"
-            value={jdText}
-            onChange={(e) => setJdText(e.target.value)}
-            placeholder="Paste the job description here"
-            rows={8}
-          />
-        </div>
+          {/* JDTextarea */}
+          <div className="upload-screen__section">
+            <label className="upload-screen__label" htmlFor="jd-textarea">
+              Job Description (JD)
+            </label>
+            <textarea
+              id="jd-textarea"
+              className="upload-screen__textarea"
+              value={jdText}
+              onChange={(e) => setJdText(e.target.value)}
+              placeholder="Paste the job description here"
+              rows={8}
+            />
+          </div>
 
-        {/* SubmitButton */}
-        <button
-          className="upload-screen__submit"
-          onClick={handleSubmit}
-          disabled={isSubmitDisabled}
-          type="button"
-        >
-          Submit
-        </button>
+          {/* SubmitButton */}
+          <button
+            className="upload-screen__submit"
+            onClick={handleSubmit}
+            disabled={isSubmitDisabled}
+            type="button"
+          >
+            Submit
+          </button>
+        </div>
       </div>
 
       <style>{`
@@ -146,23 +164,55 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 48px 24px;
+          padding: 48px 16px;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .upload-screen__hero-icon {
+          margin-bottom: 20px;
+          opacity: 0.85;
         }
 
         .upload-screen__title {
           color: var(--color-text-primary, #FFFFFF);
-          font-size: 28px;
-          font-weight: 600;
-          margin-bottom: 40px;
+          font-size: 32px;
+          font-weight: 700;
+          margin-bottom: 10px;
+          text-align: center;
+        }
+
+        .upload-screen__tagline {
+          color: var(--color-text-secondary, #A0A0A5);
+          font-size: 15px;
+          font-style: italic;
+          margin: 0 0 20px;
+          text-align: center;
+          letter-spacing: 0.2px;
+        }
+
+        .upload-screen__subtitle {
+          color: var(--color-text-secondary, #A0A0A5);
+          font-size: 17px;
+          margin: 0 0 36px;
+          max-width: 600px;
+          text-align: center;
+          line-height: 1.6;
+        }
+
+        .upload-screen__card {
+          width: 100%;
+          max-width: 620px;
+          background-color: var(--color-tile-bg, #1C1C1E);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          padding: 32px;
         }
 
         .upload-screen__content {
           width: 100%;
-          max-width: 560px;
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 28px;
         }
 
         .upload-screen__section {
@@ -173,15 +223,22 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
 
         .upload-screen__label {
           color: var(--color-text-primary, #FFFFFF);
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .upload-screen__hint {
+          color: var(--color-text-secondary, #A0A0A5);
           font-size: 14px;
-          font-weight: 500;
+          font-style: italic;
+          line-height: 1.4;
         }
 
         .upload-screen__dropzone {
-          background-color: var(--color-tile-bg, #1C1C1E);
+          background-color: rgba(255, 255, 255, 0.03);
           border: 2px dashed var(--color-text-secondary, #A0A0A5);
           border-radius: 8px;
-          padding: 32px;
+          padding: 36px;
           text-align: center;
           cursor: pointer;
           transition: border-color 0.2s, background-color 0.2s;
@@ -199,13 +256,14 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
 
         .upload-screen__filename {
           color: var(--color-accent, #9AE05C);
-          font-size: 14px;
+          font-size: 15px;
+          font-weight: 500;
           margin: 0;
         }
 
         .upload-screen__placeholder {
           color: var(--color-text-secondary, #A0A0A5);
-          font-size: 14px;
+          font-size: 15px;
           margin: 0;
         }
 
@@ -216,15 +274,15 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
         }
 
         .upload-screen__textarea {
-          background-color: var(--color-tile-bg, #1C1C1E);
+          background-color: rgba(255, 255, 255, 0.03);
           border: 1px solid var(--color-text-secondary, #A0A0A5);
           border-radius: 8px;
-          padding: 12px;
+          padding: 14px;
           color: var(--color-text-primary, #FFFFFF);
-          font-size: 14px;
+          font-size: 15px;
           font-family: inherit;
           resize: vertical;
-          min-height: 120px;
+          min-height: 130px;
         }
 
         .upload-screen__textarea:focus {
@@ -241,7 +299,7 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
           color: var(--color-canvas, #0A0A0A);
           border: none;
           border-radius: 8px;
-          padding: 12px 24px;
+          padding: 14px 28px;
           font-size: 16px;
           font-weight: 600;
           cursor: pointer;

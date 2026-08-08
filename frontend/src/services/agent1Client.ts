@@ -1,9 +1,9 @@
 /**
- * Agent 1 client — calls the PDF Parser, Analyst, and Interviewer HTTP stages
- * to produce nova_sonic_context and competency_guides from resume + JD.
+ * Agent 1 client — calls pdf_parser + analyst + interviewer Lambdas
+ * to produce nova_sonic_context and analyst_output from resume + JD.
  */
 
-import type { Agent1Response, CompetencyGuide } from '@/types/session';
+import type { Agent1Response } from '@/types/session';
 import { API_ENDPOINTS } from '@/services/apiConfig';
 
 export interface Agent1Request {
@@ -13,7 +13,7 @@ export interface Agent1Request {
 
 /**
  * Calls the full pipeline: pdf_parser → analyst → interviewer.
- * Returns the complete Analyst output plus the derived runtime context and UI guides.
+ * Returns nova_sonic_context and analyst_output.
  */
 export async function callAgent1(
   request: Agent1Request,
@@ -71,35 +71,10 @@ export async function callAgent1(
 
   const novaSonicContext = interviewerResult.runtime_context;
 
-  // Step 4: Map analyst output to competency_guides for the UI
-  const competencyGuides: CompetencyGuide[] = mapToCompetencyGuides(analystOutput);
-
   return {
     nova_sonic_context: novaSonicContext,
-    competency_guides: competencyGuides,
     analyst_output: analystOutput,
   };
-}
-
-/**
- * Maps analyst_output.interview_plan to CompetencyGuide[] for the UI.
- */
-function mapToCompetencyGuides(analystOutput: Record<string, unknown>): CompetencyGuide[] {
-  const plan = (analystOutput.interview_plan || []) as Array<{
-    topic: string;
-    priority: number;
-    question_type: string;
-    target_skill: string;
-    source_experience_id: string | null;
-  }>;
-
-  return plan.map((item, index) => ({
-    id: `cg-${index + 1}`,
-    title: item.target_skill,
-    keywords: [item.topic, item.question_type, item.target_skill],
-    description: item.topic,
-    highlighted: false,
-  }));
 }
 
 /**

@@ -14,7 +14,7 @@ export interface SessionState {
   uploadData: UploadData | null;
   analystOutput: AnalystOutput | null;
   transcript: TranscriptEntry[];
-  competencyGuides: CompetencyGuide[];
+  livePartial: { role: 'interviewer' | 'user'; text: string } | null;
   novaSonicContext: string;
   elapsedSeconds: number;
   wsConnectionState: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -33,18 +33,18 @@ export interface UploadData {
 
 export type AnalystOutput = Record<string, unknown>;
 
-export interface TranscriptEntry {
-  role: 'interviewer' | 'user';
-  text: string;
-  timestamp: string; // ISO 8601
-}
-
 export interface CompetencyGuide {
   id: string;
   title: string;
   keywords: string[];
   description: string;
   highlighted: boolean;
+}
+
+export interface TranscriptEntry {
+  role: 'interviewer' | 'user';
+  text: string;
+  timestamp: string; // ISO 8601
 }
 
 export interface SessionError {
@@ -77,6 +77,8 @@ export type SessionAction =
   | { type: 'USER_TURN' }
   | { type: 'BARGE_IN' }
   | { type: 'APPEND_TRANSCRIPT'; payload: TranscriptEntry }
+  | { type: 'UPDATE_LIVE_PARTIAL'; payload: { role: 'interviewer' | 'user'; text: string } }
+  | { type: 'CLEAR_LIVE_PARTIAL' }
   | { type: 'TOGGLE_PRACTICE_MODE' }
   | { type: 'TEXT_INPUT_START' }
   | { type: 'TEXT_INPUT_CLEAR' }
@@ -91,8 +93,7 @@ export type SessionAction =
 
 export interface Agent1Response {
   nova_sonic_context: string;
-  competency_guides: CompetencyGuide[];
-  analyst_output: AnalystOutput;
+  analyst_output?: Record<string, unknown>;
 }
 
 export interface Agent3Request {

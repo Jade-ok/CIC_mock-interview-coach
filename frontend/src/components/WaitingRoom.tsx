@@ -156,14 +156,12 @@ export function WaitingRoom() {
     const requestId = ++wsRequestIdRef.current;
     const wsClient = createWsClient();
     wsClientRef.current = wsClient;
-    setWebSocketClient(wsClient);
-
+    setWebSocketClient(wsClient as any);
     const isCurrentRequest = () => (
       activeRef.current
       && requestId === wsRequestIdRef.current
       && wsClientRef.current === wsClient
     );
-
     wsClient.onDisconnect = (reason) => {
       if (!isCurrentRequest()) return;
       dispatch({ type: 'WS_DISCONNECTED', payload: { reason } });

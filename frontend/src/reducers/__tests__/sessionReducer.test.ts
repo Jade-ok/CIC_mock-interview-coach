@@ -28,6 +28,8 @@ const evaluatorOutput: EvaluatorOutput = {
   readiness_label: 'Developing well',
   strengths: [],
   improvements: [],
+  keywords_covered: [],
+  keywords_not_covered: [],
   contextual_advice: [],
   interview_metadata: {
     candidate_level: 'student_intern',
@@ -59,20 +61,15 @@ describe('sessionReducer', () => {
   });
 
   describe('AGENT1_SUCCESS', () => {
-    it('stores nova_sonic_context and competency_guides, sets agent1Ready', () => {
+    it('stores nova_sonic_context and sets agent1Ready', () => {
       const result = sessionReducer(initialState, {
         type: 'AGENT1_SUCCESS',
         payload: {
           nova_sonic_context: 'ctx',
-          analyst_output: { candidate_profile: {} },
-          competency_guides: [
-            { id: '1', title: 'T', keywords: ['k'], description: 'd', highlighted: false },
-          ],
         },
       });
       expect(result.agent1Ready).toBe(true);
       expect(result.novaSonicContext).toBe('ctx');
-      expect(result.competencyGuides).toHaveLength(1);
     });
   });
 
@@ -413,6 +410,57 @@ describe('maybeStartSession', () => {
   });
 });
 
+// ---------- analystOutput Unit Tests ----------
+
+describe('AGENT1_SUCCESS — analystOutput', () => {
+  it('stores analystOutput when analyst_output is present in payload', () => {
+    const analystData = {
+      interview_plan: [
+        { topic: 'React', priority: 1, question_type: 'technical', target_skill: 'React', source_experience_id: null },
+      ],
+    };
+
+    const result = sessionReducer(initialState, {
+      type: 'AGENT1_SUCCESS',
+      payload: {
+        nova_sonic_context: 'ctx',
+        analyst_output: analystData,
+      },
+    });
+
+    expect(result.analystOutput).toEqual(analystData);
+  });
+
+  it('stores null when analyst_output is undefined in payload', () => {
+    const result = sessionReducer(initialState, {
+      type: 'AGENT1_SUCCESS',
+      payload: {
+        nova_sonic_context: 'ctx',
+      },
+    });
+
+    expect(result.analystOutput).toBeNull();
+  });
+});
+
+describe('initialState — analystOutput', () => {
+  it('has analystOutput set to null', () => {
+    expect(initialState.analystOutput).toBeNull();
+  });
+});
+
+describe('RESET — analystOutput', () => {
+  it('clears analystOutput to null', () => {
+    const stateWithAnalyst: SessionState = {
+      ...initialState,
+      analystOutput: { interview_plan: [] },
+    };
+
+    const result = sessionReducer(stateWithAnalyst, { type: 'RESET' });
+    expect(result.analystOutput).toBeNull();
+  });
+});
+
 // ---------- Property-Based Tests ----------
 
 describe('PBT: Property 8 — Practice Mode isolation', () => {
@@ -444,16 +492,6 @@ describe('PBT: Property 8 — Practice Mode isolation', () => {
         }),
         { minLength: 0, maxLength: 5 }
       ),
-      competencyGuides: fc.array(
-        fc.record({
-          id: fc.string({ minLength: 1, maxLength: 10 }),
-          title: fc.string({ minLength: 1, maxLength: 20 }),
-          keywords: fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 1, maxLength: 3 }),
-          description: fc.string({ minLength: 0, maxLength: 30 }),
-          highlighted: fc.boolean(),
-        }),
-        { minLength: 0, maxLength: 3 }
-      ),
       novaSonicContext: fc.string({ minLength: 0, maxLength: 100 }),
       elapsedSeconds: fc.nat({ max: 3600 }),
       wsConnectionState: fc.constantFrom('connecting', 'connected', 'reconnecting', 'disconnected') as fc.Arbitrary<SessionState['wsConnectionState']>,
@@ -462,6 +500,7 @@ describe('PBT: Property 8 — Practice Mode isolation', () => {
       error: fc.constant(null),
       agent3Loading: fc.boolean(),
       feedbackResult: fc.constant(null),
+      livePartial: fc.constant(null),
       endReason: fc.constant(null),
     });
 
@@ -478,7 +517,6 @@ describe('PBT: Property 8 — Practice Mode isolation', () => {
         expect(result.inputMode).toBe(state.inputMode);
         expect(result.textInputState).toBe(state.textInputState);
         expect(result.transcript).toEqual(state.transcript);
-        expect(result.competencyGuides).toEqual(state.competencyGuides);
         expect(result.novaSonicContext).toBe(state.novaSonicContext);
         expect(result.elapsedSeconds).toBe(state.elapsedSeconds);
         expect(result.wsConnectionState).toBe(state.wsConnectionState);

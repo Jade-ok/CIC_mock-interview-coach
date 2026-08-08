@@ -51,10 +51,6 @@ describe('callAgent1', () => {
     }
     expect(result.analyst_output).toEqual(analystOutput);
     expect(result.nova_sonic_context).toBe('runtime context');
-    expect(result.competency_guides[0]).toMatchObject({
-      title: 'Communication',
-      description: 'Ownership',
-    });
   });
 
   it('reports the Interviewer Function URL error envelope', async () => {
