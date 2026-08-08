@@ -65,7 +65,6 @@ describe('WaitingRoom', () => {
     // Default: agent1 succeeds after a small delay
     mockedCallAgent1.mockResolvedValue({
       nova_sonic_context: 'test-context',
-      competency_guides: [],
     });
   });
 

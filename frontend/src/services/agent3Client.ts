@@ -1,6 +1,6 @@
 /**
  * Agent 3 client — calls the evaluator Lambda to get feedback
- * based on the interview transcript and competency guides.
+ * based on the interview transcript and analyst output.
  */
 
 import type { Agent3Request, TranscriptEntry } from '@/types/session';
@@ -66,7 +66,7 @@ function buildConversation(
 }
 
 /**
- * Calls the evaluator Lambda with the interview transcript and competency guides.
+ * Calls the evaluator Lambda with the interview transcript and analyst output.
  * Transforms data to match the evaluator's expected input schema.
  * Returns feedback data.
  */

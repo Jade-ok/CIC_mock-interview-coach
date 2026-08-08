@@ -5,11 +5,10 @@
  * **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
  *
  * These tests capture baseline behavior that MUST remain unchanged after the fix.
- * All tests MUST PASS on the current UNFIXED code.
  *
  * Preserved behaviors:
- * - nova_sonic_context and competency_guides are stored correctly on AGENT1_SUCCESS
- * - transcript and competency_guides flow to callAgent3() correctly
+ * - nova_sonic_context is stored correctly on AGENT1_SUCCESS
+ * - transcript and analyst_output flow to callAgent3() correctly
  * - When analyst_output is undefined, agent3Client uses {} as fallback
  * - RESET returns state to initialState completely
  */
@@ -19,20 +18,11 @@ import * as fc from 'fast-check';
 import { sessionReducer, initialState } from '../sessionReducer';
 import type {
   SessionState,
-  CompetencyGuide,
   TranscriptEntry,
   Agent3Request,
 } from '@/types/session';
 
 // ─── Arbitraries (shared generators) ───
-
-const competencyGuideArb: fc.Arbitrary<CompetencyGuide> = fc.record({
-  id: fc.string({ minLength: 1, maxLength: 10 }),
-  title: fc.string({ minLength: 1, maxLength: 30 }),
-  keywords: fc.array(fc.string({ minLength: 1, maxLength: 15 }), { minLength: 1, maxLength: 5 }),
-  description: fc.string({ minLength: 0, maxLength: 50 }),
-  highlighted: fc.boolean(),
-});
 
 const transcriptEntryArb: fc.Arbitrary<TranscriptEntry> = fc.record({
   role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
@@ -42,36 +32,30 @@ const transcriptEntryArb: fc.Arbitrary<TranscriptEntry> = fc.record({
 
 const novaSonicContextArb: fc.Arbitrary<string> = fc.string({ minLength: 1, maxLength: 200 });
 
-// ─── Sub-task 1: Observe callAgent1() returns nova_sonic_context and competency_guides correctly ───
-// ─── Sub-task 5: PBT - For all valid Agent1Response payloads, nova_sonic_context and competency_guides are stored correctly in state ───
+// ─── Sub-task 1: Observe callAgent1() returns nova_sonic_context correctly ───
+// ─── Sub-task 5: PBT - For all valid Agent1Response payloads, nova_sonic_context is stored correctly in state ───
 
-describe('Preservation: AGENT1_SUCCESS stores nova_sonic_context and competency_guides', () => {
+describe('Preservation: AGENT1_SUCCESS stores nova_sonic_context', () => {
   /**
    * **Validates: Requirements 3.1**
    *
    * For all valid Agent1Response payloads, dispatching AGENT1_SUCCESS
-   * must store nova_sonic_context and competency_guides correctly in state.
+   * must store nova_sonic_context correctly in state.
    */
-  it('property: for all valid Agent1Response payloads, nova_sonic_context and competency_guides are stored correctly', () => {
+  it('property: for all valid Agent1Response payloads, nova_sonic_context is stored correctly', () => {
     fc.assert(
       fc.property(
         novaSonicContextArb,
-        fc.array(competencyGuideArb, { minLength: 0, maxLength: 5 }),
-        (novaSonicContext, competencyGuides) => {
+        (novaSonicContext) => {
           const result = sessionReducer(initialState, {
             type: 'AGENT1_SUCCESS',
             payload: {
               nova_sonic_context: novaSonicContext,
-              competency_guides: competencyGuides,
             },
           });
 
           // nova_sonic_context is stored correctly
           expect(result.novaSonicContext).toBe(novaSonicContext);
-
-          // competency_guides are stored correctly
-          expect(result.competencyGuides).toEqual(competencyGuides);
-          expect(result.competencyGuides).toHaveLength(competencyGuides.length);
 
           // agent1Ready is set to true
           expect(result.agent1Ready).toBe(true);
@@ -94,9 +78,8 @@ describe('Preservation: AGENT1_SUCCESS stores nova_sonic_context and competency_
     fc.assert(
       fc.property(
         novaSonicContextArb,
-        fc.array(competencyGuideArb, { minLength: 0, maxLength: 3 }),
         sessionStateWithDataArb,
-        (ctx, guides, extras) => {
+        (ctx, extras) => {
           const preState: SessionState = {
             ...initialState,
             elapsedSeconds: extras.elapsedSeconds,
@@ -108,7 +91,6 @@ describe('Preservation: AGENT1_SUCCESS stores nova_sonic_context and competency_
             type: 'AGENT1_SUCCESS',
             payload: {
               nova_sonic_context: ctx,
-              competency_guides: guides,
             },
           });
 
@@ -124,10 +106,10 @@ describe('Preservation: AGENT1_SUCCESS stores nova_sonic_context and competency_
   });
 });
 
-// ─── Sub-task 2: Observe callAgent3() receives transcript and competency_guides unchanged ───
-// ─── Sub-task 6: PBT - For all valid transcript/competency_guides combinations, callAgent3() always includes both ───
+// ─── Sub-task 2: Observe callAgent3() receives transcript correctly ───
+// ─── Sub-task 6: PBT - For all valid transcript combinations, callAgent3() always includes them ───
 
-describe('Preservation: callAgent3() receives transcript and competency_guides', () => {
+describe('Preservation: callAgent3() receives transcript and analyst_output', () => {
   let originalFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
@@ -141,10 +123,10 @@ describe('Preservation: callAgent3() receives transcript and competency_guides',
   /**
    * **Validates: Requirements 3.2**
    *
-   * For all valid transcript/competency_guides combinations,
-   * callAgent3() always includes both fields in the request body.
+   * For all valid transcript combinations,
+   * callAgent3() always includes the transcript in the request body.
    */
-  it('property: for all valid transcript/competency_guides, callAgent3 includes both in request body', async () => {
+  it('property: for all valid transcripts, callAgent3 includes them in request body', async () => {
     // We test the agent3Client module directly
     const { callAgent3 } = await import('@/services/agent3Client');
 
@@ -166,8 +148,7 @@ describe('Preservation: callAgent3() receives transcript and competency_guides',
           ),
           { minLength: 1, maxLength: 5 }
         ),
-        fc.array(competencyGuideArb, { minLength: 0, maxLength: 3 }),
-        async (pairs, competencyGuides) => {
+        async (pairs) => {
           // Flatten pairs into transcript
           const transcript: TranscriptEntry[] = pairs.flatMap(([q, a]) => [q, a]);
 
@@ -184,7 +165,6 @@ describe('Preservation: callAgent3() receives transcript and competency_guides',
 
           const request: Agent3Request = {
             transcript,
-            competency_guides: competencyGuides,
           };
 
           await callAgent3(request);
@@ -253,10 +233,9 @@ describe('Preservation: analyst_output fallback to {} when undefined/null', () =
           ),
           { minLength: 1, maxLength: 5 }
         ),
-        fc.array(competencyGuideArb, { minLength: 0, maxLength: 3 }),
         // analyst_output is explicitly undefined (as in the unfixed code path)
         fc.constantFrom(undefined, undefined),
-        async (pairs, competencyGuides, _analystOutput) => {
+        async (pairs, _analystOutput) => {
           const transcript: TranscriptEntry[] = pairs.flatMap(([q, a]) => [q, a]);
 
           let capturedBody: Record<string, unknown> | null = null;
@@ -271,7 +250,6 @@ describe('Preservation: analyst_output fallback to {} when undefined/null', () =
 
           const request: Agent3Request = {
             transcript,
-            competency_guides: competencyGuides,
             // analyst_output is NOT provided (undefined) — testing the fallback
           };
 
@@ -304,7 +282,6 @@ describe('Preservation: analyst_output fallback to {} when undefined/null', () =
         { role: 'interviewer', text: 'Q1', timestamp: '2024-01-01T00:00:00Z' },
         { role: 'user', text: 'A1', timestamp: '2024-01-01T00:00:01Z' },
       ],
-      competency_guides: [],
       analyst_output: undefined,
     });
 
@@ -330,7 +307,13 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       textInputState: fc.constantFrom('idle', 'composing') as fc.Arbitrary<SessionState['textInputState']>,
       practiceMode: fc.boolean(),
       transcript: fc.array(transcriptEntryArb, { minLength: 0, maxLength: 10 }),
-      competencyGuides: fc.array(competencyGuideArb, { minLength: 0, maxLength: 5 }),
+      livePartial: fc.oneof(
+        fc.constant(null),
+        fc.record({
+          role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
+          text: fc.string({ minLength: 1, maxLength: 50 }),
+        })
+      ) as fc.Arbitrary<SessionState['livePartial']>,
       novaSonicContext: fc.string({ minLength: 0, maxLength: 100 }),
       elapsedSeconds: fc.nat({ max: 7200 }),
       wsConnectionState: fc.constantFrom('connecting', 'connected', 'reconnecting', 'disconnected') as fc.Arbitrary<SessionState['wsConnectionState']>,
@@ -355,13 +338,6 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       ) as fc.Arbitrary<Record<string, unknown> | null>,
       uploadedPdf: fc.constant(null) as fc.Arbitrary<File | null>,
       uploadedJdText: fc.string({ minLength: 0, maxLength: 50 }),
-      livePartial: fc.oneof(
-        fc.constant(null),
-        fc.record({
-          role: fc.constantFrom('interviewer', 'user') as fc.Arbitrary<'interviewer' | 'user'>,
-          text: fc.string({ minLength: 1, maxLength: 50 }),
-        })
-      ) as fc.Arbitrary<SessionState['livePartial']>,
     });
 
     fc.assert(
@@ -392,9 +368,7 @@ describe('Preservation: RESET always clears all state back to initialState', () 
         { role: 'interviewer', text: 'Q1', timestamp: '2024-01-01T00:00:00Z' },
         { role: 'user', text: 'A1', timestamp: '2024-01-01T00:00:01Z' },
       ],
-      competencyGuides: [
-        { id: 'cg-1', title: 'Test', keywords: ['test'], description: 'desc', highlighted: true },
-      ],
+      livePartial: { role: 'interviewer', text: 'partial text...' },
       novaSonicContext: 'some-context-data',
       elapsedSeconds: 3600,
       wsConnectionState: 'connected',
@@ -406,7 +380,6 @@ describe('Preservation: RESET always clears all state back to initialState', () 
       analystOutput: { interview_plan: [{ topic: 'React' }] },
       uploadedPdf: null,
       uploadedJdText: 'Some JD text',
-      livePartial: { role: 'interviewer', text: 'partial text...' },
     };
 
     const result = sessionReducer(mutatedState, { type: 'RESET' });
@@ -417,7 +390,6 @@ describe('Preservation: RESET always clears all state back to initialState', () 
     expect(result.textInputState).toBe('idle');
     expect(result.practiceMode).toBe(true);
     expect(result.transcript).toEqual([]);
-    expect(result.competencyGuides).toEqual([]);
     expect(result.novaSonicContext).toBe('');
     expect(result.elapsedSeconds).toBe(0);
     expect(result.wsConnectionState).toBe('disconnected');

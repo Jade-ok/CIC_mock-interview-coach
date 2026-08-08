@@ -11,7 +11,6 @@ export const initialState: SessionState = {
   practiceMode: true,
   transcript: [],
   livePartial: null,
-  competencyGuides: [],
   novaSonicContext: '',
   elapsedSeconds: 0,
   wsConnectionState: 'disconnected',
@@ -44,7 +43,6 @@ export function sessionReducer(
         ...state,
         agent1Ready: true,
         novaSonicContext: action.payload.nova_sonic_context,
-        competencyGuides: action.payload.competency_guides,
         analystOutput: action.payload.analyst_output ?? null,
         error: null,
       };

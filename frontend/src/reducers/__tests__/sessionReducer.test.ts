@@ -58,19 +58,15 @@ describe('sessionReducer', () => {
   });
 
   describe('AGENT1_SUCCESS', () => {
-    it('stores nova_sonic_context and competency_guides, sets agent1Ready', () => {
+    it('stores nova_sonic_context and sets agent1Ready', () => {
       const result = sessionReducer(initialState, {
         type: 'AGENT1_SUCCESS',
         payload: {
           nova_sonic_context: 'ctx',
-          competency_guides: [
-            { id: '1', title: 'T', keywords: ['k'], description: 'd', highlighted: false },
-          ],
         },
       });
       expect(result.agent1Ready).toBe(true);
       expect(result.novaSonicContext).toBe('ctx');
-      expect(result.competencyGuides).toHaveLength(1);
     });
   });
 
@@ -416,7 +412,6 @@ describe('AGENT1_SUCCESS — analystOutput', () => {
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'ctx',
-        competency_guides: [],
         analyst_output: analystData,
       },
     });
@@ -429,7 +424,6 @@ describe('AGENT1_SUCCESS — analystOutput', () => {
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'ctx',
-        competency_guides: [],
       },
     });
 
@@ -484,16 +478,6 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
         }),
         { minLength: 0, maxLength: 5 }
       ),
-      competencyGuides: fc.array(
-        fc.record({
-          id: fc.string({ minLength: 1, maxLength: 10 }),
-          title: fc.string({ minLength: 1, maxLength: 20 }),
-          keywords: fc.array(fc.string({ minLength: 1, maxLength: 10 }), { minLength: 1, maxLength: 3 }),
-          description: fc.string({ minLength: 0, maxLength: 30 }),
-          highlighted: fc.boolean(),
-        }),
-        { minLength: 0, maxLength: 3 }
-      ),
       novaSonicContext: fc.string({ minLength: 0, maxLength: 100 }),
       elapsedSeconds: fc.nat({ max: 3600 }),
       wsConnectionState: fc.constantFrom('connecting', 'connected', 'reconnecting', 'disconnected') as fc.Arbitrary<SessionState['wsConnectionState']>,
@@ -521,7 +505,6 @@ describe('PBT: Property 8 — Practice Mode Isolation', () => {
         expect(result.inputMode).toBe(state.inputMode);
         expect(result.textInputState).toBe(state.textInputState);
         expect(result.transcript).toEqual(state.transcript);
-        expect(result.competencyGuides).toEqual(state.competencyGuides);
         expect(result.novaSonicContext).toBe(state.novaSonicContext);
         expect(result.elapsedSeconds).toBe(state.elapsedSeconds);
         expect(result.wsConnectionState).toBe(state.wsConnectionState);

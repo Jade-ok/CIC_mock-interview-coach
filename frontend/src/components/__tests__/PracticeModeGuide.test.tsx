@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import fc from 'fast-check';
 import { PracticeBubbles } from '@/components/PracticeBubbles';
-import { GuidePanel } from '@/components/GuidePanel';
-import { matchKeywords } from '@/utils/keywordMatcher';
-import type { SessionState, CompetencyGuide, TranscriptEntry } from '@/types/session';
+import type { SessionState, TranscriptEntry } from '@/types/session';
 import { initialState } from '@/reducers/sessionReducer';
 import { InterviewScreen } from '@/components/InterviewScreen';
 
@@ -32,29 +30,11 @@ vi.mock('@/services/agent3Client', () => ({
 }));
 
 // --- Helpers ---
-function makeGuide(overrides: Partial<CompetencyGuide> = {}): CompetencyGuide {
-  return {
-    id: overrides.id ?? 'guide-1',
-    title: overrides.title ?? 'Leadership',
-    keywords: overrides.keywords ?? ['leadership', 'team'],
-    description: overrides.description ?? 'Team leadership skills',
-    highlighted: overrides.highlighted ?? false,
-  };
-}
-
 function makeTranscriptEntry(role: 'interviewer' | 'user', text: string): TranscriptEntry {
   return { role, text, timestamp: new Date().toISOString() };
 }
 
 // --- fast-check Arbitraries ---
-const guidArb = fc.record({
-  id: fc.uuid(),
-  title: fc.string({ minLength: 1, maxLength: 50 }),
-  keywords: fc.array(fc.string({ minLength: 1, maxLength: 30 }), { minLength: 1, maxLength: 5 }),
-  description: fc.string({ minLength: 1, maxLength: 100 }),
-  highlighted: fc.boolean(),
-});
-
 const transcriptEntryArb = fc.record({
   role: fc.oneof(fc.constant('interviewer' as const), fc.constant('user' as const)),
   text: fc.string({ minLength: 1, maxLength: 200 }),
@@ -62,57 +42,6 @@ const transcriptEntryArb = fc.record({
 });
 
 // --- Unit Tests ---
-describe('keywordMatcher', () => {
-  it('returns empty array for empty text', () => {
-    const guides = [makeGuide()];
-    expect(matchKeywords('', guides)).toEqual([]);
-  });
-
-  it('returns empty array for empty guides', () => {
-    expect(matchKeywords('some text', [])).toEqual([]);
-  });
-
-  it('matches English keyword with word boundary', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['team'] });
-    expect(matchKeywords('Working with the team was great', [guide])).toEqual(['g1']);
-  });
-
-  it('does not match English keyword without word boundary', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['team'] });
-    // "teamwork" should NOT match "team" with word boundary
-    expect(matchKeywords('teamwork is important', [guide])).toEqual([]);
-  });
-
-  it('matches case-insensitively for English', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['Leadership'] });
-    expect(matchKeywords('My LEADERSHIP experience', [guide])).toEqual(['g1']);
-  });
-
-  it('matches Korean keyword by simple inclusion', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['리더십'] });
-    expect(matchKeywords('저는 리더십이 있습니다', [guide])).toEqual(['g1']);
-  });
-
-  it('matches Korean keyword case-insensitively', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['협업'] });
-    expect(matchKeywords('팀 협업 경험', [guide])).toEqual(['g1']);
-  });
-
-  it('returns multiple matched guide IDs', () => {
-    const guides = [
-      makeGuide({ id: 'g1', keywords: ['python'] }),
-      makeGuide({ id: 'g2', keywords: ['java'] }),
-      makeGuide({ id: 'g3', keywords: ['rust'] }),
-    ];
-    expect(matchKeywords('I use python and java daily', guides)).toEqual(['g1', 'g2']);
-  });
-
-  it('handles special regex characters in keywords', () => {
-    const guide = makeGuide({ id: 'g1', keywords: ['C++'] });
-    // C++ contains regex special chars; should not throw
-    expect(() => matchKeywords('I know C++ well', [guide])).not.toThrow();
-  });
-});
 
 describe('PracticeBubbles', () => {
   it('shows interviewer bubbles when practiceMode is ON', () => {
@@ -152,43 +81,6 @@ describe('PracticeBubbles', () => {
 
     rerender(<PracticeBubbles practiceMode={false} transcript={transcript} />);
     expect(screen.queryAllByTestId('practice-bubble')).toHaveLength(0);
-  });
-});
-
-describe('GuidePanel', () => {
-  it('always shows guide list regardless of practiceMode', () => {
-    const guides = [makeGuide({ id: 'g1' }), makeGuide({ id: 'g2' })];
-    render(<GuidePanel guides={guides} practiceMode={false} currentInterviewerText={null} />);
-    expect(screen.getAllByTestId('guide-panel-item')).toHaveLength(2);
-  });
-
-  it('highlights matching guides when practiceMode ON', () => {
-    const guides = [
-      makeGuide({ id: 'g1', keywords: ['leadership'] }),
-      makeGuide({ id: 'g2', keywords: ['python'] }),
-    ];
-    render(<GuidePanel guides={guides} practiceMode={true} currentInterviewerText="Tell me about your leadership" />);
-    const items = screen.getAllByTestId('guide-panel-item');
-    expect(items[0].getAttribute('data-highlighted')).toBe('true');
-    expect(items[1].getAttribute('data-highlighted')).toBe('false');
-  });
-
-  it('no highlights when practiceMode OFF', () => {
-    const guides = [makeGuide({ id: 'g1', keywords: ['leadership'] })];
-    render(<GuidePanel guides={guides} practiceMode={false} currentInterviewerText="Tell me about your leadership" />);
-    const items = screen.getAllByTestId('guide-panel-item');
-    expect(items[0].getAttribute('data-highlighted')).toBe('false');
-  });
-
-  it('clears highlights on ON→OFF transition', () => {
-    const guides = [makeGuide({ id: 'g1', keywords: ['leadership'] })];
-    const { rerender } = render(
-      <GuidePanel guides={guides} practiceMode={true} currentInterviewerText="leadership example" />
-    );
-    expect(screen.getByTestId('guide-panel-item').getAttribute('data-highlighted')).toBe('true');
-
-    rerender(<GuidePanel guides={guides} practiceMode={false} currentInterviewerText="leadership example" />);
-    expect(screen.getByTestId('guide-panel-item').getAttribute('data-highlighted')).toBe('false');
   });
 });
 
@@ -322,10 +214,10 @@ describe('Property 11: Practice Mode ON→OFF 즉시 제거', () => {
    * Feature: frontend-interview, Property 11: Practice Mode ON→OFF 즉시 제거
    * Validates: Requirements 5.6
    *
-   * For any state with Practice Mode ON that has bubbles/highlights displayed,
-   * switching to OFF immediately removes all bubbles and guide highlights.
+   * For any state with Practice Mode ON that has bubbles displayed,
+   * switching to OFF immediately removes all bubbles.
    */
-  it('PBT: ON→OFF transition immediately removes all bubbles and highlights', () => {
+  it('PBT: ON→OFF transition immediately removes all bubbles', () => {
     fc.assert(
       fc.property(
         fc.array(
@@ -336,10 +228,9 @@ describe('Property 11: Practice Mode ON→OFF 즉시 제거', () => {
           }),
           { minLength: 1, maxLength: 10 }
         ),
-        fc.array(guidArb, { minLength: 1, maxLength: 5 }),
-        (interviewerTranscript, guides) => {
+        (interviewerTranscript) => {
           // Render PracticeBubbles in ON state
-          const { rerender: rerenderBubbles, unmount: unmountBubbles } = render(
+          const { rerender, unmount } = render(
             <PracticeBubbles practiceMode={true} transcript={interviewerTranscript} />
           );
 
@@ -348,7 +239,7 @@ describe('Property 11: Practice Mode ON→OFF 즉시 제거', () => {
           expect(bubblesOn.length).toBe(interviewerTranscript.length);
 
           // Switch to OFF
-          rerenderBubbles(
+          rerender(
             <PracticeBubbles practiceMode={false} transcript={interviewerTranscript} />
           );
 
@@ -356,71 +247,7 @@ describe('Property 11: Practice Mode ON→OFF 즉시 제거', () => {
           const bubblesOff = screen.queryAllByTestId('practice-bubble');
           expect(bubblesOff.length).toBe(0);
 
-          unmountBubbles();
-
-          // Now test GuidePanel highlights
-          const textWithKeyword = guides[0]?.keywords[0]
-            ? `This text contains ${guides[0].keywords[0]} keyword`
-            : 'no match';
-
-          const { rerender: rerenderGuide, unmount: unmountGuide } = render(
-            <GuidePanel guides={guides} practiceMode={true} currentInterviewerText={textWithKeyword} />
-          );
-
-          // Switch to OFF
-          rerenderGuide(
-            <GuidePanel guides={guides} practiceMode={false} currentInterviewerText={textWithKeyword} />
-          );
-
-          // All highlights must be cleared
-          const items = screen.queryAllByTestId('guide-panel-item');
-          for (const item of items) {
-            expect(item.getAttribute('data-highlighted')).toBe('false');
-          }
-
-          unmountGuide();
-        }
-      ),
-      { numRuns: 100 }
-    );
-  });
-});
-
-describe('Property 12: Guide 키워드 매칭 일관성', () => {
-  /**
-   * Feature: frontend-interview, Property 12: Guide 키워드 매칭 일관성
-   * Validates: Requirements 6.2
-   *
-   * For any interviewer text and competency_guides list, every guide ID
-   * returned by matchKeywords has at least one keyword present in the text.
-   */
-  it('PBT: every returned guide ID has at least one keyword present in the text', () => {
-    fc.assert(
-      fc.property(
-        fc.string({ minLength: 0, maxLength: 500 }),
-        fc.array(guidArb, { minLength: 0, maxLength: 10 }),
-        (text, guides) => {
-          const matchedIds = matchKeywords(text, guides);
-
-          for (const id of matchedIds) {
-            const guide = guides.find((g) => g.id === id);
-            expect(guide).toBeDefined();
-
-            // At least one keyword must actually be present in the text
-            const hasKeywordInText = guide!.keywords.some((keyword) => {
-              if (!keyword) return false;
-              // Use the same logic as the matcher
-              const isKoreanKw = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/.test(keyword);
-              if (isKoreanKw) {
-                return text.toLowerCase().includes(keyword.toLowerCase());
-              }
-              const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-              const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-              return regex.test(text);
-            });
-
-            expect(hasKeywordInText).toBe(true);
-          }
+          unmount();
         }
       ),
       { numRuns: 100 }

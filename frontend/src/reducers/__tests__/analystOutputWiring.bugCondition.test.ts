@@ -34,9 +34,6 @@ describe('Bug Condition: callAgent1() return includes analyst_output', () => {
     // should work correctly, proving the type includes the field.
     const agent1Response = {
       nova_sonic_context: 'test-context',
-      competency_guides: [
-        { id: '1', title: 'Skill', keywords: ['k'], description: 'd', highlighted: false },
-      ],
       analyst_output: { interview_plan: [{ topic: 'React', priority: 1 }] },
     };
 
@@ -66,9 +63,6 @@ describe('Bug Condition: AGENT1_SUCCESS stores analystOutput in state', () => {
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'ctx',
-        competency_guides: [
-          { id: '1', title: 'T', keywords: ['k'], description: 'd', highlighted: false },
-        ],
         analyst_output: analystPayload,
       },
     });
@@ -101,9 +95,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on interview end', (
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'test-context',
-        competency_guides: [
-          { id: '1', title: 'Skill', keywords: ['k'], description: 'd', highlighted: false },
-        ],
         analyst_output: analystData,
       },
     });
@@ -112,7 +103,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on interview end', (
     // It reads state.analystOutput and passes it to callAgent3
     const agent3Request = {
       transcript: [{ role: 'interviewer' as const, text: 'Q1', timestamp: '2024-01-01T00:00:00Z' }],
-      competency_guides: stateAfterAgent1.competencyGuides,
       analyst_output: stateAfterAgent1.analystOutput ?? undefined,
     };
 
@@ -130,7 +120,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on interview end', (
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'context',
-        competency_guides: [],
         analyst_output: analystData,
       },
     });
@@ -161,9 +150,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on feedback retry', 
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'ctx',
-        competency_guides: [
-          { id: '1', title: 'Communication', keywords: ['comm'], description: 'verbal', highlighted: false },
-        ],
         analyst_output: analystData,
       },
     });
@@ -176,7 +162,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on feedback retry', 
     // It reads state.analystOutput and passes it to callAgent3
     const retryRequest = {
       transcript: state.transcript,
-      competency_guides: state.competencyGuides,
       analyst_output: state.analystOutput ?? undefined,
     };
 
@@ -194,7 +179,6 @@ describe('Bug Condition: callAgent3 receives analyst_output on feedback retry', 
       type: 'AGENT1_SUCCESS',
       payload: {
         nova_sonic_context: 'ctx',
-        competency_guides: [],
         analyst_output: analystData,
       },
     });

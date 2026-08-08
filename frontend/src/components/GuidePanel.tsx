@@ -1,60 +1,108 @@
 import { useMemo } from 'react';
-import type { CompetencyGuide } from '@/types/session';
-import { matchKeywords } from '@/utils/keywordMatcher';
+import { classifyStarCategory, deriveKeywordChips } from '@/utils/starCategoryMatcher';
+import type { StarClassification } from '@/utils/starCategoryMatcher';
 
 interface GuidePanelProps {
-  guides: CompetencyGuide[];
-  practiceMode: boolean;
-  currentInterviewerText: string | null;
+  analystOutput: Record<string, unknown> | null;
+}
+
+// Local types describing the analystOutput shape this component depends on
+
+interface InterviewPlanItem {
+  topic: string;
+  target_skill: string;
+  source_experience_id: string | null;
+  priority: number;
+  question_type: string;
+}
+
+interface TargetRole {
+  title: string;
+  required_skills: string[];
+  preferred_skills: string[];
+}
+
+interface SelectedExperience {
+  experience_id: string;
+  title: string;
+  organization: string;
+}
+
+interface StarCardData {
+  index: number;
+  topic: string;
+  classification: StarClassification;
+  keywordChips: string[];
+  relatedExperience: { title: string; organization: string } | null;
 }
 
 /**
- * GuidePanel displays competency guides in the sidebar.
+ * GuidePanel displays STAR-method preparation cards derived from the Analyst output.
  *
- * - Always visible regardless of Practice Mode
- * - When Practice Mode ON + new interviewer text arrives: highlight matching guides
- * - When Practice Mode OFF: no highlighting, list only
- * - ON→OFF transition: immediately clear all highlights
- * - Highlight uses green accent color (#9AE05C) from design theme for card border
+ * - Computes card data at render time from analystOutput (no speech events)
+ * - Shows up to 3 cards from interview_plan
+ * - Each card shows: predicted topic, keyword chips, STAR category guidance, optional related experience
+ * - Renders empty (no error) when analystOutput is null or plan is empty
  */
-export function GuidePanel({ guides, practiceMode, currentInterviewerText }: GuidePanelProps) {
-  const highlightedIds = useMemo(() => {
-    if (!practiceMode || !currentInterviewerText) {
-      return new Set<string>();
-    }
-    return new Set(matchKeywords(currentInterviewerText, guides));
-  }, [practiceMode, currentInterviewerText, guides]);
+export function GuidePanel({ analystOutput }: GuidePanelProps) {
+  const cards: StarCardData[] = useMemo(() => {
+    if (!analystOutput) return [];
+
+    const plan = (analystOutput.interview_plan || []) as InterviewPlanItem[];
+    const targetRole = analystOutput.target_role as TargetRole | undefined;
+    const experiences = (analystOutput.selected_experiences || []) as SelectedExperience[];
+
+    return plan.slice(0, 3).map((item, idx) => {
+      const classification = classifyStarCategory(item.topic, item.target_skill);
+
+      const chips = deriveKeywordChips(
+        { target_skill: item.target_skill, topic: item.topic },
+        targetRole
+      );
+
+      const exp = item.source_experience_id
+        ? experiences.find(e => e.experience_id === item.source_experience_id) ?? null
+        : null;
+
+      return {
+        index: idx + 1,
+        topic: item.topic,
+        classification,
+        keywordChips: chips,
+        relatedExperience: exp ? { title: exp.title, organization: exp.organization } : null,
+      };
+    });
+  }, [analystOutput]);
 
   return (
     <div className="guide-panel" data-testid="guide-panel">
       <span className="guide-panel__title">Interview Guide</span>
       <ul className="guide-panel__list" data-testid="guide-panel-list">
-        {guides.map((guide) => {
-          const isHighlighted = highlightedIds.has(guide.id);
-          return (
-            <li
-              key={guide.id}
-              className={`guide-panel__card ${isHighlighted ? 'guide-panel__card--highlighted' : ''}`}
-              data-testid="guide-panel-item"
-              data-highlighted={isHighlighted}
-            >
-              <div className="guide-panel__card-header">
-                <span className="guide-panel__card-title">{guide.title}</span>
-                {isHighlighted && (
-                  <span className="guide-panel__badge" data-testid="guide-key-match-badge">
-                    KEY MATCH
-                  </span>
-                )}
-              </div>
-              <span className="guide-panel__card-description">{guide.description}</span>
-              <div className="guide-panel__pills">
-                {guide.keywords.map((kw, i) => (
-                  <span key={i} className="guide-panel__pill">{kw}</span>
+        {cards.map((card) => (
+          <li key={card.index} className="star-card" data-testid="star-card">
+            <span className="star-card__label">예상 질문 {card.index}</span>
+            <p className="star-card__topic">{card.topic}</p>
+            <div className="star-card__chips">
+              {card.keywordChips.map((chip, i) => (
+                <span key={i} className="star-card__chip">{chip}</span>
+              ))}
+            </div>
+            <div className="star-card__star-section">
+              <span className="star-card__category-label">{card.classification.label}</span>
+              <div className="star-card__elements">
+                {card.classification.starElements.map((el) => (
+                  <span key={el} className="star-card__element-badge">{el}</span>
                 ))}
               </div>
-            </li>
-          );
-        })}
+              <span className="star-card__reasoning">{card.classification.reasoning}</span>
+            </div>
+            {card.relatedExperience && (
+              <div className="star-card__experience" data-testid="star-card-experience">
+                <span>{card.relatedExperience.title}</span> · <span>{card.relatedExperience.organization}</span>
+              </div>
+            )}
+          </li>
+        ))}
       </ul>
       <style>{`
         .guide-panel {
@@ -83,70 +131,87 @@ export function GuidePanel({ guides, practiceMode, currentInterviewerText }: Gui
           gap: 12px;
         }
 
-        /* Card base */
-        .guide-panel__card {
+        .star-card {
           padding: 14px 16px;
           border-radius: 10px;
           border: 1.5px solid rgba(255, 255, 255, 0.08);
           background-color: rgba(255, 255, 255, 0.03);
-          transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
-        }
-
-        /* Highlighted card */
-        .guide-panel__card--highlighted {
-          border-color: var(--color-accent, #9AE05C);
-          background-color: rgba(154, 224, 92, 0.06);
-          box-shadow: 0 0 0 1px rgba(154, 224, 92, 0.15);
-        }
-
-        /* Card header row: title + badge */
-        .guide-panel__card-header {
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 6px;
+          flex-direction: column;
+          gap: 10px;
         }
 
-        .guide-panel__card-title {
+        .star-card__label {
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.5px;
+          color: var(--color-guide-highlight, #4A9EFF);
+          text-transform: uppercase;
+        }
+
+        .star-card__topic {
           font-size: 14px;
           font-weight: 600;
           color: var(--color-text-primary, #FFFFFF);
+          margin: 0;
+          line-height: 1.4;
         }
 
-        /* KEY MATCH badge */
-        .guide-panel__badge {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          color: var(--color-accent, #9AE05C);
-          background-color: rgba(154, 224, 92, 0.12);
-          padding: 3px 8px;
-          border-radius: 4px;
-          white-space: nowrap;
-        }
-
-        .guide-panel__card-description {
-          display: block;
-          font-size: 12px;
-          color: var(--color-text-secondary, #A0A0A5);
-          line-height: 1.5;
-          margin-bottom: 10px;
-        }
-
-        /* Keyword pills row */
-        .guide-panel__pills {
+        .star-card__chips {
           display: flex;
           flex-wrap: wrap;
           gap: 6px;
         }
 
-        .guide-panel__pill {
+        .star-card__chip {
           font-size: 11px;
           color: var(--color-text-secondary, #A0A0A5);
           background-color: rgba(255, 255, 255, 0.07);
           padding: 3px 10px;
           border-radius: 12px;
           white-space: nowrap;
+        }
+
+        .star-card__star-section {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .star-card__category-label {
+          font-size: 12px;
+          font-weight: 500;
+          color: var(--color-text-secondary, #A0A0A5);
+        }
+
+        .star-card__elements {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+        }
+
+        .star-card__element-badge {
+          font-size: 10px;
+          font-weight: 600;
+          color: var(--color-guide-highlight, #4A9EFF);
+          background-color: rgba(74, 158, 255, 0.12);
+          padding: 3px 8px;
+          border-radius: 4px;
+          white-space: nowrap;
+        }
+
+        .star-card__reasoning {
+          font-size: 12px;
+          color: var(--color-text-secondary, #A0A0A5);
+          line-height: 1.5;
+        }
+
+        .star-card__experience {
+          font-size: 11px;
+          color: var(--color-text-secondary, #A0A0A5);
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+          padding-top: 8px;
+          margin-top: 2px;
         }
       `}</style>
     </div>

@@ -27,7 +27,6 @@ function AppContent() {
     try {
       const result = await callAgent3({
         transcript: state.transcript,
-        competency_guides: state.competencyGuides,
         analyst_output: state.analystOutput ?? undefined,
       });
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
@@ -35,7 +34,7 @@ function AppContent() {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
+  }, [dispatch, state.transcript, state.analystOutput]);
 
   const handleNewSession = useCallback(() => {
     dispatch({ type: 'RESET' });

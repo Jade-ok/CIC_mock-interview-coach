@@ -1,0 +1,319 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Remove CompetencyGuide type and update SessionState, Agent1Response, Agent3Request in `types/session.ts`": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162591934
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162599976
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162652289
+      }
+    ],
+    "2.1 Create `frontend/src/utils/starCategoryMatcher.ts` with types and category table": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592043
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162659211
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162784230
+      }
+    ],
+    "2.2 Implement `classifyStarCategory(topic, targetSkill)` function": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592080
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162788410
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162880352
+      }
+    ],
+    "2.3 Implement and export `deriveKeywordChips(item, targetRole)` helper function": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592119
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162789170
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162881309
+      }
+    ],
+    "3.1 Update `agent1Client.ts` — remove `mapToCompetencyGuides` and `competency_guides` from return": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592193
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162790166
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162882321
+      }
+    ],
+    "3.2 Update `sessionReducer.ts` — remove `competencyGuides` from initialState and AGENT1_SUCCESS handler": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592317
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162791051
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162883365
+      }
+    ],
+    "3.3 Update `agent3Client.ts` — remove `competency_guides` usage from the request type": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592360
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162792040
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162884514
+      }
+    ],
+    "4.1 Rewrite `frontend/src/components/GuidePanel.tsx` with new props and STAR card rendering": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592402
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162891586
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163011026
+      }
+    ],
+    "4.2 Update `InterviewScreen.tsx` — pass `analystOutput` to GuidePanel, remove old props": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592443
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163015621
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163132098
+      }
+    ],
+    "5.1 Delete `frontend/src/utils/keywordMatcher.ts`": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592487
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162892281
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163011930
+      }
+    ],
+    "6. Checkpoint — Ensure TypeScript compiles and Vite build passes": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592524
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163149086
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163929565
+      }
+    ],
+    "7.1 Write unit tests for `classifyStarCategory` in `frontend/src/utils/__tests__/starCategoryMatcher.test.ts`": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592563
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163149922
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163925845
+      }
+    ],
+    "7.2 Write unit tests for `deriveKeywordChips` in the same test file": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592600
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163150793
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163926467
+      }
+    ],
+    "7.3 Write property tests for classification in `frontend/src/utils/__tests__/starCategoryMatcher.pbt.test.ts`": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592645
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163151606
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163927698
+      }
+    ],
+    "7.4 Write component tests for GuidePanel in `frontend/src/components/__tests__/GuidePanel.test.tsx`": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592684
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163152440
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163928454
+      }
+    ],
+    "8. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162592719
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163933753
+      },
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786164041749
+      }
+    ],
+    "1. Update types and remove legacy CompetencyGuide infrastructure": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162652330
+      }
+    ],
+    "2. Create STAR category matcher utility": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162881351
+      }
+    ],
+    "3. Update services and reducer to remove competencyGuides": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786162884565
+      }
+    ],
+    "5. Delete legacy files": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163011969
+      }
+    ],
+    "4. Rewrite GuidePanel component with STAR cards": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163132245
+      }
+    ],
+    "7. Write tests": [
+      {
+        "executionId": "b5002fe9-fc04-4ee2-b63c-70a4d2289dd7",
+        "chatSessionId": "sess_ccbb61d6-6b73-4e1d-96ed-78bba1c50b07",
+        "timestamp": 1786163928516
+      }
+    ]
+  }
+}

@@ -11,7 +11,6 @@ export interface SessionState {
   practiceMode: boolean;
   transcript: TranscriptEntry[];
   livePartial: { role: 'interviewer' | 'user'; text: string } | null;
-  competencyGuides: CompetencyGuide[];
   novaSonicContext: string;
   elapsedSeconds: number;
   wsConnectionState: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -29,14 +28,6 @@ export interface TranscriptEntry {
   role: 'interviewer' | 'user';
   text: string;
   timestamp: string; // ISO 8601
-}
-
-export interface CompetencyGuide {
-  id: string;
-  title: string;
-  keywords: string[];
-  description: string;
-  highlighted: boolean;
 }
 
 export interface SessionError {
@@ -84,12 +75,10 @@ export type SessionAction =
 
 export interface Agent1Response {
   nova_sonic_context: string;
-  competency_guides: CompetencyGuide[];
   analyst_output?: Record<string, unknown>;
 }
 
 export interface Agent3Request {
   transcript: TranscriptEntry[];
-  competency_guides: CompetencyGuide[];
   analyst_output?: Record<string, unknown>;
 }

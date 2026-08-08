@@ -252,7 +252,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     try {
       const result = await callAgent3({
         transcript: state.transcript,
-        competency_guides: state.competencyGuides,
         analyst_output: state.analystOutput ?? undefined,
       });
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
@@ -260,7 +259,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
       dispatch({ type: 'AGENT3_FAILED', payload: { message } });
     }
-  }, [dispatch, state.transcript, state.competencyGuides, state.analystOutput]);
+  }, [dispatch, state.transcript, state.analystOutput]);
 
   // Audio streaming integration — pass isRecordingRef for gating
   const { audioManagerRef } = useInterviewStreaming({
@@ -386,11 +385,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         </div>
         {state.practiceMode && (
           <div className="interview-screen__right">
-            <GuidePanel
-              guides={state.competencyGuides}
-              practiceMode={state.practiceMode}
-              currentInterviewerText={latestInterviewerText}
-            />
+            <GuidePanel analystOutput={state.analystOutput} />
           </div>
         )}
       </div>
