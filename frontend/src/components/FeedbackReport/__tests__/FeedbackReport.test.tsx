@@ -36,7 +36,7 @@ describe('FeedbackReport (full page)', () => {
     expect(screen.getByText('CIC Mock Interview Coach')).toBeTruthy();
 
     // Hero
-    expect(screen.getByRole('heading', { name: 'Strong foundation' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
 
     // Dimensions
     expect(screen.getByText('How your answers scored')).toBeTruthy();

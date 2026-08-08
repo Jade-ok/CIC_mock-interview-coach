@@ -9,8 +9,11 @@
   --accent-red: #FF5C5C;
   --accent-blue: #4A9EFF;
 
+  /* Extended palette — warm amber for mid-range scores */
+  --accent-amber: #F5A623;
+
   /* Feedback page specific */
-  --score-bar-filled: var(--accent-red);
+  --score-bar-filled: var(--accent-blue);
   --score-bar-empty: var(--bg-control);
   --section-gap: 48px;
   --card-padding: 24px;

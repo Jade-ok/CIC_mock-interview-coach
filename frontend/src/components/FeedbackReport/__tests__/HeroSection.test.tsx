@@ -10,9 +10,9 @@ describe('HeroSection', () => {
     targetRole: 'Software Engineering Intern',
   };
 
-  it('displays the readiness label as heading', () => {
+  it('displays neutral "Your Interview Report" heading', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByRole('heading', { name: 'Developing well' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
   });
 
   it('displays the supportive subheading', () => {
@@ -20,12 +20,12 @@ describe('HeroSection', () => {
     expect(screen.getByText(/building real interview skills/)).toBeTruthy();
   });
 
-  it('displays the context line with target role', () => {
+  it('displays the target role context', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/INTERVIEW FEEDBACK · SOFTWARE ENGINEERING INTERN/)).toBeTruthy();
+    expect(screen.getByText(/SOFTWARE ENGINEERING INTERN/)).toBeTruthy();
   });
 
-  it('displays the total score formatted to 1 decimal', () => {
+  it('displays the total score in the ring gauge', () => {
     render(<HeroSection {...defaultProps} />);
     expect(screen.getByText('3.0')).toBeTruthy();
   });
@@ -35,8 +35,18 @@ describe('HeroSection', () => {
     expect(screen.getByText(/4 questions answered/)).toBeTruthy();
   });
 
+  it('displays focus area tag', () => {
+    render(<HeroSection {...defaultProps} />);
+    expect(screen.getByText('Focus area: story structure')).toBeTruthy();
+  });
+
   it('handles unknown readiness label gracefully', () => {
     render(<HeroSection {...defaultProps} readinessLabel="Unknown label" />);
-    expect(screen.getByRole('heading', { name: 'Unknown label' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
+  });
+
+  it('shows ring gauge with accessible label', () => {
+    render(<HeroSection {...defaultProps} />);
+    expect(screen.getByLabelText('Score: 3.0 out of 5')).toBeTruthy();
   });
 });
