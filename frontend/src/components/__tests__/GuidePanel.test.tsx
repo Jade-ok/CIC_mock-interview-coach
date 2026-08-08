@@ -2,227 +2,214 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GuidePanel } from '@/components/GuidePanel';
 
+/** Regex matching Korean Unicode ranges */
+const KOREAN_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/;
+
 const mockAnalystOutput = {
   interview_plan: [
     { topic: 'team project', target_skill: 'collaboration', source_experience_id: 'exp-1', priority: 1, question_type: 'behavioral' },
     { topic: 'debugging skills', target_skill: 'problem-solving', source_experience_id: null, priority: 2, question_type: 'technical' },
     { topic: 'leadership experience', target_skill: 'leadership', source_experience_id: 'exp-2', priority: 3, question_type: 'behavioral' },
   ],
-  target_role: { title: 'SDE Intern', required_skills: ['collaboration', 'problem-solving'], preferred_skills: ['leadership'] },
+  target_role: {
+    title: 'SDE Intern',
+    required_skills: ['collaboration', 'problem-solving'],
+    preferred_skills: ['leadership'],
+    evaluation_priorities: ['teamwork and communication', 'technical problem-solving'],
+  },
   selected_experiences: [
-    { experience_id: 'exp-1', title: 'Hackathon Project', organization: 'University CS Club' },
-    { experience_id: 'exp-2', title: 'Club President', organization: 'Engineering Society' },
+    { experience_id: 'exp-1', title: 'Hackathon Project', organization: 'University CS Club', relevance_score: 0.92 },
+    { experience_id: 'exp-2', title: 'Club President', organization: 'Engineering Society', relevance_score: 0.78 },
+    { experience_id: 'exp-3', title: 'Course Project', organization: 'CS Department', relevance_score: 0.85 },
+    { experience_id: 'exp-4', title: 'Volunteer Work', organization: 'Community Center', relevance_score: 0.60 },
+    { experience_id: 'exp-5', title: 'Research Assistant', organization: 'AI Lab', relevance_score: 0.55 },
   ],
+  resume_job_alignment: {
+    strong_matches: [
+      { resume_evidence: 'Built REST API with Flask', job_requirement: 'Python and REST APIs', match_reason: 'Direct experience' },
+    ],
+    partial_matches: [
+      { resume_evidence: 'Used asyncio for testing', job_requirement: 'Testing skills', match_reason: 'Limited scope' },
+    ],
+    areas_to_explore: [
+      { topic: 'Docker experience', reason: 'No container evidence on resume' },
+    ],
+  },
 };
 
 describe('GuidePanel', () => {
-  describe('card count', () => {
-    it('renders exactly 3 cards from valid analyst output with 3 plan items', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const cards = screen.getAllByTestId('star-card');
-      expect(cards).toHaveLength(3);
+  describe('no Korean text', () => {
+    it('contains zero Korean characters when analystOutput is null', () => {
+      const { container } = render(<GuidePanel analystOutput={null} />);
+      expect(container.textContent).not.toMatch(KOREAN_REGEX);
     });
 
-    it('renders fewer cards when plan has < 3 items', () => {
-      const twoItemOutput = {
-        ...mockAnalystOutput,
-        interview_plan: mockAnalystOutput.interview_plan.slice(0, 2),
-      };
+    it('contains zero Korean characters when analystOutput is provided', () => {
+      const { container } = render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(container.textContent).not.toMatch(KOREAN_REGEX);
+    });
+  });
 
-      render(<GuidePanel analystOutput={twoItemOutput} />);
+  describe('no panel title', () => {
+    it('does NOT render "Interview Guide" title text', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByText('Interview Guide')).not.toBeInTheDocument();
+    });
+  });
 
-      const cards = screen.getAllByTestId('star-card');
-      expect(cards).toHaveLength(2);
+  describe('no alignment sections', () => {
+    it('does NOT render "Strong Matches" text', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByText('Strong Matches')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render "Areas to Grow" text', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByText('Areas to Grow')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render alignment-summary section', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByTestId('alignment-summary')).not.toBeInTheDocument();
+    });
+
+    it('does NOT render any alignment evidence text', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByText('Built REST API with Flask')).not.toBeInTheDocument();
+      expect(screen.queryByText('Used asyncio for testing')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('no organization in experience cards', () => {
+    it('does NOT contain · separator in card titles', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      const topics = document.querySelectorAll('.star-card__topic');
+      topics.forEach(topic => {
+        expect(topic.textContent).not.toContain('·');
+      });
+    });
+
+    it('does NOT render organization names', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.queryByText(/University CS Club/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/CS Department/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Engineering Society/)).not.toBeInTheDocument();
+    });
+
+    it('renders only the project title in each card', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.getByText('Hackathon Project')).toBeInTheDocument();
+      expect(screen.getByText('Course Project')).toBeInTheDocument();
+      expect(screen.getByText('Club President')).toBeInTheDocument();
     });
   });
 
   describe('empty state', () => {
-    it('renders no cards when analystOutput is null', () => {
+    it('renders guide-panel container when analystOutput is null', () => {
       render(<GuidePanel analystOutput={null} />);
-
-      expect(screen.queryAllByTestId('star-card')).toHaveLength(0);
       expect(screen.getByTestId('guide-panel')).toBeInTheDocument();
     });
 
-    it('renders no cards when interview_plan is empty array', () => {
-      render(<GuidePanel analystOutput={{ interview_plan: [] }} />);
-
-      expect(screen.queryAllByTestId('star-card')).toHaveLength(0);
+    it('does NOT render content when analystOutput is null', () => {
+      render(<GuidePanel analystOutput={null} />);
+      expect(screen.queryByTestId('guide-panel-layer2')).not.toBeInTheDocument();
     });
   });
 
-  describe('card labels — "Expected Question N"', () => {
-    it('renders "Expected Question 1", "Expected Question 2", "Expected Question 3"', () => {
+  describe('role skills hint — exactly 3 chips with accent color', () => {
+    it('renders role-skills-hint section', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.getByTestId('role-skills-hint')).toBeInTheDocument();
+    });
 
-      expect(screen.getByText('Expected Question 1')).toBeInTheDocument();
-      expect(screen.getByText('Expected Question 2')).toBeInTheDocument();
-      expect(screen.getByText('Expected Question 3')).toBeInTheDocument();
+    it('displays exactly 3 skill chips', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      const chipContainer = screen.getByTestId('role-skill-chips');
+      const chips = chipContainer.querySelectorAll('.role-skills-hint__chip');
+      expect(chips).toHaveLength(3);
+    });
+
+    it('uses accent color class on skill chips', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      const chipContainer = screen.getByTestId('role-skill-chips');
+      const accentChips = chipContainer.querySelectorAll('.role-skills-hint__chip');
+      expect(accentChips.length).toBeGreaterThan(0);
+      const genericChips = chipContainer.querySelectorAll('.star-card__chip');
+      expect(genericChips).toHaveLength(0);
+    });
+
+    it('displays first 3 unique skills from target_skill + evaluation_priorities', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      const chipContainer = screen.getByTestId('role-skill-chips');
+      const chipTexts = Array.from(chipContainer.querySelectorAll('.role-skills-hint__chip'))
+        .map(c => c.textContent);
+      expect(chipTexts).toEqual(['collaboration', 'problem-solving', 'leadership']);
     });
   });
 
-  describe('section labels', () => {
-    it('does NOT render "Question focus:" label (removed for compression)', () => {
+  describe('experience cards — exactly 3 cards', () => {
+    it('renders exactly 3 experience cards even when 5 experiences exist', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      expect(screen.queryByText('Question focus:')).not.toBeInTheDocument();
+      const cards = screen.getAllByTestId('experience-card');
+      expect(cards).toHaveLength(3);
     });
 
-    it('renders "Skills to highlight:" label in each card', () => {
+    it('selects the top 3 by relevance_score descending', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const labels = screen.getAllByText('Skills to highlight:');
-      expect(labels).toHaveLength(3);
+      const cards = screen.getAllByTestId('experience-card');
+      expect(cards[0]).toHaveTextContent('Hackathon Project');
+      expect(cards[1]).toHaveTextContent('Course Project');
+      expect(cards[2]).toHaveTextContent('Club President');
     });
 
-    it('renders "Question type:" label in each card', () => {
+    it('uses "Experience N" label', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const labels = screen.getAllByText('Question type:');
-      expect(labels).toHaveLength(3);
+      expect(screen.getByText('Experience 1')).toBeInTheDocument();
+      expect(screen.getByText('Experience 2')).toBeInTheDocument();
+      expect(screen.getByText('Experience 3')).toBeInTheDocument();
     });
 
-    it('renders "Emphasize in your answer:" label in each card', () => {
+    it('renders English section labels in cards', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const labels = screen.getAllByText('Emphasize in your answer:');
-      expect(labels).toHaveLength(3);
-    });
-
-    it('renders "Relevant experience:" label only for cards with experience', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      // Cards 1 and 3 have experiences, card 2 has source_experience_id: null
-      const labels = screen.getAllByText(/Relevant experience:/);
-      expect(labels).toHaveLength(2);
-    });
-
-    it('does NOT render "Relevant experience:" label when experience is null', () => {
-      // Use only the card with null source_experience_id
-      const singleNullExpOutput = {
-        ...mockAnalystOutput,
-        interview_plan: [mockAnalystOutput.interview_plan[1]], // debugging skills, source_experience_id: null
-      };
-
-      render(<GuidePanel analystOutput={singleNullExpOutput} />);
-
-      expect(screen.queryByText(/Relevant experience:/)).not.toBeInTheDocument();
+      expect(screen.getAllByText('Skills to highlight:').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Angle to prepare:').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Emphasize:').length).toBeGreaterThan(0);
     });
   });
 
-  describe('inline layout — label and value on same row', () => {
-    it('"Question type:" and category label share the same parent element', () => {
+  describe('final structure — only two sections', () => {
+    it('renders Key Competencies section', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const row = screen.getAllByTestId('question-type-row')[0];
-      expect(row).toBeInTheDocument();
-      // Both the label and the value are direct children of the same row
-      expect(row.querySelector('.star-card__section-label')).not.toBeNull();
-      expect(row.querySelector('.star-card__category-label')).not.toBeNull();
+      expect(screen.getByText('Key Competencies')).toBeInTheDocument();
     });
 
-    it('"Emphasize in your answer:" and element badges share the same parent element', () => {
+    it('renders Experiences to Prepare section', () => {
       render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      expect(screen.getByText('Experiences to Prepare')).toBeInTheDocument();
+    });
 
-      const row = screen.getAllByTestId('emphasize-row')[0];
-      expect(row).toBeInTheDocument();
-      expect(row.querySelector('.star-card__section-label')).not.toBeNull();
-      expect(row.querySelector('.star-card__element-badge')).not.toBeNull();
+    it('renders only these two section titles (no others)', () => {
+      render(<GuidePanel analystOutput={mockAnalystOutput} />);
+      const sectionTitles = document.querySelectorAll('.guide-panel__section-title');
+      const titleTexts = Array.from(sectionTitles).map(t => t.textContent);
+      expect(titleTexts).toEqual(['Key Competencies', 'Experiences to Prepare']);
     });
   });
 
-  describe('green accent color — no blue references', () => {
+  describe('theme compliance', () => {
     it('style block contains no #4A9EFF color reference', () => {
       const { container } = render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
       const styleTag = container.querySelector('style');
       expect(styleTag).not.toBeNull();
       expect(styleTag!.textContent).not.toContain('#4A9EFF');
     });
 
-    it('style block contains no --color-guide-highlight reference', () => {
+    it('style block uses accent color for role-skills-hint chips', () => {
       const { container } = render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
       const styleTag = container.querySelector('style');
       expect(styleTag).not.toBeNull();
-      expect(styleTag!.textContent).not.toContain('--color-guide-highlight');
-    });
-  });
-
-  describe('topic text', () => {
-    it('displays each card topic', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      expect(screen.getByText('team project')).toBeInTheDocument();
-      expect(screen.getByText('debugging skills')).toBeInTheDocument();
-      expect(screen.getByText('leadership experience')).toBeInTheDocument();
-    });
-  });
-
-  describe('keyword chips', () => {
-    it('renders target_skill as a chip for each card', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const chips = document.querySelectorAll('.star-card__chip');
-      const chipTexts = Array.from(chips).map(c => c.textContent);
-
-      expect(chipTexts).toContain('collaboration');
-      expect(chipTexts).toContain('problem-solving');
-      expect(chipTexts).toContain('leadership');
-    });
-  });
-
-  describe('STAR section', () => {
-    it('renders category label for each card', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      // "team project" matches "Team Experience" (keyword: "team")
-      expect(screen.getByText('Team Experience')).toBeInTheDocument();
-      // "debugging skills" matches "Problem Solving" (keyword: "debug")
-      expect(screen.getByText('Problem Solving', { selector: '.star-card__category-label' })).toBeInTheDocument();
-    });
-
-    it('renders STAR element badges', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      const badges = document.querySelectorAll('.star-card__element-badge');
-      expect(badges.length).toBeGreaterThan(0);
-
-      const badgeTexts = Array.from(badges).map(b => b.textContent);
-      expect(badgeTexts).toContain('Action');
-      expect(badgeTexts).toContain('Result');
-    });
-
-    it('renders English reasoning text', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      // "Team Experience" reasoning (English)
-      expect(screen.getByText('What you actually did within the team and how it affected outcomes')).toBeInTheDocument();
-      // "Problem Solving" reasoning (English)
-      expect(screen.getByText('Your approach, iterations, and adjustments')).toBeInTheDocument();
-    });
-  });
-
-  describe('related experience', () => {
-    it('shows experience when source_experience_id matches', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      // Card 1: source_experience_id='exp-1' → 'Hackathon Project' at 'University CS Club'
-      expect(screen.getByText('Hackathon Project')).toBeInTheDocument();
-      expect(screen.getByText('University CS Club')).toBeInTheDocument();
-
-      // Card 3: source_experience_id='exp-2' → 'Club President' at 'Engineering Society'
-      expect(screen.getByText('Club President')).toBeInTheDocument();
-      expect(screen.getByText('Engineering Society')).toBeInTheDocument();
-    });
-
-    it('hides experience section when source_experience_id is null', () => {
-      render(<GuidePanel analystOutput={mockAnalystOutput} />);
-
-      // Card 2 has source_experience_id: null, so only 2 experience sections should appear
-      const experienceSections = screen.getAllByTestId('star-card-experience');
-      expect(experienceSections).toHaveLength(2);
+      expect(styleTag!.textContent).toContain('.role-skills-hint__chip');
+      expect(styleTag!.textContent).toContain('--color-accent');
     });
   });
 });

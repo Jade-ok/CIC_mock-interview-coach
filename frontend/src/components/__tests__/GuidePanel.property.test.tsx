@@ -4,18 +4,20 @@ import fc from 'fast-check';
 import { GuidePanel } from '@/components/GuidePanel';
 
 /**
- * Feature: guide-panel-ux-improvements, Property 2: Rendered Guide Panel contains no Korean text
- * Validates: Requirements 1.4
+ * Guide Panel — Property-Based Tests
  *
- * For any valid analystOutput containing an interview_plan array of 1–3 items
- * with arbitrary topic and target_skill strings, rendering GuidePanel SHALL produce
- * text content containing zero Korean Unicode characters.
+ * Property 1: Renders without crashing for any valid analystOutput shape.
+ * Property 2: No Korean text appears for any valid analystOutput.
+ * Property 3: No "Expected Question" predictive text ever appears.
+ * Property 4: Experience cards never exceed 3.
+ * Property 5: Role skill chips never exceed 3.
+ * Property 6: No alignment-related text (Strong Matches, Areas to Grow) ever appears.
+ * Property 7: No · separator appears in card topics.
+ * Property 8: No "Interview Guide" panel title appears.
  */
 
-/** Regex matching Korean Unicode ranges: Hangul Syllables, Jamo, Compatibility Jamo */
 const KOREAN_REGEX = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/;
 
-/** Arbitrary for a single interview plan item */
 const interviewPlanItemArb = fc.record({
   topic: fc.string({ minLength: 0, maxLength: 100 }),
   target_skill: fc.string({ minLength: 0, maxLength: 50 }),
@@ -24,23 +26,22 @@ const interviewPlanItemArb = fc.record({
   question_type: fc.string({ minLength: 1, maxLength: 30 }),
 });
 
-/** Arbitrary for target_role */
 const targetRoleArb = fc.record({
   title: fc.string({ minLength: 1, maxLength: 50 }),
   required_skills: fc.array(fc.string({ minLength: 1, maxLength: 30 }), { minLength: 0, maxLength: 5 }),
   preferred_skills: fc.array(fc.string({ minLength: 1, maxLength: 30 }), { minLength: 0, maxLength: 5 }),
+  evaluation_priorities: fc.array(fc.string({ minLength: 1, maxLength: 30 }), { minLength: 0, maxLength: 5 }),
 });
 
-/** Arbitrary for selected_experiences */
 const selectedExperienceArb = fc.record({
   experience_id: fc.string({ minLength: 1, maxLength: 20 }),
   title: fc.string({ minLength: 1, maxLength: 50 }),
   organization: fc.string({ minLength: 1, maxLength: 50 }),
+  relevance_score: fc.double({ min: 0, max: 1, noNaN: true }),
 });
 
-/** Arbitrary for a complete analystOutput object */
 const analystOutputArb = fc.record({
-  interview_plan: fc.array(interviewPlanItemArb, { minLength: 1, maxLength: 3 }),
+  interview_plan: fc.array(interviewPlanItemArb, { minLength: 0, maxLength: 5 }),
   target_role: fc.option(targetRoleArb, { nil: undefined }),
   selected_experiences: fc.option(
     fc.array(selectedExperienceArb, { minLength: 0, maxLength: 5 }),
@@ -48,29 +49,107 @@ const analystOutputArb = fc.record({
   ),
 });
 
+function buildAnalystOutput(output: {
+  interview_plan: unknown[];
+  target_role?: unknown;
+  selected_experiences?: unknown[];
+}): Record<string, unknown> {
+  const ao: Record<string, unknown> = { interview_plan: output.interview_plan };
+  if (output.target_role !== undefined) ao.target_role = output.target_role;
+  if (output.selected_experiences !== undefined) ao.selected_experiences = output.selected_experiences;
+  return ao;
+}
+
 describe('GuidePanel — Property-Based Tests', () => {
-  it('Property 2: rendered GuidePanel contains no Korean text for any valid analystOutput', () => {
+  it('Property 1: renders without crashing for any valid analystOutput', () => {
     fc.assert(
       fc.property(analystOutputArb, (output) => {
-        // Build the analystOutput record, filtering out undefined optional fields
-        const analystOutput: Record<string, unknown> = {
-          interview_plan: output.interview_plan,
-        };
-        if (output.target_role !== undefined) {
-          analystOutput.target_role = output.target_role;
-        }
-        if (output.selected_experiences !== undefined) {
-          analystOutput.selected_experiences = output.selected_experiences;
-        }
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        expect(container.querySelector('[data-testid="guide-panel"]')).not.toBeNull();
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
 
-        const { container, unmount } = render(<GuidePanel analystOutput={analystOutput} />);
+  it('Property 2: no Korean text for any valid analystOutput', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        expect(container.textContent).not.toMatch(KOREAN_REGEX);
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
 
-        // Extract all visible text content from the rendered output
-        const textContent = container.textContent ?? '';
+  it('Property 3: no "Expected Question" text ever appears', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        expect(container.textContent).not.toContain('Expected Question');
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
 
-        // Assert no Korean characters appear in the rendered text
-        expect(textContent).not.toMatch(KOREAN_REGEX);
+  it('Property 4: experience cards never exceed 3', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        const cards = container.querySelectorAll('[data-testid="experience-card"]');
+        expect(cards.length).toBeLessThanOrEqual(3);
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
 
+  it('Property 5: role skill chips never exceed 3', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        const chips = container.querySelectorAll('.role-skills-hint__chip');
+        expect(chips.length).toBeLessThanOrEqual(3);
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('Property 6: no alignment text (Strong Matches, Areas to Grow) ever appears', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        const text = container.textContent ?? '';
+        expect(text).not.toContain('Strong Matches');
+        expect(text).not.toContain('Areas to Grow');
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('Property 7: no · separator in card topics', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        const topics = container.querySelectorAll('.star-card__topic');
+        topics.forEach(topic => {
+          expect(topic.textContent).not.toContain('·');
+        });
+        unmount();
+      }),
+      { numRuns: 100 }
+    );
+  });
+
+  it('Property 8: no "Interview Guide" panel title appears', () => {
+    fc.assert(
+      fc.property(analystOutputArb, (output) => {
+        const { container, unmount } = render(<GuidePanel analystOutput={buildAnalystOutput(output)} />);
+        expect(container.textContent).not.toContain('Interview Guide');
         unmount();
       }),
       { numRuns: 100 }
