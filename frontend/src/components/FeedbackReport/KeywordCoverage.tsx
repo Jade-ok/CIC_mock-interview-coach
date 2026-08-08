@@ -6,27 +6,40 @@ interface KeywordCoverageProps {
 }
 
 export function KeywordCoverage({ covered, notCovered }: KeywordCoverageProps) {
-  if (covered.length === 0 && notCovered.length === 0) return null;
+  const total = covered.length + notCovered.length;
+  if (total === 0) return null;
 
   return (
     <section className="keyword-coverage">
-      <h2 className="keyword-coverage__heading">Keyword coverage</h2>
-      <p className="keyword-coverage__subheading">
-        Skills from the job description you mentioned during the interview.
-      </p>
+      <div className="keyword-coverage__header">
+        <div>
+          <h2 className="keyword-coverage__heading">Role requirements you covered</h2>
+          <p className="keyword-coverage__subheading">
+            Key skills from the job description — which ones your answers touched.
+          </p>
+        </div>
+        <span className="keyword-coverage__counter">
+          {covered.length} of {total} covered
+        </span>
+      </div>
       <div className="keyword-coverage__grid">
         {covered.map((kw, i) => (
           <span key={`c-${i}`} className="keyword-coverage__chip keyword-coverage__chip--covered">
-            <span className="keyword-coverage__check" aria-hidden="true">&#10003;</span>
-            {kw}
-          </span>
-        ))}
-        {notCovered.map((kw, i) => (
-          <span key={`n-${i}`} className="keyword-coverage__chip keyword-coverage__chip--missed">
+            <span className="keyword-coverage__icon" aria-hidden="true">&#10003;</span>
             {kw}
           </span>
         ))}
       </div>
+      {notCovered.length > 0 && (
+        <div className="keyword-coverage__grid keyword-coverage__grid--missed">
+          {notCovered.map((kw, i) => (
+            <span key={`n-${i}`} className="keyword-coverage__chip keyword-coverage__chip--missed">
+              <span className="keyword-coverage__icon" aria-hidden="true">&#9675;</span>
+              {kw}
+            </span>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

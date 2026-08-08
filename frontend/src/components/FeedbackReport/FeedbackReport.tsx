@@ -52,15 +52,15 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
           improvements={data.improvements}
         />
 
-        <KeywordCoverage
-          covered={data.keywords_covered || []}
-          notCovered={data.keywords_not_covered || []}
-        />
-
         <QuestionBreakdown
           questions={data.per_question_scores}
           questionCount={data.question_count}
           transcript={transcript}
+        />
+
+        <KeywordCoverage
+          covered={data.keywords_covered || []}
+          notCovered={data.keywords_not_covered || []}
         />
 
         <ContextualAdvice advice={data.contextual_advice} />
