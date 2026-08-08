@@ -3,6 +3,14 @@ import type {
   SessionAction,
 } from '@/types/session';
 
+/**
+ * Maximum time gap (ms) between consecutive same-role transcript entries
+ * that will be merged into a single entry. Entries arriving within this
+ * window from the same speaker are concatenated rather than creating
+ * separate bubbles.
+ */
+const TRANSCRIPT_MERGE_WINDOW_MS = 4000;
+
 export const initialState: SessionState = {
   phase: 'upload',
   turnState: 'idle',
@@ -129,12 +137,37 @@ export function sessionReducer(
         turnState: 'user_turn',
       };
 
-    case 'APPEND_TRANSCRIPT':
+    case 'APPEND_TRANSCRIPT': {
+      const newEntry = action.payload;
+      const lastEntry = state.transcript[state.transcript.length - 1];
+
+      // Merge consecutive same-role entries within MERGE_WINDOW_MS
+      if (lastEntry && lastEntry.role === newEntry.role) {
+        const lastTime = new Date(lastEntry.timestamp).getTime();
+        const newTime = new Date(newEntry.timestamp).getTime();
+
+        if (newTime - lastTime < TRANSCRIPT_MERGE_WINDOW_MS) {
+          // Append text with a space separator (avoid double spaces)
+          const separator = lastEntry.text.endsWith(' ') || newEntry.text.startsWith(' ') ? '' : ' ';
+          const mergedEntry = {
+            ...lastEntry,
+            text: lastEntry.text + separator + newEntry.text,
+            timestamp: newEntry.timestamp, // update to latest timestamp
+          };
+          return {
+            ...state,
+            transcript: [...state.transcript.slice(0, -1), mergedEntry],
+            livePartial: null,
+          };
+        }
+      }
+
       return {
         ...state,
-        transcript: [...state.transcript, action.payload],
+        transcript: [...state.transcript, newEntry],
         livePartial: null,
       };
+    }
 
     case 'UPDATE_LIVE_PARTIAL':
       return {

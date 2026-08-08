@@ -126,7 +126,7 @@ function EndButton({ onEnd }: { onEnd: () => void }) {
       aria-label="End"
       data-testid="end-button"
     >
-      End 🔴
+      End
     </button>
   );
 }
