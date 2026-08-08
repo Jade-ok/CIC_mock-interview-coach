@@ -9,7 +9,7 @@ const WS_URL = 'ws://localhost:8080';
 
 // Use mock in dev mode so the demo transitions without a real backend
 const createWsClient = () =>
-  import.meta.env.DEV ? new MockWebSocketClient() : new WebSocketClient();
+  new WebSocketClient();
 
 export function WaitingRoom() {
   const { state, dispatch, setWebSocketClient } = useSession();
@@ -104,7 +104,7 @@ export function WaitingRoom() {
     wsCalledRef.current = true;
     const wsClient = createWsClient();
     wsClientRef.current = wsClient;
-    setWebSocketClient(wsClient as any);
+    setWebSocketClient(wsClient);
 
     try {
       await wsClient.connect({ url: WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });

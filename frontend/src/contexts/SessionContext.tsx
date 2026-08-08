@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useRef, useState } from 'react';
 import type { SessionState, SessionAction } from '@/types/session';
+import { WebSocketClient as WsClientClass } from '@/services/webSocketClient';
 import {
   sessionReducer,
   initialState,
@@ -10,7 +11,8 @@ import {
 interface SessionContextValue {
   state: SessionState;
   dispatch: React.Dispatch<SessionAction>;
-  setWebSocketClient: (ws: WebSocketClient | null) => void;
+  webSocketClient: WsClientClass | null;
+  setWebSocketClient: (ws: WsClientClass | null) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -18,13 +20,15 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(sessionReducer, initialState);
   const wsRef = useRef<WebSocketClient | null>(null);
+  const [webSocketClient, setWebSocketClientState] = useState<WsClientClass | null>(null);
 
   // Eagerly-updated state ref so async coordination always reads the latest state,
   // even between React re-renders.
   const latestStateRef = useRef<SessionState>(initialState);
 
-  const setWebSocketClient = useCallback((ws: WebSocketClient | null) => {
+  const setWebSocketClient = useCallback((ws: WsClientClass | null) => {
     wsRef.current = ws;
+    setWebSocketClientState(ws);
   }, []);
 
   // Wrap dispatch: apply the reducer eagerly to the ref, then call React dispatch.
@@ -50,7 +54,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ state, dispatch: coordinatedDispatch, setWebSocketClient }}
+      value={{ state, dispatch: coordinatedDispatch, webSocketClient, setWebSocketClient }}
     >
       {children}
     </SessionContext.Provider>

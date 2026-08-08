@@ -8,7 +8,7 @@ import { FeedbackPreview } from '@/pages/FeedbackPreview';
 import { callAgent3 } from '@/services/agent3Client';
 
 function AppContent() {
-  const { state, dispatch } = useSession();
+  const { state, dispatch, webSocketClient } = useSession();
 
   // Dev-only: /feedback-preview shows FeedbackReport with mock data
   if (window.location.pathname === '/feedback-preview') {
@@ -46,7 +46,7 @@ function AppContent() {
     case 'waiting':
       return <WaitingRoom />;
     case 'interview':
-      return <InterviewScreen />;
+      return <InterviewScreen wsClient={webSocketClient} />;
     case 'feedback':
       return (
         <FeedbackScreen
