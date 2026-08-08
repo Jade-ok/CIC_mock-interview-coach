@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
@@ -337,28 +337,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     setRecording((prev) => !prev);
   }, [state.turnState]);
 
-  // Derive the latest interviewer text: livePartial (if interviewer) takes priority, else last confirmed
-  const latestInterviewerText = useMemo(() => {
-    if (state.livePartial?.role === 'interviewer') return state.livePartial.text;
-    for (let i = state.transcript.length - 1; i >= 0; i--) {
-      if (state.transcript[i].role === 'interviewer') {
-        return state.transcript[i].text;
-      }
-    }
-    return null;
-  }, [state.transcript, state.livePartial]);
-
-  // Derive the latest user text: livePartial (if user) takes priority, else last confirmed
-  const latestUserText = useMemo(() => {
-    if (state.livePartial?.role === 'user') return state.livePartial.text;
-    for (let i = state.transcript.length - 1; i >= 0; i--) {
-      if (state.transcript[i].role === 'user') {
-        return state.transcript[i].text;
-      }
-    }
-    return null;
-  }, [state.transcript, state.livePartial]);
-
   const micDisabled = state.turnState === 'ai_speaking';
 
   return (
@@ -372,8 +350,14 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
       <div className="interview-screen__main">
         <div className={`interview-screen__left ${!state.practiceMode ? 'interview-screen__left--full' : ''}`}>
-          <ParticipantTiles turnState={state.turnState} latestInterviewerText={latestInterviewerText} latestUserText={latestUserText} />
-          <PracticeBubbles practiceMode={state.practiceMode} transcript={state.transcript} />
+          {/* Practice Mode OFF → Tile view, no text (real interview mode) */}
+          {!state.practiceMode && (
+            <ParticipantTiles turnState={state.turnState} latestInterviewerText={null} latestUserText={null} />
+          )}
+          {/* Practice Mode ON → Chat log view */}
+          {state.practiceMode && (
+            <PracticeBubbles transcript={state.transcript} livePartial={state.livePartial} turnState={state.turnState} />
+          )}
           <MicButton
             disabled={micDisabled}
             recording={recording}
@@ -401,7 +385,9 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
       <style>{`
         .interview-screen {
-          min-height: 100vh;
+          height: 100vh;
+          max-height: 100vh;
+          overflow: hidden;
           background-color: var(--color-canvas, #0A0A0A);
           display: flex;
           flex-direction: column;
@@ -411,6 +397,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
         .interview-screen__main {
           flex: 1;
+          min-height: 0;
           display: flex;
           gap: 12px;
           padding: 12px;
@@ -429,6 +416,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
 
         .interview-screen__left {
           flex: 2;
+          min-height: 0;
           display: flex;
           flex-direction: column;
           gap: 8px;
@@ -564,10 +552,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           color: var(--color-text-secondary, #A0A0A5);
         }
 
-        /* Practice Bubbles */
-        .practice-bubbles {
-          min-height: 40px;
-        }
+
 
         /* Mic Button */
         .mic-button-wrapper {

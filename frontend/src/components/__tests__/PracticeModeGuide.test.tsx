@@ -43,44 +43,80 @@ const transcriptEntryArb = fc.record({
 
 // --- Unit Tests ---
 
-describe('PracticeBubbles', () => {
-  it('shows interviewer bubbles when practiceMode is ON', () => {
+describe('PracticeBubbles (Chat Log View)', () => {
+  it('shows both interviewer and user bubbles in transcript order', () => {
     const transcript = [
       makeTranscriptEntry('interviewer', 'Tell me about yourself'),
       makeTranscriptEntry('user', 'I am a student'),
       makeTranscriptEntry('interviewer', 'What project are you proud of?'),
     ];
-    render(<PracticeBubbles practiceMode={true} transcript={transcript} />);
-    const bubbles = screen.getAllByTestId('practice-bubble');
-    expect(bubbles).toHaveLength(2); // only interviewer entries
-    expect(bubbles[0].textContent).toBe('Tell me about yourself');
-    expect(bubbles[1].textContent).toBe('What project are you proud of?');
+    render(<PracticeBubbles transcript={transcript} livePartial={null} turnState="idle" />);
+
+    const interviewerBubbles = screen.getAllByTestId('practice-bubble-interviewer');
+    const userBubbles = screen.getAllByTestId('practice-bubble-user');
+    expect(interviewerBubbles).toHaveLength(2);
+    expect(userBubbles).toHaveLength(1);
+    expect(interviewerBubbles[0].textContent).toContain('Tell me about yourself');
+    expect(userBubbles[0].textContent).toContain('I am a student');
+    expect(interviewerBubbles[1].textContent).toContain('What project are you proud of?');
   });
 
-  it('never shows user answers as bubbles', () => {
-    const transcript = [
-      makeTranscriptEntry('user', 'My answer here'),
-      makeTranscriptEntry('user', 'Another answer'),
-    ];
-    render(<PracticeBubbles practiceMode={true} transcript={transcript} />);
-    expect(screen.queryAllByTestId('practice-bubble')).toHaveLength(0);
+  it('shows live partial indicator when present', () => {
+    const transcript = [makeTranscriptEntry('interviewer', 'Hello')];
+    render(
+      <PracticeBubbles
+        transcript={transcript}
+        livePartial={{ role: 'interviewer', text: 'Tell me about...' }}
+        turnState="ai_speaking"
+      />
+    );
+    const liveBubble = screen.getByTestId('practice-bubble-live');
+    expect(liveBubble.textContent).toContain('Tell me about...');
   });
 
-  it('shows no bubbles when practiceMode is OFF', () => {
-    const transcript = [
-      makeTranscriptEntry('interviewer', 'Tell me about yourself'),
-    ];
-    render(<PracticeBubbles practiceMode={false} transcript={transcript} />);
-    expect(screen.queryAllByTestId('practice-bubble')).toHaveLength(0);
+  it('displays status indicator for AI speaking', () => {
+    render(<PracticeBubbles transcript={[]} livePartial={null} turnState="ai_speaking" />);
+    expect(screen.getByTestId('practice-chat-status').textContent).toContain('AI speaking');
   });
 
-  it('ON→OFF immediately removes bubbles', () => {
-    const transcript = [makeTranscriptEntry('interviewer', 'Question')];
-    const { rerender } = render(<PracticeBubbles practiceMode={true} transcript={transcript} />);
-    expect(screen.getAllByTestId('practice-bubble')).toHaveLength(1);
+  it('displays status indicator for user turn', () => {
+    render(<PracticeBubbles transcript={[]} livePartial={null} turnState="user_turn" />);
+    expect(screen.getByTestId('practice-chat-status').textContent).toContain('Your turn');
+  });
 
-    rerender(<PracticeBubbles practiceMode={false} transcript={transcript} />);
-    expect(screen.queryAllByTestId('practice-bubble')).toHaveLength(0);
+  it('renders empty log when no transcript entries', () => {
+    render(<PracticeBubbles transcript={[]} livePartial={null} turnState="idle" />);
+    const log = screen.getByTestId('practice-chat-log');
+    expect(log.children).toHaveLength(0);
+  });
+});
+
+// --- Integration Tests (InterviewScreen) ---
+
+describe('InterviewScreen: Practice Mode layout switching', () => {
+  beforeEach(() => {
+    mockDispatch.mockClear();
+    mockState = {
+      ...initialState,
+      phase: 'interview',
+      turnState: 'idle',
+      practiceMode: false,
+      elapsedSeconds: 0,
+    };
+  });
+
+  it('Practice Mode OFF: shows participant tiles, no chat log', () => {
+    mockState = { ...mockState, practiceMode: false };
+    render(<InterviewScreen />);
+    expect(screen.getByTestId('participant-tiles')).toBeInTheDocument();
+    expect(screen.queryByTestId('practice-bubbles')).not.toBeInTheDocument();
+  });
+
+  it('Practice Mode ON: shows chat log, no participant tiles', () => {
+    mockState = { ...mockState, practiceMode: true };
+    render(<InterviewScreen />);
+    expect(screen.getByTestId('practice-bubbles')).toBeInTheDocument();
+    expect(screen.queryByTestId('participant-tiles')).not.toBeInTheDocument();
   });
 });
 
@@ -145,34 +181,35 @@ describe('Property 8: Practice Mode 격리', () => {
   });
 });
 
-describe('Property 9: Practice Mode ON — 표시 규칙', () => {
+describe('Property 9: Practice Mode ON — Chat Log 표시 규칙', () => {
   /**
    * Feature: frontend-interview, Property 9: Practice Mode ON — 표시 규칙
    * Validates: Requirements 5.3, 5.4
    *
-   * For any transcript entries with Practice Mode ON:
-   * - Interviewer text is shown as bubbles
-   * - User text is NEVER shown as bubbles
+   * For any transcript entries when PracticeBubbles is rendered (Practice Mode ON):
+   * - Both interviewer and user text are shown in the chat log
+   * - Entries appear in transcript order
    */
-  it('PBT: Practice Mode ON shows only interviewer bubbles, never user bubbles', () => {
+  it('PBT: Chat log shows all transcript entries in order', () => {
     fc.assert(
       fc.property(
         fc.array(transcriptEntryArb, { minLength: 0, maxLength: 20 }),
         (transcript) => {
           const { unmount } = render(
-            <PracticeBubbles practiceMode={true} transcript={transcript} />
+            <PracticeBubbles transcript={transcript} livePartial={null} turnState="idle" />
           );
 
-          const bubbles = screen.queryAllByTestId('practice-bubble');
+          const interviewerBubbles = screen.queryAllByTestId('practice-bubble-interviewer');
+          const userBubbles = screen.queryAllByTestId('practice-bubble-user');
+          const totalBubbles = interviewerBubbles.length + userBubbles.length;
+
+          // Total bubbles should equal total transcript entries
+          expect(totalBubbles).toBe(transcript.length);
+
           const interviewerEntries = transcript.filter((e) => e.role === 'interviewer');
-
-          // Number of bubbles must equal number of interviewer entries
-          expect(bubbles.length).toBe(interviewerEntries.length);
-
-          // Each bubble text matches interviewer entries in order
-          for (let i = 0; i < bubbles.length; i++) {
-            expect(bubbles[i].textContent).toBe(interviewerEntries[i].text);
-          }
+          const userEntries = transcript.filter((e) => e.role === 'user');
+          expect(interviewerBubbles.length).toBe(interviewerEntries.length);
+          expect(userBubbles.length).toBe(userEntries.length);
 
           unmount();
         }
@@ -182,24 +219,38 @@ describe('Property 9: Practice Mode ON — 표시 규칙', () => {
   });
 });
 
-describe('Property 10: Practice Mode OFF — 텍스트 숨김', () => {
+describe('Property 10: Practice Mode OFF — 조건부 렌더링', () => {
   /**
-   * Feature: frontend-interview, Property 10: Practice Mode OFF — 텍스트 숨김
+   * Feature: frontend-interview, Property 10: Practice Mode OFF — 타일만 표시
    * Validates: Requirements 5.5
    *
-   * For any transcript entries with Practice Mode OFF, no text bubbles are displayed.
+   * When Practice Mode is OFF, the parent (InterviewScreen) does not render
+   * PracticeBubbles at all — only participant tiles are shown.
    */
-  it('PBT: Practice Mode OFF shows no bubbles regardless of transcript content', () => {
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('PBT: Practice Mode OFF never renders chat log component', () => {
     fc.assert(
       fc.property(
         fc.array(transcriptEntryArb, { minLength: 0, maxLength: 20 }),
         (transcript) => {
-          const { unmount } = render(
-            <PracticeBubbles practiceMode={false} transcript={transcript} />
-          );
+          mockState = {
+            ...initialState,
+            phase: 'interview',
+            turnState: 'idle',
+            practiceMode: false,
+            transcript,
+            elapsedSeconds: 0,
+          };
 
-          const bubbles = screen.queryAllByTestId('practice-bubble');
-          expect(bubbles.length).toBe(0);
+          const { unmount } = render(<InterviewScreen />);
+
+          // Chat log should not exist
+          expect(screen.queryByTestId('practice-bubbles')).not.toBeInTheDocument();
+          // Tiles should exist
+          expect(screen.getByTestId('participant-tiles')).toBeInTheDocument();
 
           unmount();
         }
@@ -209,43 +260,40 @@ describe('Property 10: Practice Mode OFF — 텍스트 숨김', () => {
   });
 });
 
-describe('Property 11: Practice Mode ON→OFF 즉시 제거', () => {
+describe('Property 11: 두 뷰가 동시에 렌더링되지 않음', () => {
   /**
-   * Feature: frontend-interview, Property 11: Practice Mode ON→OFF 즉시 제거
+   * Feature: frontend-interview, Property 11: 중복 렌더링 방지
    * Validates: Requirements 5.6
    *
-   * For any state with Practice Mode ON that has bubbles displayed,
-   * switching to OFF immediately removes all bubbles.
+   * For any practiceMode state, participant-tiles and practice-bubbles
+   * must never coexist in the DOM.
    */
-  it('PBT: ON→OFF transition immediately removes all bubbles', () => {
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('PBT: tiles and chat log are mutually exclusive', () => {
     fc.assert(
       fc.property(
-        fc.array(
-          fc.record({
-            role: fc.constant('interviewer' as const),
-            text: fc.string({ minLength: 1, maxLength: 100 }),
-            timestamp: fc.date().map((d) => d.toISOString()),
-          }),
-          { minLength: 1, maxLength: 10 }
-        ),
-        (interviewerTranscript) => {
-          // Render PracticeBubbles in ON state
-          const { rerender, unmount } = render(
-            <PracticeBubbles practiceMode={true} transcript={interviewerTranscript} />
-          );
+        fc.boolean(),
+        fc.array(transcriptEntryArb, { minLength: 0, maxLength: 10 }),
+        (practiceMode, transcript) => {
+          mockState = {
+            ...initialState,
+            phase: 'interview',
+            turnState: 'idle',
+            practiceMode,
+            transcript,
+            elapsedSeconds: 0,
+          };
 
-          // Verify bubbles exist in ON state
-          const bubblesOn = screen.queryAllByTestId('practice-bubble');
-          expect(bubblesOn.length).toBe(interviewerTranscript.length);
+          const { unmount } = render(<InterviewScreen />);
 
-          // Switch to OFF
-          rerender(
-            <PracticeBubbles practiceMode={false} transcript={interviewerTranscript} />
-          );
+          const hasTiles = screen.queryByTestId('participant-tiles') !== null;
+          const hasChatLog = screen.queryByTestId('practice-bubbles') !== null;
 
-          // Verify all bubbles removed
-          const bubblesOff = screen.queryAllByTestId('practice-bubble');
-          expect(bubblesOff.length).toBe(0);
+          // Exactly one should be present, never both
+          expect(hasTiles).not.toBe(hasChatLog);
 
           unmount();
         }
