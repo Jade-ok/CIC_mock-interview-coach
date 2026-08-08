@@ -4,6 +4,7 @@ import { HeroSection } from './HeroSection';
 import { TldrCard } from './TldrCard';
 import { DimensionScoresGrid } from './DimensionScoresGrid';
 import { FeedbackColumns } from './FeedbackColumns';
+import { KeywordCoverage } from './KeywordCoverage';
 import { ContextualAdvice } from './ContextualAdvice';
 import { QuestionBreakdown } from './QuestionBreakdown';
 import { FooterCTA } from './FooterCTA';
@@ -49,6 +50,11 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
         <FeedbackColumns
           strengths={data.strengths}
           improvements={data.improvements}
+        />
+
+        <KeywordCoverage
+          covered={data.keywords_covered || []}
+          notCovered={data.keywords_not_covered || []}
         />
 
         <QuestionBreakdown

@@ -29,10 +29,14 @@ Scoring guide (co-op student calibration):
 - 2: Developing — vague or generic, needs more specificity
 - 1: Missing — dimension was completely absent from the answer (the student said nothing relevant to this dimension)
 
-FEEDBACK RULES:
-- "strengths" MUST reference specific things the student SAID during the interview (quote or paraphrase their actual spoken answers). Do NOT praise resume content that was not discussed.
-- "improvements" MUST give actionable advice about how to better ANSWER interview questions, with specific examples of what the student could have said differently.
-- "contextual_advice" can reference resume experiences the student did not mention, suggesting they bring those up in future interviews.
+FEEDBACK STRUCTURE:
+- per_question_scores.feedback.strength: One sentence about what the student did well in THAT specific answer. Reference what they said.
+- per_question_scores.feedback.improvement: One sentence with one actionable tip to improve THAT specific answer.
+- "strengths": 2-3 sentences summarizing OVERALL patterns of strength across the entire interview. Do NOT repeat per-question feedback. Think: "Across all your answers, you consistently..."
+- "improvements": 2-3 sentences summarizing OVERALL patterns to work on. Do NOT repeat per-question feedback. Think: "A common pattern across your answers is..."
+- "keywords_covered": List job-description skills the student mentioned or demonstrated.
+- "keywords_not_covered": List job-description skills the student did NOT mention.
+- "contextual_advice": Advice about resume experiences not discussed and job gaps.
 
 Provide your scoring judgments only. Do NOT calculate averages or assign labels.
 Use supportive, constructive, student-friendly language in all feedback."""
@@ -144,9 +148,11 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
     sections.append("\n---")
     sections.append(
         "Score each question-answer pair from the Interview Conversation above. "
-        "Your 'strengths' MUST quote or paraphrase what the student actually said. "
-        "Your 'improvements' should suggest how to answer better next time. "
-        "Use 'contextual_advice' to mention resume experiences not discussed and job gaps."
+        "For each question, provide one-sentence feedback (strength + improvement). "
+        "Then provide 2-3 overall summary sentences for strengths and improvements "
+        "(cross-cutting patterns, NOT per-question repetitions). "
+        "List which target role keywords were covered vs. not covered in the interview. "
+        "Use 'contextual_advice' for resume experiences not discussed and job gaps."
     )
 
     return "\n".join(sections)

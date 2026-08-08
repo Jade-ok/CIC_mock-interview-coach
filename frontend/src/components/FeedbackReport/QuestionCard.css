@@ -75,14 +75,43 @@
   font-size: var(--font-body);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 8px;
+  margin: 0 0 12px;
 }
 
-.question-card__answer {
+/* Per-question feedback */
+.question-card__feedback {
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-card__feedback-strength,
+.question-card__feedback-improvement {
   font-size: var(--font-small);
   color: var(--text-secondary);
-  margin: 0 0 12px;
+  margin: 0;
   line-height: 1.5;
+  padding-left: 18px;
+  position: relative;
+}
+
+.question-card__feedback-dot {
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.question-card__feedback-dot--green {
+  background: var(--accent-green);
+}
+
+.question-card__feedback-dot--amber {
+  background: var(--accent-amber);
 }
 
 .question-card__scores {

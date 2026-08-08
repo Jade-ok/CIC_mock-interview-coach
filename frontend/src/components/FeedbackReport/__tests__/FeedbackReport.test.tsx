@@ -5,8 +5,8 @@ import type { EvaluatorOutput } from '../../../types/evaluator';
 
 const mockData: EvaluatorOutput = {
   per_question_scores: [
-    { question_text: 'Q1?', answer_summary: 'A1.', scores: { concrete_example: 4, situation_action_result: 3, link_to_job: 4, quantifiable_outcome: 2 } },
-    { question_text: 'Q2?', answer_summary: 'A2.', scores: { concrete_example: 5, situation_action_result: 4, link_to_job: 3, quantifiable_outcome: 3 } },
+    { question_text: 'Q1?', feedback: { strength: 'Good example.', improvement: 'Add metrics.' }, scores: { concrete_example: 4, situation_action_result: 3, link_to_job: 4, quantifiable_outcome: 2 } },
+    { question_text: 'Q2?', feedback: { strength: 'Clear structure.', improvement: 'Link to role.' }, scores: { concrete_example: 5, situation_action_result: 4, link_to_job: 3, quantifiable_outcome: 3 } },
   ],
   overall_scores: {
     dimensions: { concrete_example: 4.5, situation_action_result: 3.5, link_to_job: 3.5, quantifiable_outcome: 2.5 },
@@ -16,6 +16,8 @@ const mockData: EvaluatorOutput = {
   readiness_label: 'Strong foundation',
   strengths: ['Great specific example.'],
   improvements: ['Add more numbers.'],
+  keywords_covered: ['React', 'TypeScript'],
+  keywords_not_covered: ['AWS', 'Docker'],
   contextual_advice: ['Mention your hackathon project.'],
   interview_metadata: {
     candidate_level: 'student_intern',

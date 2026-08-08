@@ -8,7 +8,7 @@ interface QuestionCardProps {
   index: number;
   turnType: string;
   questionText: string;
-  answerSummary: string;
+  feedback?: { strength: string; improvement: string };
   scores: PerQuestionScore['scores'];
   fullAnswer?: string;
 }
@@ -36,7 +36,7 @@ function getChipTier(score: number): string {
   return 'question-card__chip--minimal';
 }
 
-export function QuestionCard({ index, turnType, questionText, answerSummary, scores, fullAnswer }: QuestionCardProps) {
+export function QuestionCard({ index, turnType, questionText, feedback, scores, fullAnswer }: QuestionCardProps) {
   const [showScores, setShowScores] = useState(false);
   const badgeLabel = turnType === 'main_question' ? 'Main question' : 'Follow-up';
   const badgeClass = turnType === 'main_question' ? 'question-card__badge--main' : 'question-card__badge--followup';
@@ -61,7 +61,19 @@ export function QuestionCard({ index, turnType, questionText, answerSummary, sco
         </button>
       </div>
       <h3 className="question-card__question">{questionText}</h3>
-      <p className="question-card__answer">{answerSummary}</p>
+
+      {feedback && (
+        <div className="question-card__feedback">
+          <p className="question-card__feedback-strength">
+            <span className="question-card__feedback-dot question-card__feedback-dot--green" aria-hidden="true" />
+            {feedback.strength}
+          </p>
+          <p className="question-card__feedback-improvement">
+            <span className="question-card__feedback-dot question-card__feedback-dot--amber" aria-hidden="true" />
+            {feedback.improvement}
+          </p>
+        </div>
+      )}
 
       {fullAnswer && (
         <div className="question-card__transcript">

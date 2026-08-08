@@ -79,7 +79,7 @@ export function QuestionBreakdown({ questions, questionCount, transcript }: Ques
           index={i + 1}
           turnType={i % 2 === 0 ? 'main_question' : 'follow_up'}
           questionText={q.question_text}
-          answerSummary={q.answer_summary}
+          feedback={q.feedback}
           scores={q.scores}
           fullAnswer={showTranscript ? transcriptPairs[i]?.answer : undefined}
         />

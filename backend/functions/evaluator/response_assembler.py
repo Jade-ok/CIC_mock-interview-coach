@@ -14,7 +14,7 @@ def build(
         per_question_scores: List of per-question score objects (clamped).
         overall_scores: Dict with dimensions, total, and question_count.
         readiness_label: The deterministic readiness label string.
-        llm_response: The full LLM tool_use output (for strengths/improvements/advice).
+        llm_response: The full LLM tool_use output (for feedback/strengths/improvements/advice).
         interview_metadata: Metadata passed through unchanged from input.
 
     Returns:
@@ -30,6 +30,8 @@ def build(
         "readiness_label": readiness_label,
         "strengths": llm_response["strengths"],
         "improvements": llm_response["improvements"],
+        "keywords_covered": llm_response.get("keywords_covered", []),
+        "keywords_not_covered": llm_response.get("keywords_not_covered", []),
         "contextual_advice": llm_response["contextual_advice"],
         "interview_metadata": interview_metadata,
     }

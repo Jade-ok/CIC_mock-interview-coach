@@ -174,8 +174,13 @@ export function isEvaluatorOutput(value: unknown): value is EvaluatorOutput {
     && value.per_question_scores.every((item) => {
       if (!isRecord(item) || !isRecord(item.scores)) return false;
       const scores = item.scores;
+      // Accept both new schema (feedback object) and legacy (answer_summary string)
+      const hasFeedback = isRecord(item.feedback)
+        && typeof (item.feedback as Record<string, unknown>).strength === 'string'
+        && typeof (item.feedback as Record<string, unknown>).improvement === 'string';
+      const hasLegacySummary = typeof item.answer_summary === 'string';
       return typeof item.question_text === 'string'
-        && typeof item.answer_summary === 'string'
+        && (hasFeedback || hasLegacySummary)
         && dimensionKeys.every((key) => typeof scores[key] === 'number');
     });
 
