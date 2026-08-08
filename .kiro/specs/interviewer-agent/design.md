@@ -1,173 +1,95 @@
-# Design Document: Interviewer Module
+# Design: Interviewer and Voice Runtime
+
+> Maintained design. Last verified: 2026-08-07. This replaces the retired direct browser-to-Bedrock and signing-Lambda designs. Amplify hosting and authenticated browser-to-AgentCore WSS define the hosted architecture; their configuration and verification are environment-specific.
 
 ## Overview
 
-The Interviewer module is a single Lambda that builds a runtime context for Nova Sonic from the Analyst output + S3 configs.
+The interview capability has two backend components:
 
-The frontend connects directly to Nova Sonic using the Bedrock JS SDK with Cognito Identity Pool credentials. No proxy server, no signing Lambda — the SDK handles WebSocket signing internally.
+1. The Interviewer Lambda builds a Nova runtime-context string from Analyst output and two S3 configuration objects.
+2. The AgentCore-hosted voice relay owns the transient bidirectional connection to Amazon Nova 2 Sonic. AgentCore is an AWS-managed serverless container runtime; it is not an application server or EC2 instance that the project operates.
 
-### Design Goals
+The browser retains UI state and transcript data. No persistent interview session database is used.
 
-- **Simple**: One Lambda + direct WebSocket via SDK. No containers, no proxy servers.
-- **Secure**: Cognito Identity Pool provides scoped temporary credentials. No raw AWS keys in the browser.
-- **Stateless**: No database — frontend holds all state.
-- **Configurable**: Interview format and behavior defined in S3, changeable without redeploy.
+## Target Architecture and Current Status
 
-## Architecture
-
-```mermaid
-flowchart TD
-    Frontend["Frontend (browser)"]
-    Cognito["Cognito Identity Pool"]
-    Interviewer["Interviewer Lambda"]
-    S3["S3 Bucket (configs)"]
-    NovaSonic["Nova Sonic (direct WebSocket)"]
-    Evaluator["Evaluator Lambda"]
-
-    Frontend -->|"get temp credentials"| Cognito
-    Frontend -->|"1. POST {analyst_output}"| Interviewer
-    Interviewer -->|"load configs"| S3
-    Interviewer -->|"2. Return {runtime_context}"| Frontend
-    Frontend <-->|"3. Direct WebSocket (SDK signed)"| NovaSonic
-    Frontend -->|"4. POST {analyst_output + conversation}"| Evaluator
+```text
+React browser client (target: Amplify Hosting)
+  ├─ POST analyst_output ──> Interviewer Function URL
+  │                           └─ reads interview configs from S3
+  │<─ {success, runtime_context}
+  │
+  ├─ authenticated WSS ─────> AgentCore serverless voice relay
+  │                            └─ bidirectional stream to Nova 2 Sonic
+  │<─ audio/text Nova events
+  │
+  └─ POST evaluator input ──> Evaluator Function URL
 ```
 
-**Steps 1–2**: Interviewer Lambda (context building)
-**Step 3**: Frontend connects directly to Nova Sonic using Bedrock SDK + Cognito credentials
-**Step 4**: Frontend sends results to Evaluator
-
-## Infrastructure
-
-| Resource | Value |
-|----------|-------|
-| Region | `us-east-1` |
-| Runtime | Python 3.12 |
-| Nova Sonic Model | `amazon.nova-2-sonic-v1:0` |
-| S3 Bucket | `cic-mock-interview-configs-002859476624` |
-| Structure Key | `interview_structure.json` |
-| Profile Key | `student_interview_profile.json` |
-| Cognito Identity Pool | `us-east-1:be3da380-d032-46f4-b4a2-85846a61bc52` |
-| Lambda Invocation | AWS SDK `LambdaClient.invoke()` |
-| Voice Connection | Frontend → Nova Sonic via `@aws-sdk/client-bedrock-runtime` |
+There is no signing Lambda or direct browser-to-Bedrock connection in the current repository. The React client, relay container, Lambdas, S3 configuration, and CDK backend stack exist; Amplify resources, authentication integration, deployment environment values, and a verified authenticated WSS connection do not yet exist. The final identity provider may use Amplify Auth/Cognito, but this document does not claim that choice is implemented.
 
 ## Interviewer Lambda
 
-### Module Structure
+Source: `backend/functions/interviewer/`
 
-```
-interviewer/
-  __init__.py
-  handler.py            # Lambda entry point
-  validation.py         # Input validation
-  config_loader.py      # S3 fetch for interview configs
-  context_builder.py    # Assembles runtime context string
-  .env                  # Environment variables (reference only)
+```text
+handler.py          Function URL/direct-invocation entry point
+validation.py       validates analyst_output presence
+config_loader.py    loads both JSON objects from S3
+context_builder.py  assembles the Nova system context
 ```
 
-### Request Flow
+### Input and Output
 
-```
-Frontend (SDK invoke) → handler.py
-  ├─ event has 'body'? → parse JSON (400 if fails)
-  └─ no 'body'? → use event as payload
-      │
-      ▼
-  validation.py → analyst_output missing? → 200 + error
-      │
-      ▼
-  config_loader.py → S3 fails? → 200 + error
-      │
-      ▼
-  context_builder.py → assemble runtime_context
-      │
-      ▼
-  handler.py → 200 + {"success": true, "runtime_context": "..."}
-```
+Input payload: `{"analyst_output": {}}`
 
-### Behavioral Instructions (in runtime_context)
+Success body: `{"success": true, "runtime_context": "..."}`
 
-- You MUST speak first when the session starts — greet the candidate briefly and ask the first question immediately
-- Keep all questions and responses to 1-2 sentences maximum
-- Ask one question at a time (no compound questions)
-- Do not explain, summarize, or narrate what you are about to do
-- Follow the tone specified in the interview profile
-- Accept all experience types listed in the interview profile
-- Do not invent details not present in the candidate data
-- Do not give feedback or score answers during the interview
-- Do not ask the candidate to rate themselves
-- Signal transitions between interview points briefly
-- Stop gracefully when the session ends
+Error bodies use `success: false` and `error_message`. This envelope differs from the Analyst and Evaluator envelopes and must be handled explicitly by clients.
 
-## Nova Sonic Connection (Frontend)
+### Configuration
 
-The frontend uses the Bedrock JS SDK (`@aws-sdk/client-bedrock-runtime`) with Cognito credentials to connect directly to Nova Sonic. The SDK handles SigV4 WebSocket signing internally.
+CDK creates the bucket, uploads `backend/config/`, grants the Lambda read access, and supplies:
 
-### Event Protocol
+- `S3_BUCKET`
+- `INTERVIEW_STRUCTURE_KEY=interview_structure.json`
+- `INTERVIEW_PROFILE_KEY=student_interview_profile.json`
 
-**Setup:**
-1. `sessionStart` — inference config + turn detection
-2. `promptStart` — audio/text output formats + voice
-3. `contentStart` (SYSTEM) → `textInput` (runtime_context) → `contentEnd`
-4. Send silence + `contentEnd` — triggers Nova to speak first
+Do not document or depend on a generated physical bucket name.
 
-**Each turn:**
-5. `contentStart` (USER/AUDIO) → `audioInput` (repeated) → `contentEnd`
-6. Nova responds: `audioOutput` + `textOutput`
+## Voice Relay
 
-**End:**
-7. `promptEnd` → `sessionEnd`
+Source: `backend/voice_agent/`
 
-### Audio Specs
+- `server.py` exposes the FastAPI/AgentCore entry point and WebSocket relay.
+- `protocol.py` translates the browser contract to and from Nova events.
+- `s2s_session_manager.py` owns the Nova bidirectional stream and transient queues.
+- `s2s_events.py` builds Nova protocol events.
+- `agentcore/agentcore.json` defines the current CLI/CDK project. `agentcore/aws-targets.example.json` documents the shape of ignored environment-specific target data. `.bedrock_agentcore.yaml` is ignored legacy Starter Toolkit configuration and is not canonical.
+- `Dockerfile` packages the relay.
 
-| | Input (mic → Nova) | Output (Nova → speakers) |
-|---|---|---|
-| Format | PCM 16-bit mono | PCM 16-bit mono |
-| Sample rate | 16,000 Hz | 24,000 Hz |
-| Encoding | base64 | base64 |
+The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
 
-## Data Models
+The production boundary is browser → authenticated `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
-### Lambda Input
+## Nova Configuration
 
-```json
-{ "analyst_output": { "...per schemas/analyst_output.json..." } }
-```
+| Setting | Value |
+|---|---|
+| Region | `us-east-1` |
+| Model | `amazon.nova-2-sonic-v1:0` |
+| Input audio | 16 kHz, 16-bit, mono LPCM |
+| Output audio | 24 kHz, 16-bit, mono LPCM |
 
-### Lambda Output (Success)
+The context builder instructs Nova to conduct three main questions with one adaptive follow-up per main question, stay concise and supportive, accept student-level experience, avoid scoring during the interview, and stop gracefully.
 
-```json
-{"statusCode": 200, "body": "{\"success\": true, \"runtime_context\": \"<string>\"}"}
-```
+## Hosted Architecture
 
-### Lambda Output (Error)
+- Amplify Hosting serves the React/Vite static frontend.
+- CDK defines the four backend Lambdas and S3 configuration.
+- AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
+- Hosted environment values supply the HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint is hard-coded.
 
-```json
-{"statusCode": 200, "body": "{\"success\": false, \"error_message\": \"...\"}"}
-```
+## Remaining Integration Gaps
 
-## Environment Variables
-
-| Variable | Value |
-|----------|-------|
-| `S3_BUCKET` | `cic-mock-interview-configs-002859476624` |
-| `INTERVIEW_STRUCTURE_KEY` | `interview_structure.json` |
-| `INTERVIEW_PROFILE_KEY` | `student_interview_profile.json` |
-
-## Error Handling
-
-| Scenario | Status | Message |
-|----------|--------|---------|
-| Body not valid JSON | 400 | "Request body is not valid JSON" |
-| analyst_output missing | 200 | "analyst_output is required..." |
-| S3 fails | 200 | includes config name |
-| Unhandled exception | 500 | exception description |
-
-## Deployment
-
-```bash
-zip -r interviewer.zip interviewer/ -x "interviewer/.env" "interviewer/tests/*"
-aws lambda update-function-code \
-  --function-name mock-interview-interviewer \
-  --zip-file fileb://interviewer.zip \
-  --region us-east-1
-```
+The AgentCore endpoint and authentication flow are environment configuration. Each hosted environment must verify them with a live browser/Nova session. The frontend reads `VITE_VOICE_WS_URL` and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.

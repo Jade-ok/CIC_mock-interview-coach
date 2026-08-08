@@ -1,5 +1,7 @@
 # Tasks
 
+> Active tracker. Last verified: 2026-08-07. FeedbackReport is integrated with the existing FeedbackScreen. Hosted presentation and authenticated AgentCore WSS are separate environment concerns.
+
 ## Task 1: Type Definitions and Utility Setup
 
 - [x] Create `frontend/src/types/evaluator.ts` with EvaluatorOutput, PerQuestionScore, OverallScores, and InterviewMetadata interfaces
@@ -73,7 +75,7 @@
 
 - [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.tsx` — page-level container
 - [x] Compose all section components in correct order: Header → Hero → Dimensions → Columns → Advice → Questions → Footer
-- [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.module.css` — page-level styles
+- [x] Create `frontend/src/components/FeedbackReport/FeedbackReport.css` — page-level styles
 - [x] Create `frontend/src/components/FeedbackReport/index.ts` — barrel export
 - [x] Pass data from EvaluatorOutput prop to each sub-component
 - [x] Write integration test: full render with mock EvaluatorOutput data, all sections present
@@ -81,7 +83,7 @@
 ## Task 10: Integration with Existing App
 
 - [x] Connect FeedbackReport to the existing FeedbackScreen component (phase === 'feedback')
-- [x] Map AGENT3_SUCCESS payload to EvaluatorOutput type
-- [x] Wire onPracticeAgain to dispatch RESET action
-- [x] Wire onViewTranscript to open transcript view (or placeholder)
+- [x] Render AGENT3_SUCCESS results through EvaluatorOutput after aligning the frontend request with the Evaluator contract
+- [x] Wire onPracticeAgain to dispatch RESET action in the integrated screen
+- [ ] Add a transcript view and then expose the currently hidden View Full Transcript controls
 - [x] Verify the full flow: mock evaluator response → FeedbackReport renders correctly

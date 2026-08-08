@@ -4,7 +4,7 @@ import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
 import { PracticeBubbles } from '@/components/PracticeBubbles';
 import { GuidePanel } from '@/components/GuidePanel';
-import { callAgent3 } from '@/services/agent3Client';
+import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
 import type { WebSocketClient } from '@/services/webSocketClient';
 
 // --- Sub-components ---
@@ -247,16 +247,25 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   const triggerAgent3 = useCallback(async () => {
     dispatch({ type: 'AGENT3_LOADING' });
     try {
-      const result = await callAgent3({
-        transcript: state.transcript,
-        analyst_output: state.analystOutput ?? undefined,
-      });
+      const request = buildAgent3Request(state);
+      if (request.conversation.length === 0) {
+        dispatch({
+          type: 'AGENT3_FAILED',
+          payload: {
+            message: 'Complete at least one interview answer before requesting feedback.',
+            retryable: false,
+          },
+        });
+        return;
+      }
+      const result = await callAgent3(request);
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
-      dispatch({ type: 'AGENT3_FAILED', payload: { message } });
+      const retryable = !message.includes('without Analyst output');
+      dispatch({ type: 'AGENT3_FAILED', payload: { message, retryable } });
     }
-  }, [dispatch, state.transcript, state.analystOutput]);
+  }, [dispatch, state]);
 
   // Audio streaming integration — pass isRecordingRef for gating
   const { audioManagerRef } = useInterviewStreaming({

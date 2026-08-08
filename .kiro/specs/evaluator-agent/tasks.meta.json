@@ -598,7 +598,7 @@
         "timestamp": 1786048705487
       }
     ],
-    "Create SAM/CloudFormation template or deployment config for Lambda (60s timeout, Python 3.12 runtime)": [
+    "Record the historical Lambda runtime configuration (60s timeout, Python 3.12 runtime)": [
       {
         "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
         "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",

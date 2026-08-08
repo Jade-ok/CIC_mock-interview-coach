@@ -1,99 +1,106 @@
 # Project Rules
 
-Shared conventions for the mock interview app. All 5 members follow these so every Lambda comes out consistent.
+> Active guidance. Last verified against the repository: 2026-08-07.
 
-## Runtime & Language
+Shared conventions for the mock interview application. When this file and an older task record disagree, current code, `schemas/`, and `infrastructure/lib/infra-stack.ts` are the source of truth.
 
-- Lambda runtime: Python 3.12. Use `python3`, not `python`.
-- No pydantic. Use plain dicts.
-- `boto3` ships with the runtime, don't bundle it. Bundle `pypdf` only (`pdf_parser`).
+## Runtime and Language
 
-## Models & Services
+- Lambda runtime: Python 3.12. Use `python3` in commands.
+- Use plain dictionaries rather than Pydantic models.
+- Lambda provides `boto3`; do not bundle it.
+- Only the PDF Parser needs a bundled third-party runtime dependency (`pypdf`). CDK installs it into that Lambda asset.
 
-Each agent uses a different model or service — this is intentional.
+## Models and Services
 
-| Agent | Model / Service |
-|-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-sonnet-5` |
-| interviewer | Amazon Nova Sonic (speech-to-speech via WebSocket) — no Bedrock text model |
-| evaluator | Bedrock — `global.anthropic.claude-sonnet-5` |
-| pdf_parser | pypdf only — no Bedrock |
+Agents use the service appropriate to their role. Analyst and Evaluator intentionally share Sonnet 4.6.
 
-Both Bedrock agents use the same Sonnet 5 model to keep analysis and evaluation behavior consistent.
+| Component | Model / Service |
+|---|---|
+| Analyst | Bedrock Converse API — `global.anthropic.claude-sonnet-4-6` |
+| Interviewer context builder | Lambda + S3; no model call |
+| Voice interviewer | Python relay on AgentCore Runtime + `amazon.nova-2-sonic-v1:0` |
+| Evaluator | Bedrock Converse API — `global.anthropic.claude-sonnet-4-6` |
+| PDF Parser | `pypdf`; no model call |
 
-## Bedrock (analyst, evaluator only)
+All AWS runtime components use `us-east-1` unless an explicit deployment configuration says otherwise. Analyst and Evaluator use forced tool use for structured Bedrock output. Their retry behavior is implementation-specific; do not assume every invalid response is retried identically.
 
-- Region: `us-east-1` for Bedrock, Nova Sonic, and all Lambdas.
-- Use the Converse API with `tool_use` to force JSON output. Never parse plain text.
-- Retry each Bedrock call once (max 2 attempts) on failure or invalid response.
+## Current Implementation
 
-## Nova Sonic (interviewer only)
+- The React/Vite frontend owns navigation, UI state, uploaded content, the complete Analyst output, and the interview transcript for the active session.
+- There is no persistent application database or server-side session store.
+- Four Lambda Function URLs expose PDF Parser, Analyst, Interviewer, and Evaluator.
+- CDK uploads `backend/config/interview_structure.json` and `backend/config/student_interview_profile.json`; the Interviewer reads the resulting S3 object keys and returns a runtime-context string.
+- `backend/voice_agent/` contains the FastAPI/Python WebSocket relay, container assets, and current `@aws/agentcore` CLI/CDK configuration. Account- and runtime-specific deployment state stays in ignored local files.
+- The frontend defaults to strict local mode: four HTTP routes under `http://localhost:8080/api` and voice at `ws://localhost:8080/`. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
+- Local development runs `backend.local_server:app`. PDF parsing and interview configuration use repository files; Analyst, Evaluator, and Nova use the developer's active AWS credentials. Hosted mode selects its environment-configured endpoints with `VITE_RUNTIME_MODE=hosted`. AWS credentials must never enter `VITE_*` variables.
+- `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter is unit-tested, but a live browser/Nova session remains unverified.
+- The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
+- AgentCore configuration currently uses AWS IAM/SigV4 for CLI-driven testing. Browser-compatible Cognito/OIDC JWT authorization is not implemented yet. `.bedrock_agentcore.yaml` remains ignored legacy configuration and is not the canonical deployment path.
+- Frontend hosting and Amplify authentication are not provisioned in this repository. The Lambda Function URLs currently use public `NONE` authentication and permissive CORS.
 
-- The Interviewer Lambda is a context-builder — it does NOT conduct the interview or call any LLM.
-- It loads interview structure + interview profile from S3, combines them with the Analyst output, and returns the runtime context to the frontend.
-- A Cognito Identity Pool provides unauthenticated credentials to the frontend for Bedrock access. The Bedrock JS SDK handles WebSocket signing internally.
-- Nova Sonic handles all question generation, follow-ups, and speech.
-- After the interview, the frontend sends the Analyst output + Q&A conversation to the Evaluator.
+## Hosted Architecture
 
-## Architecture
+- Amplify, AgentCore, Lambda, S3, and Bedrock access reside in one AWS account. Account-specific identifiers and generated infrastructure state remain outside version control.
+- AWS Amplify Hosting serves the React/Vite frontend.
+- Browser sessions authenticate before opening the hosted WebSocket. The browser connects over authenticated `wss://` to Amazon Bedrock AgentCore Runtime; it does not receive permanent AWS credentials or call Bedrock directly.
+- The Python voice relay runs in AgentCore Runtime. AgentCore is a serverless, AWS-managed container runtime, not an EC2 server maintained by this project.
+- The relay translates the agreed browser protocol, maintains connection-scoped state, and invokes `amazon.nova-2-sonic-v1:0` through Bedrock's bidirectional streaming API.
+- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in the four Lambda functions. S3 stores versioned interview configuration, and CDK is the source of truth for backend infrastructure.
+- Lambda endpoints require access control before a public launch; Amplify hosting alone does not secure their current public Function URLs.
 
-- Stateless. No database. The browser holds all state.
-- S3 is used only for interview configuration files (interview structure, interview profile) — not for session state.
-- The frontend connects directly to Nova Sonic via the Bedrock JS SDK with Cognito credentials. No proxy server, no containers.
-- Lambda Function URLs are used for the Interviewer, Analyst, Evaluator, and pdf_parser endpoints.
-- LLM does subjective judgment only (analyst: candidate analysis, evaluator: answer scoring). Deterministic logic (score calculation, classification, flow decisions) is done in Python.
-- The interviewer does not score or judge — it only builds context for Nova Sonic.
+Hosted environments require Amplify hosting, browser authentication, an authenticated AgentCore endpoint, protected Lambda access, and end-to-end verification.
 
-## Schemas
+## Contracts and Configuration
 
-Inter-agent data contracts and configuration schemas are defined separately from module code:
+Canonical inter-component payload definitions live in `schemas/`:
 
-| Schema | Purpose |
-|--------|---------|
-| Analyst → Interviewer | What the Analyst passes to the Interviewer (candidate data, job info, experiences) |
-| Interviewer → Evaluator | What the frontend sends to the Evaluator after the interview (Analyst output + transcript) |
-| Interview Structure | S3 config defining what the interview covers (points, topics, follow-up guidance, number of questions) |
-| Interview Profile | S3 config defining how the interviewer behaves (tone, style, rules, difficulty level) |
+| File | Purpose |
+|---|---|
+| `schemas/analyst_output.json` | Descriptive Analyst output shape |
+| `schemas/interviewer_output.json` | Descriptive completed-interview payload sent to the Evaluator |
+| `schemas/evaluator_output.json` | Descriptive Evaluator response shape |
 
-Each module validates presence of its inputs but relies on the producing agent to validate conformance.
+Runtime interview configuration lives in `backend/config/` and is uploaded to S3 by CDK. Configuration files are not inter-agent contracts.
 
-## Lambda Internal Structure
+The frontend and PDF Parser both enforce a 4 MB PDF limit so oversized files are rejected before upload.
 
-**AI Lambdas (analyst, evaluator):**
+Known integration gaps must not be documented as working behavior:
+
+- A hosted AgentCore runtime, authenticated WebSocket handshake, and paid Nova 2 Sonic conversation still require end-to-end verification in the chosen deployment environment.
+- Hosted frontend configuration includes the authenticated AgentCore WebSocket endpoint.
+- Current AgentCore CLI/CDK configuration is tracked and uses AWS IAM authorization; Cognito/OIDC custom-JWT settings and frontend token handling remain unimplemented.
+- Amplify Hosting and its authentication configuration are not represented in the current CDK stack or frontend configuration.
+- All four Lambda Function URLs currently use unauthenticated public access and `*` CORS; they require an explicit protection plan before public deployment.
+
+## Function Layouts
+
+The current functions intentionally have different internal shapes:
+
+```text
+backend/functions/
+  analyst/       handler, orchestrator, validation, prompt, Bedrock client, parser
+  evaluator/     lambda_handler, validator, prompt, Bedrock client, scorer,
+                 response assembler, schemas, exceptions
+  interviewer/   handler, validation, S3 config loader, context builder
+  pdf_parser/    handler, validation, orchestrator, parser
 ```
-module/
-  __init__.py
-  handler.py          # entry point
-  orchestrator.py     # business logic wiring
-  validation.py       # input validation
-  prompt_builder.py   # Claude prompt construction
-  bedrock_client.py   # Bedrock Converse API call
-  parser.py           # response parsing/validation
-```
 
-**Interviewer Lambda (context-builder, no LLM):**
-```
-interviewer/
-  __init__.py
-  handler.py          # entry point
-  validation.py       # input validation
-  config_loader.py    # S3 fetch for interview structure + profile
-  context_builder.py  # assembles runtime context for Nova Sonic
-```
+Do not force a shared filename convention during unrelated changes. CDK handler settings must match the file placed at each Lambda asset root.
 
-**Other Lambda:**
-- `pdf_parser`: same shape as AI Lambdas but no Bedrock (uses pypdf).
+## Invocation Modes
 
-**Signing Lambda (presigns Nova Sonic WebSocket URL):**
-_Removed — no longer needed. Frontend uses Cognito + Bedrock SDK for direct WebSocket signing._
+| Function | Supported input |
+|---|---|
+| Analyst | Direct payload and Function URL event body |
+| Interviewer | Direct payload and Function URL event body |
+| PDF Parser | Direct payload and Function URL event body |
+| Evaluator | Function URL event body only |
 
-## Deployment Gotchas
+CORS and Function URL configuration are defined in CDK so hosted infrastructure remains reproducible.
 
-These cost us time before — don't repeat them:
+## Local Testing
 
-- Each handler supports two modes: direct (`event = payload`) and Function URL (`event = {"body": "<JSON string>"}`). Read from `event['body']` for URL calls.
-- CORS is set on the Function URL config, not in Python code. CORS errors → fix the URL config in the console, not the handler.
-- 403 needs two permission statements, not one: `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`.
-- Trailing whitespace after a URL in `.env` causes a 403 that is hard to trace.
-- Request payload limit is 6 MiB. PDF upload capped at 4 MB client-side.
-- zip packaging: if code imports from `analyst.xxx`, zip the whole folder (`zip -r analyst.zip analyst/`), handler is `analyst.handler.lambda_handler`. Bundle pypdf with `pip3 install pypdf -t pdf_parser/`.
+- Run Python tests from the repository root with `.venv/bin/pytest` (or `python3 -m pytest` in an equivalent environment).
+- Run frontend and infrastructure commands from their respective directories.
+- Function URL requests are limited to 6 MiB. Base64 increases upload size, and the backend PDF validation limit is 4 MB.

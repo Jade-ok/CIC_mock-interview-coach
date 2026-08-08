@@ -9,6 +9,8 @@ import type { WebSocketConnectionState, NovaSonicOutputEvent, WebSocketMessage }
 
 export class MockWebSocketClient {
   private state: WebSocketConnectionState = 'disconnected';
+  private connectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectReject: ((reason: Error) => void) | null = null;
 
   // Event callbacks (same interface as real client)
   onMessage: (event: NovaSonicOutputEvent) => void = () => {};
@@ -18,13 +20,25 @@ export class MockWebSocketClient {
   onReconnectFailed: () => void = () => {};
   onSessionInvalid: () => void = () => {};
 
-  async connect(_config: { url: string; maxReconnectAttempts: number; reconnectDelayMs: number[] }): Promise<void> {
-    // Simulate instant successful connection
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    this.state = 'connected';
+  connect(_config: { url: string; maxReconnectAttempts: number; reconnectDelayMs: number[] }): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.connectReject = reject;
+      this.connectTimer = setTimeout(() => {
+        this.connectTimer = null;
+        this.connectReject = null;
+        this.state = 'connected';
+        resolve();
+      }, 200);
+    });
   }
 
   disconnect(): void {
+    if (this.connectTimer) {
+      clearTimeout(this.connectTimer);
+      this.connectTimer = null;
+      this.connectReject?.(new Error('Connection closed'));
+      this.connectReject = null;
+    }
     this.state = 'disconnected';
   }
 

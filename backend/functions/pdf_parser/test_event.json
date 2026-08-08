@@ -1,0 +1,7 @@
+{
+  "_comment": "Sample input for local handler tests.",
+  "job_posting": {
+    "content": "Software Engineering Intern at Acme Corp. We are looking for a motivated student to join our engineering team. Requirements: Python, JavaScript, problem-solving skills, teamwork. Preferred: AWS experience, React. Responsibilities: develop features, write tests, collaborate with senior engineers, participate in code reviews. This is a 4-month internship starting January 2025.",
+    "format": "text"
+  }
+}

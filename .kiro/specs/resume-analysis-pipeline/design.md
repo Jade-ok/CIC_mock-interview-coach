@@ -1,5 +1,7 @@
 # Design Document: Resume Analysis Pipeline
 
+> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and authenticated AgentCore WSS are separate deployment boundaries.
+
 ## Overview
 
 The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that form the intake and analysis stage of the mock interview coaching app:
@@ -7,13 +9,13 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Converse API with tool_use to force structured JSON output, validates the response against the analyst_output schema, and returns it to the frontend.
 
-The browser orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. Both Lambdas are invoked via Lambda Function URLs (no API Gateway). Each Lambda supports dual invocation modes (Function URL mode and direct invocation mode) to enable both production and local testing workflows.
+The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
 - tool_use pattern — we define the analyst_output schema as a "tool" in the Bedrock Converse API call, forcing Claude to produce valid JSON. This eliminates brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
-- Retry with ceiling — Bedrock calls retry once (max 2 attempts) for transient failures or invalid responses.
+- Bounded retry — each Bedrock client call makes one transport attempt. The orchestrator makes one additional call only when the first response fails schema validation, for a maximum of two Bedrock calls within the 300-second Lambda budget.
 
 ## Architecture
 
@@ -26,6 +28,7 @@ sequenceDiagram
     participant Analyst as analyst Lambda
     participant Bedrock as Bedrock (Claude)
     participant Interviewer as interviewer Lambda
+    participant AgentCore as AgentCore voice relay
     participant NovaSonic as Nova Sonic
     participant Evaluator as evaluator Lambda
 
@@ -37,11 +40,15 @@ sequenceDiagram
     Analyst-->>Browser: analyst_output (schema v1.0)
     Browser->>Interviewer: POST analyst_output
     Interviewer-->>Browser: runtime context (for Nova Sonic)
-    Browser->>NovaSonic: WebSocket (voice interview)
-    NovaSonic-->>Browser: real-time speech
+    Browser->>AgentCore: authenticated WSS (voice interview)
+    AgentCore->>NovaSonic: Bedrock bidirectional stream
+    NovaSonic-->>AgentCore: real-time audio/text
+    AgentCore-->>Browser: real-time audio/text
     Browser->>Evaluator: POST analyst_output + transcript
     Evaluator-->>Browser: scored evaluation report
 ```
+
+The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines all four Lambdas and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
 
 ### Internal Lambda Architecture
 
@@ -106,7 +113,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     """
     Validates:
     - At least one document present (resume or job_posting)
-    - Base64 content size <= 4 MB per document
+    - Decoded PDF size <= 4 MiB (4,194,304 bytes) per document
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
     
@@ -165,7 +172,7 @@ def analyze(payload: dict) -> dict:
     Orchestrates the analysis pipeline:
     1. Validate inputs
     2. Build prompt
-    3. Call Bedrock (with retry)
+    3. Call Bedrock (one transport attempt)
     4. Parse and validate response
     5. Check for analysis warnings
     
@@ -195,7 +202,7 @@ def detect_invocation_mode(event: dict) -> dict:
 #### prompt_builder.py — Claude Prompt Construction
 
 ```python
-MODEL_ID = "global.anthropic.claude-sonnet-5"  # swappable
+MODEL_ID = "global.anthropic.claude-sonnet-4-6"  # swappable
 
 def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     """
@@ -217,17 +224,14 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
 
 ```python
 REGION = "us-east-1"
-MAX_ATTEMPTS = 2
+MAX_ATTEMPTS = 1
 
 def call_converse(request: dict) -> dict:
     """
-    Calls Bedrock Converse API with retry logic.
+    Calls Bedrock Converse API with a bounded transport-attempt limit.
     
-    Retry triggers:
-    - Timeout / network error
-    - Throttling (429)
-    - Server error (5xx)
-    - Invalid/unparseable response
+    Transport failures are surfaced after one attempt. The orchestrator owns
+    the only retry: one fresh call after schema-invalid model output.
     
     Args:
         request: Converse API request dict from prompt_builder.
@@ -387,7 +391,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
 
 ```python
 {
-    "modelId": "global.anthropic.claude-sonnet-5",
+    "modelId": "global.anthropic.claude-sonnet-4-6",
     "messages": [
         {
             "role": "user",
@@ -432,8 +436,8 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 | Constant | Value | Location |
 |----------|-------|----------|
 | REGION | `"us-east-1"` | `bedrock_client.py` |
-| MODEL_ID | `"global.anthropic.claude-sonnet-5"` | `prompt_builder.py` |
-| MAX_ATTEMPTS | `2` | `bedrock_client.py` |
+| MODEL_ID | `"global.anthropic.claude-sonnet-4-6"` | `prompt_builder.py` |
+| MAX_ATTEMPTS | `1` | `bedrock_client.py` |
 | MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
 | MIN_JOB_POSTING_WORDS | `30` | `parser.py` (analyst) |
@@ -494,9 +498,9 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 
 **Validates: Requirements 5.5, 5.6, 6.1, 6.2, 6.3**
 
-### Property 9: Bedrock Client Retries Exactly Once on Failure
+### Property 9: Bedrock Call Budget Is Bounded
 
-*For any* Bedrock call that fails on the first attempt (transient error, invalid response, or timeout), the bedrock_client SHALL make exactly one retry. If the retry succeeds, the result is returned. If the retry fails, an error is raised (max 2 total attempts).
+*For any* transport/API failure, the Bedrock client SHALL surface the failure after its single configured attempt. If a successful response fails schema validation, the orchestrator SHALL make exactly one fresh recovery call (maximum two Bedrock calls total).
 
 **Validates: Requirements 6.5, 9.1, 9.3**
 
@@ -526,6 +530,8 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 
 ### pdf_parser Error Handling
 
+Validation failures use the error envelope/status indicators below. Extraction failures are different in the current implementation: the orchestrator records `resume_error` or `job_posting_error`, and the handler returns HTTP 200 with a success envelope. That behavior also occurs for a single failed document and does not yet satisfy the maintained requirements.
+
 | Error Condition | Response | Status Indicator |
 |---|---|---|
 | Invalid base64 encoding | `{"status": "error", "error": "Failed to decode base64 content for <doc_type>: <detail>"}` | 400 |
@@ -548,32 +554,38 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 | Missing/empty job_posting_text | `{"status": "error", "error": "Missing or empty fields: job_posting_text"}` | 400 |
 | Both fields missing/empty | `{"status": "error", "error": "Missing or empty fields: resume_text, job_posting_text"}` | 400 |
 | Malformed JSON in event['body'] | `{"status": "error", "error": "Failed to parse request body as JSON"}` | 400 |
-| Bedrock transient failure (after retry) | `{"status": "error", "error": "Bedrock API call failed after 2 attempts: <reason>"}` | 502 |
-| Bedrock response not parseable (after retry) | `{"status": "error", "error": "Bedrock returned invalid response after 2 attempts"}` | 502 |
-| Schema validation failure (after retry) | `{"status": "error", "error": "Analyst output does not conform to schema after 2 attempts: <detail>"}` | 502 |
+| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock API call failed after 1 attempt: <reason>"}` | 502 |
+| Bedrock response not parseable on the recovery call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
+| Schema validation failure on the recovery call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
 | Unexpected exception | `{"status": "error", "error": "Internal error: <brief description>"}` | 500 |
 
 ### Retry Strategy (analyst)
 
-```
-attempt = 0
-while attempt < MAX_ATTEMPTS:
-    try:
-        response = bedrock_client.converse(**request)
-        parsed = parse_converse_response(response)
-        validate_schema(parsed)
-        return success(parsed)
-    except (TransientError, SchemaValidationError, ParseError) as e:
-        attempt += 1
-        if attempt >= MAX_ATTEMPTS:
-            return error_response(str(e), 502)
+```text
+orchestrator attempt 1
+  └─ bedrock_client: 1 transport attempt
+  └─ parse and validate
+if schema validation fails:
+  orchestrator attempt 2
+    └─ bedrock_client: 1 fresh transport attempt
+    └─ parse and validate
 ```
 
-Transient errors include: `botocore.exceptions.ReadTimeoutError`, `ThrottlingException`, any `5xx` from Bedrock. Schema validation and parse errors are also retried (the model may produce valid output on the second attempt).
+`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Schema-invalid model output receives one recovery call, so the maximum is two service calls.
 
-## Testing Strategy
+## Testing Strategy: Current and Planned
 
-### Property-Based Testing
+### Current Coverage
+
+- `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
+- `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
+- Analyst operational tests cover the Bedrock timeout/retry configuration, Sonnet 4.6 model, 8,192-token budget, and one schema-recovery call.
+- Evaluator and Interviewer have their own unit suites under their function directories.
+- There is currently no PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
+
+The sections below are the planned expansion, not a description of tests that already exist.
+
+### Planned Property-Based Testing
 
 Property-based testing (PBT) is appropriate for this feature because:
 - The pdf_parser has pure functions with clear input/output (base64 → text, validation → bool)
@@ -594,20 +606,20 @@ Property-based testing (PBT) is appropriate for this feature because:
 
 | Property | Module Under Test | Key Generators |
 |---|---|---|
-| 1: PDF Round-Trip | `pdf_parser/parser.py` | Generate text → build PDF with pypdf → base64 encode |
-| 2: Text Pass-Through | `pdf_parser/orchestrator.py` | `st.text()` |
-| 3: Invalid PDF Rejection | `pdf_parser/parser.py` | `st.binary()` base64-encoded (non-PDF) |
-| 4: Invalid Format Flag | `pdf_parser/validation.py` | `st.text().filter(lambda s: s not in ("pdf", "text"))` |
+| 1: PDF Round-Trip | `backend/functions/pdf_parser/parser.py` | Generate text → build PDF with pypdf → base64 encode |
+| 2: Text Pass-Through | `backend/functions/pdf_parser/orchestrator.py` | `st.text()` |
+| 3: Invalid PDF Rejection | `backend/functions/pdf_parser/parser.py` | `st.binary()` base64-encoded (non-PDF) |
+| 4: Invalid Format Flag | `backend/functions/pdf_parser/validation.py` | `st.text().filter(lambda s: s not in ("pdf", "text"))` |
 | 5: Invocation Mode Equivalence | `*/handler.py` | Any valid payload wrapped/unwrapped |
-| 6: pdf_parser Validation | `pdf_parser/validation.py` | Payloads with missing/oversized fields |
-| 7: Analyst Validation | `analyst/validation.py` | Payloads with missing/empty text fields |
-| 8: Schema Validator | `analyst/parser.py` | Dicts with random mutations (remove keys, bad values) |
-| 9: Retry Logic | `analyst/bedrock_client.py` | Mock failures with various error types |
-| 10: Analysis Warnings | `analyst/parser.py` | Strings of varying word counts, lists of varying length |
+| 6: pdf_parser Validation | `backend/functions/pdf_parser/validation.py` | Payloads with missing/oversized fields |
+| 7: Analyst Validation | `backend/functions/analyst/validation.py` | Payloads with missing/empty text fields |
+| 8: Schema Validator | `backend/functions/analyst/parser.py` | Dicts with random mutations (remove keys, bad values) |
+| 9: Call Budget | `backend/functions/analyst/bedrock_client.py`, `backend/functions/analyst/orchestrator.py` | Mock transport and schema-validation failures |
+| 10: Analysis Warnings | `backend/functions/analyst/parser.py` | Strings of varying word counts, lists of varying length |
 | 11: Response Envelope | `*/handler.py` | Any inputs (valid and invalid) |
-| 12: Partial Success | `pdf_parser/orchestrator.py` | One valid + one invalid document |
+| 12: Partial Success | `backend/functions/pdf_parser/orchestrator.py` | One valid + one invalid document |
 
-### Unit Tests (Example-Based)
+### Planned Unit Tests (Example-Based)
 
 Unit tests complement property tests for specific scenarios:
 
@@ -619,11 +631,11 @@ Unit tests complement property tests for specific scenarios:
 
 - **analyst**:
   - Successful end-to-end with mocked Bedrock (golden path)
-  - Bedrock fails twice → 502 error response
-  - First call fails, retry succeeds → success returned
+  - Bedrock transport/API failure → 502 error response after one client attempt
+  - First schema-invalid response, second valid response → success returned
   - Direct mode invocation
 
-### Integration Tests
+### Planned External Integration Tests
 
 Integration tests verify the full pipeline against real services:
 
@@ -633,21 +645,22 @@ Integration tests verify the full pipeline against real services:
 
 These run with 1–3 representative inputs (not PBT) due to cost and external dependencies.
 
-### Test File Organization
+### Planned Test File Organization
 
 ```
-tests/
-  pdf_parser/
+backend/functions/
+  pdf_parser/tests/
     test_parser_properties.py      # Property tests (Hypothesis)
     test_validation_properties.py  # Property tests
     test_handler.py                # Unit + invocation mode tests
     test_orchestrator.py           # Unit tests
-  analyst/
+  analyst/tests/
     test_parser_properties.py      # Property tests (schema validation, warnings)
     test_validation_properties.py  # Property tests
     test_bedrock_client.py         # Retry property tests (mocked)
     test_handler.py                # Unit + invocation mode tests
     test_orchestrator.py           # Unit tests (mocked Bedrock)
+tests/
   integration/
     test_pdf_parser_e2e.py
     test_analyst_e2e.py

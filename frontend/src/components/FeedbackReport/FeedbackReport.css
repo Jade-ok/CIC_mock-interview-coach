@@ -38,14 +38,37 @@
 }
 
 .feedback-report__nav-link--primary {
-  background: var(--accent-red);
-  color: var(--text-primary);
-  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 20px;
   font-weight: 600;
+  padding: 8px 18px;
 }
 
 .feedback-report__content {
   max-width: 800px;
   margin: 0 auto;
   padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .feedback-report__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .feedback-report__nav {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .feedback-report__nav-link {
+    flex: 1 1 auto;
+  }
+
+  .feedback-report__content {
+    padding: 0 16px;
+  }
 }

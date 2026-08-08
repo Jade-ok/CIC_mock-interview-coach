@@ -3,6 +3,46 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
 
 describe('FeedbackScreen', () => {
+  const feedbackResult = {
+    per_question_scores: [
+      {
+        question_text: 'Tell me about a project.',
+        feedback: { strength: 'Named a specific project clearly.', improvement: 'Add measurable outcomes.' },
+        scores: {
+          concrete_example: 4,
+          situation_action_result: 3,
+          link_to_job: 4,
+          quantifiable_outcome: 2,
+        },
+      },
+    ],
+    overall_scores: {
+      dimensions: {
+        concrete_example: 4,
+        situation_action_result: 3,
+        link_to_job: 4,
+        quantifiable_outcome: 2,
+      },
+      total: 3.25,
+    },
+    question_count: 1,
+    readiness_label: 'Developing well',
+    strengths: ['Consistently used concrete examples across answers.'],
+    improvements: ['Add measurable outcomes to strengthen answers.'],
+    keywords_covered: ['React'],
+    keywords_not_covered: ['AWS'],
+    contextual_advice: ['Connect the example to the target role.'],
+    interview_metadata: {
+      candidate_level: 'new_grad',
+      target_role: 'Software Engineer',
+      status: 'ended_early' as const,
+      completion_reason: 'user_ended_early',
+      main_questions_completed: 1,
+      follow_ups_completed: 0,
+      ended_early: true,
+    },
+  };
+
   const defaultProps = {
     loading: false,
     error: null,
@@ -79,66 +119,27 @@ describe('FeedbackScreen', () => {
   describe('Result state', () => {
     const resultProps = {
       ...defaultProps,
-      feedbackResult: {
-        overallScore: 85,
-        summary: 'Great performance overall.',
-        competencyScores: [
-          { id: 'cg-1', title: 'Leadership', score: 88, feedback: 'Strong examples provided.' },
-          { id: 'cg-2', title: 'Problem Solving', score: 82, feedback: 'Good analytical approach.' },
-        ],
-        transcriptLength: 5,
-      },
+      feedbackResult,
     };
 
-    it('shows feedback result with title', () => {
+    it('shows feedback result', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      expect(screen.getByText('Interview Feedback')).toBeInTheDocument();
+      expect(screen.getByText('CIC Mock Interview Coach')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeInTheDocument();
     });
 
-    it('displays overall score in score ring', () => {
+    it('renders evaluator details through the feedback report', () => {
       render(<FeedbackScreen {...resultProps} />);
-      expect(screen.getByTestId('overall-score')).toBeInTheDocument();
-      expect(screen.getByText('85')).toBeInTheDocument();
+      expect(screen.getByText('Tell me about a project.')).toBeInTheDocument();
+      expect(screen.getByText('Named a specific project clearly.')).toBeInTheDocument();
     });
 
-    it('displays summary text', () => {
-      render(<FeedbackScreen {...resultProps} />);
-      expect(screen.getByText('Great performance overall.')).toBeInTheDocument();
-    });
-
-    it('renders competency cards', () => {
-      render(<FeedbackScreen {...resultProps} />);
-      expect(screen.getByTestId('competency-card-cg-1')).toBeInTheDocument();
-      expect(screen.getByTestId('competency-card-cg-2')).toBeInTheDocument();
-      expect(screen.getByText('Leadership')).toBeInTheDocument();
-      expect(screen.getByText('Problem Solving')).toBeInTheDocument();
-    });
-
-    it('hides transcriptLength from the UI', () => {
-      render(<FeedbackScreen {...resultProps} />);
-      const resultEl = screen.getByTestId('feedback-result');
-      expect(resultEl.textContent).not.toContain('transcriptLength');
-    });
-
-    it('shows new session button with English text', () => {
-      render(<FeedbackScreen {...resultProps} />);
-      const btn = screen.getByTestId('feedback-new-session-btn');
-      expect(btn).toBeInTheDocument();
-      expect(btn.textContent).toBe('Start New Session');
-    });
-  });
-
-  describe('Fallback for non-standard data', () => {
-    it('falls back to raw JSON for unexpected data shape', () => {
-      const props = {
-        ...defaultProps,
-        feedbackResult: { unexpected: 'data' },
-      };
-      render(<FeedbackScreen {...props} />);
-      expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      const resultEl = screen.getByTestId('feedback-result');
-      expect(resultEl.textContent).toContain('unexpected');
+    it('starts a new session from the feedback report', () => {
+      const onNewSession = vi.fn();
+      render(<FeedbackScreen {...resultProps} onNewSession={onNewSession} />);
+      fireEvent.click(screen.getAllByText('Practice again')[0]);
+      expect(onNewSession).toHaveBeenCalledOnce();
     });
   });
 });

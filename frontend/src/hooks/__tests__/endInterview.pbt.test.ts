@@ -12,6 +12,36 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import { sessionReducer, initialState } from '@/reducers/sessionReducer';
 import type { SessionState, SessionAction } from '@/types/session';
+import type { EvaluatorOutput } from '@/types/evaluator';
+
+const evaluatorOutput: EvaluatorOutput = {
+  per_question_scores: [],
+  overall_scores: {
+    dimensions: {
+      concrete_example: 3,
+      situation_action_result: 3,
+      link_to_job: 3,
+      quantifiable_outcome: 3,
+    },
+    total: 3,
+  },
+  question_count: 0,
+  readiness_label: 'Developing well',
+  strengths: [],
+  improvements: [],
+  keywords_covered: [],
+  keywords_not_covered: [],
+  contextual_advice: [],
+  interview_metadata: {
+    candidate_level: 'student_intern',
+    target_role: 'Software Engineer Intern',
+    status: 'ended_early',
+    completion_reason: 'user_ended_early',
+    main_questions_completed: 0,
+    follow_ups_completed: 0,
+    ended_early: true,
+  },
+};
 
 describe('Property 14: end_interview tool → auto end → feedback transition', () => {
   it('END_INTERVIEW with reason auto always transitions to feedback phase from interview', () => {
@@ -69,8 +99,7 @@ describe('Property 14: end_interview tool → auto end → feedback transition',
     fc.assert(
       fc.property(
         fc.string({ minLength: 1, maxLength: 100 }),
-        fc.anything(),
-        (errorMessage, feedbackData) => {
+        (errorMessage) => {
           const feedbackState: SessionState = {
             ...initialState,
             phase: 'feedback',
@@ -84,10 +113,10 @@ describe('Property 14: end_interview tool → auto end → feedback transition',
           // AGENT3_SUCCESS → stores result, clears loading
           const successState = sessionReducer(loadingState, {
             type: 'AGENT3_SUCCESS',
-            payload: feedbackData,
+            payload: evaluatorOutput,
           });
           expect(successState.agent3Loading).toBe(false);
-          expect(successState.feedbackResult).toEqual(feedbackData);
+          expect(successState.feedbackResult).toEqual(evaluatorOutput);
 
           // AGENT3_FAILED → stores error, clears loading
           const failedState = sessionReducer(loadingState, {

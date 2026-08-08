@@ -3,6 +3,10 @@
   border-top: 1px solid var(--bg-control);
 }
 
+.question-breakdown__header {
+  margin-bottom: 24px;
+}
+
 .question-breakdown__title {
   font-size: var(--font-section-title);
   color: var(--text-primary);
@@ -12,6 +16,6 @@
 .question-breakdown__intro {
   font-size: var(--font-body);
   color: var(--text-secondary);
-  margin: 0 0 24px;
+  margin: 0;
   line-height: 1.5;
 }

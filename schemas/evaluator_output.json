@@ -1,6 +1,4 @@
 {
-  "schema_version": "1.0",
-
   "per_question_scores": [
     {
       "question_text": "string — the interview question that was asked",
