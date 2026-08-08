@@ -1,4 +1,5 @@
 import type { EvaluatorOutput } from '../../types/evaluator';
+import type { TranscriptEntry } from '../../types/session';
 import { HeroSection } from './HeroSection';
 import { DimensionScoresGrid } from './DimensionScoresGrid';
 import { FeedbackColumns } from './FeedbackColumns';
@@ -12,9 +13,10 @@ interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
   onViewTranscript?: () => void;
+  transcript?: TranscriptEntry[];
 }
 
-export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: FeedbackReportProps) {
+export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transcript }: FeedbackReportProps) {
   return (
     <div className="feedback-report">
       <header className="feedback-report__header">
@@ -46,12 +48,13 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript }: Feed
           improvements={data.improvements}
         />
 
-        <ContextualAdvice advice={data.contextual_advice} />
-
         <QuestionBreakdown
           questions={data.per_question_scores}
           questionCount={data.question_count}
+          transcript={transcript}
         />
+
+        <ContextualAdvice advice={data.contextual_advice} />
       </main>
 
       <FooterCTA

@@ -60,7 +60,7 @@ describe('FeedbackReport (full page)', () => {
 
   it('passes correct question count', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onViewTranscript={() => {}} />);
-    expect(screen.getByText(/2 of 6 questions answered/)).toBeTruthy();
+    expect(screen.getByText(/2 questions answered/)).toBeTruthy();
   });
 
   it('hides transcript controls until transcript viewing is implemented', () => {

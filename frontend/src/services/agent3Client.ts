@@ -60,10 +60,15 @@ export function buildAgent3Request(state: SessionState): Agent3Request {
 }
 
 function pairConversation(transcript: TranscriptEntry[]): Agent3Request['conversation'] {
+  // Merge consecutive entries from the same role into a single turn.
+  // Nova may send multiple FINAL text_output events for one speech turn
+  // (e.g., separate recognized utterance segments for a long user answer).
+  const merged = mergeConsecutiveEntries(transcript);
+
   const conversation: Agent3Request['conversation'] = [];
   let pendingQuestion: string | null = null;
 
-  for (const entry of transcript) {
+  for (const entry of merged) {
     if (entry.role === 'interviewer') {
       pendingQuestion = entry.text;
       continue;
@@ -81,6 +86,31 @@ function pairConversation(transcript: TranscriptEntry[]): Agent3Request['convers
   }
 
   return conversation;
+}
+
+/**
+ * Merge consecutive transcript entries that share the same role into one entry.
+ * This handles cases where Nova sends multiple FINAL events for a single
+ * speech turn (common for longer user answers transcribed in segments).
+ */
+function mergeConsecutiveEntries(transcript: TranscriptEntry[]): TranscriptEntry[] {
+  if (transcript.length === 0) return [];
+
+  const merged: TranscriptEntry[] = [];
+  let current = { ...transcript[0] };
+
+  for (let i = 1; i < transcript.length; i++) {
+    const entry = transcript[i];
+    if (entry.role === current.role) {
+      current.text += ' ' + entry.text;
+    } else {
+      merged.push(current);
+      current = { ...entry };
+    }
+  }
+  merged.push(current);
+
+  return merged;
 }
 
 /**

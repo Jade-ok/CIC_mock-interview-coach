@@ -9,9 +9,10 @@ interface QuestionCardProps {
   questionText: string;
   answerSummary: string;
   scores: PerQuestionScore['scores'];
+  fullAnswer?: string;
 }
 
-export function QuestionCard({ index, turnType, questionText, answerSummary, scores }: QuestionCardProps) {
+export function QuestionCard({ index, turnType, questionText, answerSummary, scores, fullAnswer }: QuestionCardProps) {
   const badgeLabel = turnType === 'main_question' ? 'Main question' : 'Follow-up';
   const badgeClass = turnType === 'main_question' ? 'question-card__badge--main' : 'question-card__badge--followup';
 
@@ -23,6 +24,14 @@ export function QuestionCard({ index, turnType, questionText, answerSummary, sco
       </div>
       <h3 className="question-card__question">{questionText}</h3>
       <p className="question-card__answer">{answerSummary}</p>
+
+      {fullAnswer && (
+        <div className="question-card__transcript">
+          <p className="question-card__transcript-label">Your full answer:</p>
+          <p className="question-card__transcript-text">{fullAnswer}</p>
+        </div>
+      )}
+
       <div className="question-card__scores">
         {DIMENSION_KEYS.map((key) => (
           <div key={key} className="question-card__score-row">

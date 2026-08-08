@@ -64,12 +64,16 @@ EVALUATION_TOOL_SCHEMA: dict = {
                 "strengths": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Specific praise with direct quotes or references from the conversation."
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "Exactly 3 (or fewer if only 1 question) specific things the student did well, referencing what they SAID during the interview. Quote or paraphrase their actual spoken answers. Do NOT praise resume content that was not discussed."
                 },
                 "improvements": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Specific, actionable improvement advice tied to scoring dimensions."
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "description": "Exactly 3 (or fewer if only 1 question) specific, actionable tips on how to better ANSWER interview questions next time, tied to scoring dimensions."
                 },
                 "contextual_advice": {
                     "type": "array",

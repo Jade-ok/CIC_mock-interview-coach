@@ -32,7 +32,7 @@ describe('HeroSection', () => {
 
   it('displays question count', () => {
     render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/4 of 6 questions answered/)).toBeTruthy();
+    expect(screen.getByText(/4 questions answered/)).toBeTruthy();
   });
 
   it('handles unknown readiness label gracefully', () => {

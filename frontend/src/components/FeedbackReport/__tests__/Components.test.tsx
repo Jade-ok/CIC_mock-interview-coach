@@ -83,7 +83,7 @@ describe('QuestionBreakdown', () => {
   it('renders intro line with question count', () => {
     const questions = [{ question_text: 'Q1?', answer_summary: 'A1.', scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 } }];
     render(<QuestionBreakdown questions={questions} questionCount={1} />);
-    expect(screen.getByText(/1 of 6 questions/)).toBeTruthy();
+    expect(screen.getByText(/1 question/)).toBeTruthy();
   });
 
   it('renders correct number of question cards', () => {

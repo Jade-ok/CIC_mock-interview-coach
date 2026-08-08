@@ -8,11 +8,13 @@ except ImportError:  # Lambda loads modules from the function root.
 
 SYSTEM_PROMPT = """You are an interview performance evaluator for co-op seeking students.
 
-IMPORTANT CALIBRATION:
+CRITICAL SCORING RULES:
 - You are scoring a student seeking a co-op placement, NOT an experienced professional.
 - School projects, course work, hackathons, and team assignments are VALID experience.
-- Score generously when students demonstrate learning and growth from academic experiences.
+- A student who describes ANY specific project or task with some detail deserves at least a 3.
+- Score based on what the student ACTUALLY SAID in their spoken answers, not what is missing.
 - Do NOT penalize for missing questions if the interview ended early.
+- A short but relevant answer is better than no answer — never score 1 unless the student literally did not address the dimension at all.
 
 Score each question-answer pair on these four dimensions (1-5 integer scale):
 1. concrete_example (1-5): Did the student provide a specific, real example?
@@ -25,7 +27,12 @@ Scoring guide (co-op student calibration):
 - 4: Strong — demonstrates good understanding with minor gaps
 - 3: Adequate — shows relevant experience but lacks detail or structure
 - 2: Developing — vague or generic, needs more specificity
-- 1: Missing — dimension not addressed at all
+- 1: Missing — dimension was completely absent from the answer (the student said nothing relevant to this dimension)
+
+FEEDBACK RULES:
+- "strengths" MUST reference specific things the student SAID during the interview (quote or paraphrase their actual spoken answers). Do NOT praise resume content that was not discussed.
+- "improvements" MUST give actionable advice about how to better ANSWER interview questions, with specific examples of what the student could have said differently.
+- "contextual_advice" can reference resume experiences the student did not mention, suggesting they bring those up in future interviews.
 
 Provide your scoring judgments only. Do NOT calculate averages or assign labels.
 Use supportive, constructive, student-friendly language in all feedback."""
@@ -50,10 +57,11 @@ def build(conversation: list, analyst_output: dict) -> tuple:
 
 
 def _format_user_message(conversation: list, analyst_output: dict) -> str:
-    """Format the user message with conversation, target role, and resume context.
+    """Format the user message with conversation first, then supplementary context.
 
-    Extracts target_role, resume_job_alignment, interview_plan, and
-    selected_experiences from the structured analyst_output object.
+    The interview conversation is placed first to ensure the LLM evaluates
+    the student's actual spoken answers as the primary focus. Resume and role
+    context follows as supplementary reference for contextual_advice only.
     """
     target_role = analyst_output.get("target_role", {})
     alignment = analyst_output.get("resume_job_alignment", {})
@@ -63,8 +71,20 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
 
     sections = []
 
-    # Target role context
-    sections.append("## Target Role")
+    # PRIMARY: Interview conversation (what we are scoring)
+    sections.append("## Interview Conversation (PRIMARY — score these answers)")
+    sections.append("Below are the actual questions asked and the student's spoken responses.")
+    sections.append("Your scores and strengths MUST be based on what the student said here.\n")
+    for i, turn in enumerate(conversation):
+        turn_label = "Main Question" if turn.get("turn_type") == "main_question" else "Follow-up"
+        sections.append(f"### Turn {i + 1} ({turn_label}) [Point: {turn.get('point_id', '')}]")
+        sections.append(f"**Question:** {turn.get('question', '')}")
+        sections.append(f"**Answer:** {turn.get('answer', '')}\n")
+
+    # SUPPLEMENTARY: Target role context
+    sections.append("---")
+    sections.append("## Supplementary Context (for contextual_advice only)")
+    sections.append("\n### Target Role")
     sections.append(f"Title: {target_role.get('title', 'N/A')}")
     if target_role.get("required_skills"):
         sections.append(f"Required skills: {', '.join(target_role['required_skills'])}")
@@ -75,7 +95,7 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
 
     # Interview plan (what topics were intended to be covered)
     if interview_plan:
-        sections.append("\n## Interview Plan")
+        sections.append("\n### Interview Plan")
         for item in sorted(interview_plan, key=lambda x: x.get("priority", 99)):
             sections.append(
                 f"- [Priority {item.get('priority', '?')}] "
@@ -85,7 +105,7 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
             )
 
     # Resume-job alignment
-    sections.append("\n## Resume-Job Alignment")
+    sections.append("\n### Resume-Job Alignment")
     if alignment.get("strong_matches"):
         sections.append("Strong matches:")
         for match in alignment["strong_matches"]:
@@ -99,8 +119,8 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
         for area in alignment["areas_to_explore"]:
             sections.append(f"  - {area.get('topic', '')}: {area.get('reason', '')}")
 
-    # Selected experiences from resume (enriched)
-    sections.append("\n## Candidate's Key Experiences (from resume)")
+    # Selected experiences from resume
+    sections.append("\n### Candidate's Key Experiences (from resume)")
     for exp in selected_experiences:
         org = f" ({exp.get('organization', '')})" if exp.get("organization") else ""
         sections.append(
@@ -117,23 +137,16 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
 
     # Analysis warnings
     if warnings:
-        sections.append("\n## Analysis Warnings")
+        sections.append("\n### Analysis Warnings")
         for w in warnings:
             sections.append(f"- {w}")
 
-    # Interview conversation
-    sections.append("\n## Interview Conversation")
-    for i, turn in enumerate(conversation):
-        turn_label = "Main Question" if turn.get("turn_type") == "main_question" else "Follow-up"
-        sections.append(f"\n### Turn {i + 1} ({turn_label}) [Point: {turn.get('point_id', '')}]")
-        sections.append(f"**Question:** {turn.get('question', '')}")
-        sections.append(f"**Answer:** {turn.get('answer', '')}")
-
     sections.append("\n---")
     sections.append(
-        "Score each question-answer pair above on the four dimensions. "
-        "Provide strengths, improvements, and contextual advice referencing "
-        "the resume experiences and job alignment above."
+        "Score each question-answer pair from the Interview Conversation above. "
+        "Your 'strengths' MUST quote or paraphrase what the student actually said. "
+        "Your 'improvements' should suggest how to answer better next time. "
+        "Use 'contextual_advice' to mention resume experiences not discussed and job gaps."
     )
 
     return "\n".join(sections)

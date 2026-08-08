@@ -18,7 +18,7 @@ export function HeroSection({ readinessLabel, totalScore, questionCount, targetR
       <p className="hero-section__subheading">{subheading}</p>
       <p className="hero-section__score">
         <span className="hero-section__score-value">{totalScore.toFixed(1)}</span>
-        {' '}/ 5 overall · {questionCount} of 6 questions answered
+        {' '}/ 5 overall · {questionCount} question{questionCount !== 1 ? 's' : ''} answered
       </p>
     </section>
   );
