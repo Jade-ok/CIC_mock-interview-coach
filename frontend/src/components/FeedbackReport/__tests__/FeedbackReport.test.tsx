@@ -35,7 +35,7 @@ describe('FeedbackReport (full page)', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
 
     // Header
-    expect(screen.getByText('CIC Mock Interview Coach')).toBeTruthy();
+    expect(screen.getByText('AI Mock Interview Coach')).toBeTruthy();
 
     // Hero
     expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();

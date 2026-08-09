@@ -126,7 +126,7 @@ describe('FeedbackScreen', () => {
     it('shows feedback result', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      expect(screen.getByText('CIC Mock Interview Coach')).toBeInTheDocument();
+      expect(screen.getByText('AI Mock Interview Coach')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeInTheDocument();
     });
 
