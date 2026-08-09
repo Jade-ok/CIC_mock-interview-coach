@@ -18,7 +18,7 @@ def session_start_event(
     max_tokens: int = 1024,
     temperature: float = 0.7,
     top_p: float = 0.9,
-    endpointing_sensitivity: str = "LOW",
+    endpointing_sensitivity: str = "MEDIUM",
 ) -> str:
     """Initialize session with inference config and turn detection."""
     return json.dumps({
