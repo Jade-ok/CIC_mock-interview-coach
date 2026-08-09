@@ -10,13 +10,27 @@ interface HeroSectionProps {
   dimensions: OverallScores['dimensions'];
 }
 
-/** Short action phrase for each dimension. */
+/** Short action phrase for each dimension, with highlight markers around key words. */
 const DIMENSION_ACTIONS: Record<string, string> = {
-  concrete_example: 'pick one specific project and name it',
-  situation_action_result: 'complete your SAR structure (Situation \u2192 Action \u2192 Result)',
-  link_to_job: 'connect your example to this role',
-  quantifiable_outcome: 'Add a number or measurable outcome to every story.',
+  concrete_example: 'Pick one **specific project** and name it.',
+  situation_action_result: 'Complete your **SAR structure** (Situation, Action, Result).',
+  link_to_job: 'Connect your example to **this role** explicitly.',
+  quantifiable_outcome: 'Add a **number or measurable outcome** to every story.',
 };
+
+/** Renders text with **bold** markers as accent-colored spans. */
+function HighlightedText({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.*?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1
+          ? <span key={i} className="hero-section__highlight">{part}</span>
+          : <span key={i}>{part}</span>
+      )}
+    </>
+  );
+}
 
 export function HeroSection({ totalScore, questionCount, targetRole, dimensions }: HeroSectionProps) {
   // Find weakest dimension
@@ -68,11 +82,7 @@ export function HeroSection({ totalScore, questionCount, targetRole, dimensions 
         {/* One thing to fix */}
         <div className="hero-section__callout">
           <span className="hero-section__callout-label">YOUR ONE THING TO FIX</span>
-          <p className="hero-section__callout-text">{action}</p>
-          <div className="hero-section__callout-meta">
-            <span className="hero-section__callout-chip">{weakestLabel} · {weakestScore.toFixed(1)}/5</span>
-            <span className="hero-section__callout-count">{questionCount} question{questionCount !== 1 ? 's' : ''} answered</span>
-          </div>
+          <p className="hero-section__callout-text"><HighlightedText text={action} /></p>
         </div>
       </div>
     </section>

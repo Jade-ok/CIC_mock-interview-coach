@@ -2,7 +2,7 @@
   background: var(--bg-tile);
   border-radius: var(--card-radius);
   padding: var(--card-padding);
-  margin-top: 32px;
+  margin: 32px 0;
 }
 
 .keyword-coverage__header {
@@ -10,14 +10,14 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .keyword-coverage__heading {
-  font-size: var(--font-body);
+  font-size: var(--font-section-title);
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 8px;
 }
 
 .keyword-coverage__subheading {

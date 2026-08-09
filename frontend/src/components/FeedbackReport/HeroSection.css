@@ -78,11 +78,16 @@
 }
 
 .hero-section__callout-text {
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.75rem;
+  font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 12px;
-  line-height: 1.4;
+  margin: 0;
+  line-height: 1.35;
+  max-width: 420px;
+}
+
+.hero-section__highlight {
+  color: var(--accent-green);
 }
 
 .hero-section__callout-meta {
