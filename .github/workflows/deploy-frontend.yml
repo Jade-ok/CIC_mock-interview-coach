@@ -1,0 +1,104 @@
+name: Deploy frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - 'amplify.yml'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-frontend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Build and publish Amplify site
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: |
+          test -n "${{ vars.AWS_DEPLOY_ROLE_ARN }}" || { echo "Missing AWS_DEPLOY_ROLE_ARN repository variable."; exit 1; }
+          test -n "${{ vars.AMPLIFY_APP_ID }}" || { echo "Missing AMPLIFY_APP_ID repository variable."; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Configure temporary AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Load hosted endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          outputs="$(aws cloudformation describe-stacks --stack-name MockInterviewStack --query 'Stacks[0].Outputs' --output json)"
+          value() { jq -r --arg key "$1" '.[] | select(.OutputKey == $key) | .OutputValue' <<<"$outputs"; }
+
+          for key in PdfParserUrl AnalystUrl InterviewerUrl EvaluatorUrl VoiceSessionUrl; do
+            test -n "$(value "$key")" || { echo "Missing MockInterviewStack output: $key"; exit 1; }
+          done
+
+          {
+            echo 'VITE_RUNTIME_MODE=hosted'
+            echo "VITE_PDF_PARSER_URL=$(value PdfParserUrl)"
+            echo "VITE_ANALYST_URL=$(value AnalystUrl)"
+            echo "VITE_INTERVIEWER_URL=$(value InterviewerUrl)"
+            echo "VITE_EVALUATOR_URL=$(value EvaluatorUrl)"
+            echo "VITE_VOICE_SESSION_URL=$(value VoiceSessionUrl)"
+          } >> "$GITHUB_ENV"
+
+      - name: Install and build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Package build output
+        working-directory: frontend/dist
+        run: zip -qr "$RUNNER_TEMP/amplify.zip" .
+
+      - name: Publish Amplify deployment
+        shell: bash
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+        run: |
+          set -euo pipefail
+          deployment="$(aws amplify create-deployment --app-id "$AMPLIFY_APP_ID" --branch-name main)"
+          job_id="$(jq -r '.jobId' <<<"$deployment")"
+          upload_url="$(jq -r '.zipUploadUrl' <<<"$deployment")"
+          curl --fail --silent --show-error --request PUT --upload-file "$RUNNER_TEMP/amplify.zip" "$upload_url"
+          aws amplify start-deployment --app-id "$AMPLIFY_APP_ID" --branch-name main --job-id "$job_id" >/dev/null
+
+          for _ in {1..60}; do
+            status="$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name main --job-id "$job_id" --query 'job.summary.status' --output text)"
+            case "$status" in
+              SUCCEED) echo "Amplify deployment $job_id succeeded."; exit 0 ;;
+              FAILED|CANCELLED) echo "Amplify deployment $job_id ended with $status."; exit 1 ;;
+            esac
+            sleep 5
+          done
+
+          echo "Timed out waiting for Amplify deployment $job_id."
+          exit 1
