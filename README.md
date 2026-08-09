@@ -1,117 +1,392 @@
-# Mock Interview Coach
+<h1 align="center">AI Mock Interview Coach</h1>
 
-AI-powered mock interview application. Analyzes resumes, generates interview questions, and evaluates answers for co-op seeking students.
+<h4 align="center">
+  A personalized, student-first, multi-agent AI mock interview coach<br>
+  providing real-time speech-to-speech practice.
+</h4>
 
-## Architecture
+<p align="center">
+  <img src="docs/images/mock-interview-coach-logo.png" alt="AI Mock Interview Coach logo" width="450"/>
+</p>
 
-The browser manages all state. Each Lambda is stateless. No database, no S3 session state, no API Gateway.
+<p align="center">
+  <a href="https://main.dvppliwnm6u9g.amplifyapp.com/">Live Demo</a>
+</p>
 
-```
-frontend/                    → Browser UI (holds state)
-backend/functions/analyst/  → Resume analysis (OpenAI GPT OSS 120B)
-backend/functions/interviewer/ → Interview context builder
-backend/functions/evaluator/   → Answer evaluation (OpenAI GPT OSS 120B)
-backend/functions/pdf_parser/  → PDF text extraction (pypdf)
-backend/functions/voice_session/ → Short-lived AgentCore WebSocket URL signer
-backend/voice_agent/         → Nova 2 Sonic WebSocket relay
-infrastructure/              → AWS CDK infrastructure definitions
-```
+<br>
+
+## Table of Contents
+
+- [Contributors](#contributors)
+- [Problem Statement](#problem-statement)
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [How It Works](#how-it-works)
+- [Technical Challenges](#technical-challenges)
+- [Achievements](#achievements)
+- [What We Learned](#what-we-learned)
+- [Future Improvements](#future-improvements)
+- [Getting Started](#getting-started)
+
+<br>
+
+## Contributors
+
+- Hoonji Choi
+- Jade Lee
+- Jena Chang
+- Jianding Bai
+- Stephanie Xue
+
+<br>
+
+## Problem Statement
+
+Preparing for internship and co-op interviews can be especially difficult for students with limited interview experience. Many mock interview resources use generic questions or assume that candidates have substantial professional experience. Students often need to draw from coursework, personal projects, hackathons, student clubs, research, volunteering, and early work experience, yet existing tools rarely help them connect those experiences to the requirements of a specific role.
+
+Practice resources also tend to offer limited support during and after an interview. They may present questions or return a general score, but often do not help students identify which experiences to discuss, understand what competencies an interviewer is evaluating, or recognize how each response could be improved. For someone with limited interview experience, this makes it difficult to know what to practise and whether that practice is leading to stronger answers.
+
+Many digital mock interviews also rely on text chat or stop-and-start recordings, which do not recreate the pace and spontaneity of a live conversation. Without realistic back-and-forth dialogue, students have fewer opportunities to practise listening, responding naturally, and adapting when an interviewer asks an unexpected follow-up question.
+
+<br>
+
+## Overview
+
+AI Mock Interview Coach is a full-stack, multi-agent AI web application that gives students a personalized resume deep-dive interview for internship and co-op preparation. Students upload a PDF resume and paste a target job description, which are used to identify the experiences and skills most relevant to the role. Both modes provide live, hands-free, conversational speech-to-speech interviews with natural responses and possible follow-up questions. Practice Mode adds supportive, role-specific guidance and personalized hints based on the student's background, while Live Mode simulates a realistic virtual interview. After the interview, students receive a thorough report with an overall assessment, dimension scores, question-specific strengths and improvements, keyword coverage, and focused next steps.
+
+The application was built with React, TypeScript, HTML, and CSS on the frontend, with Vite as the build tool. Its backend uses Python and AWS Lambda for the Analyst, Evaluator, PDF Parser, Voice Session signer, and Interviewer context builder. Three specialized agents coordinate the experience: the Analyst Agent and Evaluator Agent use OpenAI GPT OSS 120B through Amazon Bedrock, while the spoken Interviewer Agent uses Amazon Nova 2 Sonic through Amazon Bedrock and a session-long Amazon Bedrock AgentCore voice relay. Amazon S3 stores interview configuration, AWS CDK defines the infrastructure, Amazon CloudFront routes hosted API traffic, and AWS Amplify Hosting serves the application.
+
+<br>
+
+## Features
+
+### Resume and Job Description Upload
+
+Students begin by uploading a PDF resume and pasting the job description for the internship or co-op position they want to practise for. The form validates both inputs, shows the job description's character count, and keeps submission disabled until the required information is ready.
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/upload-screen-empty.png" alt="Empty resume and job description upload screen" width="100%"><br>
+      <em>Start with a resume and target role.</em>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/upload-screen-filled.png" alt="Completed resume and job description upload screen" width="100%"><br>
+      <em>Application details ready for analysis.</em>
+    </td>
+  </tr>
+</table>
+
+<br>
+
+### Personalized Resume Analysis
+
+The application extracts the resume text, compares it with the target job description, and identifies the student's most relevant experiences, skills, measurable claims, and areas worth clarifying. This analysis becomes shared context for both the interview and final evaluation rather than producing a generic set of questions.
+
+<p align="center">
+  <img src="docs/screenshots/resume-processing.png" alt="Resume analysis and interview preparation screen" width="525"/><br>
+  <em>Resume analysis builds personalized interview context.</em>
+</p>
+
+<br>
+
+### Interview: Practice Mode
+
+Practice Mode combines a natural, hands-free speech-to-speech interview with personalized support. During the conversation, a guidance panel highlights role-relevant competencies and resume experiences that may provide useful evidence. Each suggestion includes skills to highlight, an angle to consider, and a part of the STAR structure to emphasize, helping students strengthen their answers without supplying scripted responses.
+
+<p align="center">
+  <img src="docs/screenshots/interview-practice-mode.png" alt="Interview Practice Mode with personalized guidance" width="525"/><br>
+  <em>Practice Mode combines live interviewing with personalized guidance.</em>
+</p>
+
+<br>
+
+### Interview: Live Mode
+
+Live Mode keeps the same continuous, hands-free conversational experience while removing the guidance and hints to simulate a realistic virtual interview. Students listen and respond naturally, adapt to the questions being asked, and may receive follow-up questions based on their answers, allowing them to rehearse independently under interview-like conditions.
+
+<p align="center">
+  <img src="docs/screenshots/interview-live-mode.png" alt="Interview Live Mode" width="525"/><br>
+  <em>Live Mode provides a focused, hands-free interview experience.</em>
+</p>
+
+<br>
+
+### Personalized Feedback Report
+
+After the interview, the Evaluator Agent turns the completed conversation into a structured report. Students receive an overall score, scores for concrete examples, STAR structure, connection to the job, and quantifiable outcomes, plus a focused priority to improve. The report also provides question-specific strengths and improvements, overall strengths, keyword coverage, contextual guidance, and practical next steps. Students can practise again with the same resume and analysis or begin a new interview with different application materials.
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/feedback-report.png" alt="Interview report overview and score dimensions" width="100%"><br>
+      <em>Overall performance and scoring dimensions.</em>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/feedback-summary.png" alt="Interview feedback summary" width="100%"><br>
+      <em>Summary with job-specific keyword coverage.</em>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/feedback-questions.png" alt="Question-specific interview feedback" width="100%"><br>
+      <em>Strengths and improvements for each response.</em>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/feedback-next-steps.png" alt="Interview feedback next steps" width="100%"><br>
+      <em>Personalized advice for the next interview.</em>
+    </td>
+  </tr>
+</table>
+
+<br>
 
 ## Tech Stack
 
-- **Runtime**: Python 3.12 (AWS Lambda)
-- **LLM**: Amazon Bedrock Mantle Chat Completions (forced function calls)
-- **Speech**: Amazon Nova 2 Sonic (local WebSocket relay for development; AgentCore when hosted)
-- **PDF**: pypdf
-- **Region**: us-east-1
+| Component | Technologies |
+|---|---|
+| Frontend | React, TypeScript, HTML, CSS |
+| Build Tool | Vite |
+| Backend | Python |
+| Analyst Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
+| Interviewer Agent | AWS Lambda context builder, Amazon Nova 2 Sonic through Amazon Bedrock, Amazon Bedrock AgentCore |
+| Evaluator Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
+| Configuration | Amazon S3 |
+| Infrastructure | AWS CDK |
+| Deployment | Amazon CloudFront, AWS Amplify Hosting |
 
-## Lambda Module Structure
+<br>
 
-The Analyst uses an orchestrator/parser layout:
+## How It Works
 
+### Multi-Agent Workflow
+
+The application uses three specialized agents connected through structured JSON contracts:
+
+1. **Analyst Agent:** Examines the resume and target job description, identifies role alignment, and selects useful evidence for the interview.
+2. **Interviewer Agent:** Combines the personalized analysis with the interview structure and student profile, then conducts the spoken interview through Nova 2 Sonic.
+3. **Evaluator Agent:** Reviews the completed question-and-answer pairs together with the original analysis and generates the final feedback report.
+
+The browser orchestrates the workflow and retains the active session state. Each Lambda remains stateless, and Amazon S3 stores interview configuration rather than candidate sessions or uploaded documents.
+
+### Architecture Diagram
+
+```mermaid
+flowchart TD
+    User --> Frontend[React frontend<br/>AWS Amplify Hosting]
+    Frontend --> CloudFront[Amazon CloudFront<br/>API distribution]
+
+    CloudFront --> PDF[PDF Parser<br/>AWS Lambda]
+    CloudFront --> Analyst[Analyst Agent<br/>AWS Lambda]
+    CloudFront --> Interviewer[Interviewer Agent<br/>AWS Lambda]
+    CloudFront --> Evaluator[Evaluator Agent<br/>AWS Lambda]
+    CloudFront --> VoiceSession[Voice Session<br/>AWS Lambda]
+
+    Analyst <--> GPT[Amazon Bedrock<br/>OpenAI GPT OSS 120B]
+    Evaluator <--> GPT
+    S3[Amazon S3<br/>Interview configuration] --> Interviewer
+
+    VoiceSession -. Short-lived signed WebSocket URL .-> Frontend
+    Frontend <-->|Live audio and transcript events| AgentCore[Amazon Bedrock AgentCore<br/>Voice relay]
+    AgentCore <-->|Bidirectional speech stream| Nova[Amazon Bedrock<br/>Nova 2 Sonic]
 ```
-backend/functions/analyst/
-  __init__.py
-  handler.py          # Lambda entry point
-  orchestrator.py     # Business logic wiring
-  validation.py       # Input validation
-  prompt_builder.py   # Prompt construction
-  bedrock_client.py   # Signed Bedrock Mantle API call
-  parser.py           # Response parsing/validation
-```
 
-The Evaluator separates validation, deterministic scoring, and response assembly:
+### Resume and Job Analysis
 
-```
-backend/functions/evaluator/
-  __init__.py
-  lambda_handler.py     # Lambda entry point
-  validator.py          # Input validation
-  prompt_builder.py     # Prompt construction
-  bedrock_client.py     # Signed Bedrock Mantle API call/tool extraction
-  scorer.py             # Deterministic score aggregation
-  response_assembler.py # Final response construction
-  schemas.py            # Evaluator schema definitions
-  exceptions.py         # Evaluator-specific errors
-```
+The browser first sends the PDF resume and job-description text to the PDF Parser. The parser extracts the resume text with pypdf and returns both documents in a normalized response. The Analyst Agent receives that content, builds a role-aware prompt, and calls GPT OSS 120B through Amazon Bedrock with a forced structured-output function. The resulting Analyst output includes the student's background, relevant skills, target-role requirements, strongest experiences, measurable claims, alignment evidence, and analysis warnings.
 
-The Interviewer Lambda is a context-builder (no LLM call):
+### Personalized Interview Context
 
-```
-backend/functions/interviewer/
-  __init__.py
-  handler.py          # Lambda entry point
-  validation.py       # Input validation
-  config_loader.py    # S3 fetch for interview structure + profile
-  context_builder.py  # Assembles runtime context for Nova 2 Sonic
-```
+The Interviewer Agent receives the complete Analyst output and combines it with two configuration files stored in Amazon S3: the interview structure and the student interview profile. Together, these define the intended interview areas, supportive tone, student-appropriate expectations, follow-up guidance, and information Nova should listen for. The resulting runtime context is returned to the browser and supplied when the voice session starts.
 
-## Models
+### Real-Time Speech-to-Speech Interview
 
-| Agent | Model / Service |
-|-------|-----------------|
-| analyst | Bedrock Mantle — `openai.gpt-oss-120b` |
-| interviewer | Amazon Nova 2 Sonic (speech-to-speech via WebSocket) |
-| evaluator | Bedrock Mantle — `openai.gpt-oss-120b` |
-| pdf_parser | pypdf only |
+For the hosted application, the browser requests a fresh signed connection from the Voice Session Lambda and opens a WebSocket to the AgentCore-hosted Python relay. The relay manages Nova's bidirectional streaming protocol, including audio input, audio playback, transcript events, interruptions, tool calls, and graceful shutdown. Nova 2 Sonic listens to the student's speech and responds directly with synthesized speech, allowing the conversation to continue naturally without push-to-talk controls.
 
-## Contracts
+Nova is instructed to ask three main questions and one adaptive follow-up after each main question, drawing from project ownership, technical problem-solving, and learning or collaboration experiences. The follow-up sequence remains model-directed, so the application evaluates the completed question-and-answer pairs rather than penalizing an interview that ends early.
 
-Inter-agent payload schemas are defined in `schemas/`:
+### Feedback Evaluation
+
+When the interview finishes, the frontend pairs final interviewer and student transcript entries into the canonical Evaluator request. The Evaluator Agent calls GPT OSS 120B through Amazon Bedrock with a forced feedback function, validates the returned structure, aggregates deterministic scores, assigns a readiness label, and assembles the final report. Each completed answer is scored independently, while the report combines those results into overall strengths, improvements, keyword coverage, contextual advice, and interview metadata.
+
+### Models and Contracts
+
+| Agent | Model or Service |
+|---|---|
+| Analyst | OpenAI GPT OSS 120B through Amazon Bedrock |
+| Interviewer | Amazon Nova 2 Sonic through Amazon Bedrock |
+| Evaluator | OpenAI GPT OSS 120B through Amazon Bedrock |
+
+Inter-agent payload definitions live in `schemas/`:
 
 | File | Purpose |
-|------|---------|
-| `analyst_output.json` | Analyst → Interviewer & Evaluator |
-| `interviewer_output.json` | Completed interview payload sent to the Evaluator |
-| `evaluator_output.json` | What the Evaluator returns (scores + feedback) |
+|---|---|
+| `analyst_output.json` | Analyst output shared with Interviewer and Evaluator |
+| `interviewer_output.json` | Question-and-answer payload and interview metadata sent to Evaluator |
+| `evaluator_output.json` | Scores, feedback, keyword coverage, and interview metadata returned by Evaluator |
 
-## Local Development
+### Lambda Module Structure
 
-Local mode runs PDF parsing, Analyst, Interviewer context building, Evaluator, and the Nova voice relay on the development machine.
+The Analyst uses an orchestrator and parser layout:
 
-### Prerequisites
+```text
+backend/functions/analyst/
+├── handler.py          # Lambda entry point
+├── orchestrator.py     # Business-logic coordination
+├── validation.py       # Input validation
+├── prompt_builder.py   # Prompt and function construction
+├── bedrock_client.py   # Signed model request
+└── parser.py           # Structured response parsing and validation
+```
 
-- Python 3.12
-- Node.js 20 or another current Node.js release with npm
-- AWS CLI v2
-- AWS credentials with access to `openai.gpt-oss-120b` through Bedrock Mantle and `amazon.nova-2-sonic-v1:0` through Bedrock Runtime in `us-east-1`
+The Interviewer prepares the personalized Nova context:
 
-Model availability and quotas are account-specific. All local model usage and charges belong to the AWS account shown by `aws sts get-caller-identity`.
+```text
+backend/functions/interviewer/
+├── handler.py          # Lambda entry point
+├── validation.py       # Analyst-output validation
+├── config_loader.py    # S3 interview-configuration loader
+└── context_builder.py  # Nova runtime-context assembly
+```
 
-Use any credential method supported by the AWS SDK. For a configured AWS profile:
+The Evaluator separates model output, deterministic scoring, and response assembly:
+
+```text
+backend/functions/evaluator/
+├── lambda_handler.py      # Lambda entry point and orchestration
+├── validator.py           # Input validation
+├── prompt_builder.py      # Prompt and feedback-function construction
+├── bedrock_client.py      # Signed model request and function extraction
+├── scorer.py              # Score aggregation and readiness classification
+├── response_assembler.py  # Final feedback response
+├── schemas.py             # Evaluator function and response schemas
+└── exceptions.py          # Evaluator-specific errors
+```
+
+### Hosted Architecture
+
+AWS Amplify Hosting serves the React application. The browser sends hosted HTTP requests through one Amazon CloudFront distribution, which routes each path to the appropriate Lambda function. The Voice Session Lambda creates short-lived AgentCore connection URLs, while AgentCore runs the session-long Python relay needed for Nova's bidirectional audio stream. Amazon S3 stores interview configuration deployed from the repository, and AWS CDK defines the CloudFront, Lambda, permissions, storage, monitoring, and budget resources.
+
+Two GitHub Actions release paths keep the hosted application synchronized with `main`. Application changes test and update the CDK backend before building and publishing the same frontend revision to Amplify. Voice-relay changes test and update the AgentCore runtime separately. Both workflows use short-lived GitHub OIDC credentials rather than permanent AWS access keys.
+
+### Security and Cost Controls
+
+The hosted application intentionally does not require an end-user login, so its public entry points are protected and monitored at the infrastructure level:
+
+- All five Lambda Function URLs require AWS IAM authentication. CloudFront Origin Access Control signs hosted origin requests, while anonymous requests sent directly to the Function URLs are rejected.
+- Browser CORS is limited to the deployed Amplify origin and the configured localhost development origin.
+- The Voice Session Lambda returns short-lived, role-scoped AgentCore WebSocket URLs instead of exposing AWS credentials to the browser.
+- The frontend and backend enforce a 4 MiB PDF limit, and every job description is limited to 5,000 characters.
+- Hosted model calls use bounded input sizes, one model attempt, and a smaller output budget than pure local development. Hosted voice sessions also have an application duration limit.
+- CloudWatch alarms monitor invocations, errors, and throttling for every hosted function. Amazon SNS delivers alert notifications, and AWS Budgets tracks account-level spending against a default monthly budget.
+- An emergency switch can set all hosted functions to zero concurrency. Optional normal concurrency caps remain disabled unless the AWS account has sufficient Lambda concurrency quota.
+
+These controls reduce accidental usage and direct endpoint exposure, but the no-login CloudFront API remains publicly reachable. CORS is a browser policy rather than authentication, and alarms and budget notifications do not automatically stop spending. AWS WAF is not provisioned, avoiding its fixed baseline cost for the current small-scale deployment.
+
+### Important Implementation Notes
+
+- Hosted JSON requests travel through CloudFront to private Function URLs; Lambda handlers parse the payload from `event["body"]`.
+- CloudFront origin access requires both `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` permissions scoped to the distribution.
+- Lambda Function URL CORS is infrastructure configuration rather than Python response logic.
+- A 4 MiB PDF expands when base64 encoded, so the product limit also leaves space under the Lambda Function URL request-payload quota.
+- Local mode invokes the same Python handlers directly and reads interview configuration from the repository instead of Amazon S3.
+- Hosted endpoint configuration is selected only when the frontend explicitly builds or runs with hosted runtime mode.
+
+<br>
+
+## Technical Challenges
+
+- Translating the browser's simple audio and transcript messages into Nova 2 Sonic's bidirectional event lifecycle while managing identifiers, queues, interruptions, tool results, and graceful session shutdown
+- Keeping microphone capture, streamed playback, partial transcripts, final transcripts, and active-speaker state synchronized during a natural conversation
+- Producing reliable structured outputs from generative models and validating them before the data moves between Analyst, Interviewer, Evaluator, and the frontend
+- Coordinating a multi-step cloud workflow while preserving the student's resume analysis and interview state in the browser
+- Supporting both local and hosted workflows while balancing a login-free student experience with the operational constraints of a real-time multi-agent application
+
+<br>
+
+## Achievements
+
+- Built a complete three-agent workflow that personalizes interview preparation, live questions, adaptive follow-ups, and feedback using the student's own resume and target job
+- Delivered a hands-free speech-to-speech interview experience with Nova 2 Sonic instead of a text chatbot or push-to-talk recorder
+- Created both a guided Practice Mode and realistic Live Mode so students can move from supported preparation to independent rehearsal
+- Produced a detailed feedback experience with overall scoring, question-specific observations, keyword coverage, and actionable next steps
+- Implemented matching local and hosted application paths with automated tests and AWS delivery workflows
+
+<br>
+
+## What We Learned
+
+- Learned how to design a multi-agent workflow with explicit responsibilities and structured contracts between each stage
+- Developed experience with real-time bidirectional audio streaming, browser microphone processing, synthesized playback, and interruption handling
+- Learned how to use forced model functions and deterministic post-processing to make generative AI output safer for downstream application code
+- Strengthened our understanding of AWS cloud architecture, including Lambda, AgentCore, Bedrock, CloudFront, S3, Amplify, and infrastructure as code
+- Learned to balance student-friendly product design with technical constraints around latency, model availability, and real-time interaction quality
+
+<br>
+
+## Future Improvements
+
+- Add selectable interview difficulty modes with supportive, standard, and challenging options
+- Introduce panel interviews with distinct interviewer roles, such as a hiring manager, technical interviewer, and challenger
+- Add application-side interview-stage tracking so the intended main-question and follow-up sequence is enforced consistently
+- Restore interview history when reconnecting to a new voice session so Nova can continue from the same conversational context
+- Add a standalone full-transcript view to the feedback experience
+
+<br>
+
+## Getting Started
+
+Follow the steps below to set up and run the application on your own machine. This project requires both a frontend and backend server running at the same time.
+
+<br>
+
+**Prerequisites**
+
+Make sure Node.js, npm, Python 3, and AWS CLI are installed before you begin. You can check all four by running the commands below, which should each print a version number.
+
+> **Note:** This project requires Node.js 20+, Python 3.12, and AWS CLI v2.32.0+ because the recommended browser-based authentication method uses `aws login`. Local AWS credentials must have access to OpenAI GPT OSS 120B and Amazon Nova 2 Sonic in `us-east-1`.
 
 ```bash
+node --version
+npm --version
+python3 --version  # On Windows use: python --version
+aws --version
+```
+
+Install or update AWS CLI v2 using the [official AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) if the `aws` or `aws login` command is unavailable.
+
+> **Shell note:** The environment-variable and file-loading examples below use macOS/Linux syntax. In Windows PowerShell, replace `export NAME="value"` with `$env:NAME="value"` and use the Windows virtual-environment commands shown in the backend step.
+
+<br>
+
+**1. Clone the Repository**
+
+This downloads a copy of the project to your computer and moves you into the project folder.
+
+```bash
+git clone https://github.com/Jade-ok/CIC_mock-interview-coach.git
+cd CIC_mock-interview-coach
+```
+
+**2. Authenticate with AWS**
+
+The simplest option is to sign in through the browser using an AWS Console account with access to both models. This stores refreshable temporary credentials for local development. The console identity must have the AWS-managed [`SignInLocalDevelopmentAccess`](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SignInLocalDevelopmentAccess.html) policy; IAM Identity Center users should use the profile option below.
+
+```bash
+aws login
+export AWS_REGION="us-east-1"
+```
+
+Alternatively, use an existing IAM Identity Center profile:
+
+```bash
+aws sso login --profile "<profile-name>"
 export AWS_PROFILE="<profile-name>"
 export AWS_REGION="us-east-1"
 ```
 
-If the profile uses IAM Identity Center, sign in before starting the application:
-
-```bash
-aws sso login --profile "<profile-name>"
-```
-
-For environment-based temporary credentials:
+Temporary credentials can also be exported directly in the backend terminal:
 
 ```bash
 export AWS_ACCESS_KEY_ID="..."
@@ -120,16 +395,57 @@ export AWS_SESSION_TOKEN="..."
 export AWS_REGION="us-east-1"
 ```
 
-Then start the complete local backend from the repository root in terminal 1:
+To keep temporary credentials in a local file, create `backend/.env.local` with the following values:
 
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r backend/requirements-local.txt
-aws sts get-caller-identity
-.venv/bin/uvicorn backend.local_server:app --host 127.0.0.1 --port 8080
+```dotenv
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_SESSION_TOKEN=...
+AWS_REGION=us-east-1
 ```
 
-The local server prints the active AWS account and ARN at startup. Confirm that this is the identity you intend to use. In terminal 2, run:
+On macOS or Linux, load the file into the terminal before starting the backend:
+
+```bash
+set -a
+source backend/.env.local
+set +a
+```
+
+Environment files are ignored by Git. Never commit AWS credentials, place them in a `VITE_*` variable, or expose them to browser code.
+
+**3. Verify the AWS Identity**
+
+Confirm which AWS account will own the local model usage and charges before starting the application:
+
+```bash
+aws sts get-caller-identity
+```
+
+If the command fails, repeat the authentication step or refresh expired temporary credentials before continuing.
+
+**4. Set Up the Backend**
+
+From the project root, move into the backend folder and create a Python virtual environment.
+
+```bash
+cd backend
+python3 -m venv .venv       # On Windows use: python -m venv .venv
+source .venv/bin/activate   # On Windows use: .venv\Scripts\activate
+```
+
+Install all of its dependencies and start the backend development server.
+
+```bash
+pip install -r requirements-local.txt
+uvicorn backend.local_server:app --app-dir .. --reload --port 8080
+```
+
+The backend verifies and prints the active AWS identity during startup. It runs PDF parsing and interview configuration locally while using that AWS identity for Analyst, Evaluator, and Nova 2 Sonic model calls.
+
+**5. Set Up the Frontend**
+
+In a separate terminal window from the project root, move into the frontend folder, install its dependencies, and start the development server.
 
 ```bash
 cd frontend
@@ -137,32 +453,14 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. With the default `VITE_RUNTIME_MODE=local`, the development server uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice, requires no hosted endpoint variable, and ignores `VITE_API_BASE_URL`. Setting `VITE_RUNTIME_MODE=hosted` explicitly exercises the bounded hosted services instead. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+Once both servers are running, open the local URL displayed by Vite and allow microphone access when prompted.
 
-Hosted cost guardrails are deliberately disabled in this pure local path. Local Analyst and Evaluator calls retain the 8,192-token output budget, and local voice sessions have no application-imposed eight-minute limit. The product-wide 5,000-character job-description limit and 4 MiB PDF limit still apply, as do AWS model availability and account quotas.
+<br>
 
-If port `8080` is already in use, identify and stop the previous local backend before retrying:
+### Troubleshooting
 
-```bash
-lsof -nP -iTCP:8080 -sTCP:LISTEN
-```
-
-The frontend is configured for port `8080`, so changing only the Uvicorn port will not reconnect it.
-
-## Hosted Architecture
-
-The hosted architecture uses Amplify Hosting for React, AgentCore Runtime for the Python voice relay, a CloudFront API gateway backed by five private IAM-protected Lambda Function URLs, S3 for interview configuration, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The client does not require a user login; its Voice Session Lambda signs five-minute AgentCore connection URLs with a role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
-
-Two serialized GitHub Actions release paths keep the hosted application current when matching changes reach `main`: application changes test and deploy the CDK backend before building and publishing the same revision to Amplify, while voice-relay changes test and deploy AgentCore. Both reject stale revisions and share one production concurrency lock. The workflows use GitHub OIDC to assume a short-lived AWS role instead of storing permanent AWS access keys in GitHub.
-
-The hosted surface uses exact Amplify/localhost CORS origins, high-usage/error/throttle alarms, and a default $25 account-wide AWS monthly cost budget with email notifications. Direct Function URL requests are rejected; CloudFront Origin Access Control signs each origin request. The notification email must confirm its SNS subscription before messages are delivered. Hosted Analyst and Evaluator use one model attempt with a 55-second read timeout and 4,096-token output cap; hosted Analyst resume input is capped at 60,000 characters; every job description is capped at 5,000 characters; hosted Evaluator input is capped at 60,000 conversation and 120,000 Analyst-output characters; hosted Nova sessions have an eight-minute application limit. These controls reduce accidental cost and abuse exposure, but the login-free CloudFront endpoint remains internet-accessible and alarms and budgets notify rather than automatically block requests. The stack provides an emergency switch that sets all five functions to zero concurrency. Optional per-function caps (2 Analyst, 2 Evaluator, 4 Interviewer, 4 PDF Parser, and 2 Voice Session) default off because small/new AWS accounts may not have enough Lambda concurrency quota to deploy them.
-
-AWS WAF is intentionally not provisioned, avoiding its fixed web-ACL baseline cost. CloudFront is usage-priced, so the public gateway still needs the workload limits and monitoring above.
-
-## Important Notes
-
-- CloudFront forwards JSON requests to private Function URLs; handlers parse `event['body']`
-- CORS is configured on the Function URL settings, not in Python code
-- Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
-- The frontend and PDF Parser both enforce a 4 MiB (4,194,304-byte) PDF limit; Lambda Function URL request payloads are capped at 6 MiB
-- Hosted endpoint values are used only when `VITE_RUNTIME_MODE=hosted`
+- **Port 8080 is already in use:** Run `lsof -nP -iTCP:8080 -sTCP:LISTEN`, stop the previous backend process, and start the server again.
+- **AWS login has expired:** Run `aws login` again, or refresh the configured profile or temporary credentials.
+- **AccessDenied or model quota error:** Confirm that the identity returned by `aws sts get-caller-identity` can use GPT OSS 120B and Nova 2 Sonic in `us-east-1`.
+- **Microphone access is blocked:** Allow microphone permission for the local Vite URL in the browser settings, then refresh the page.
+- **The repository was moved:** Recreate the backend virtual environment so its executable paths point to the current checkout.
