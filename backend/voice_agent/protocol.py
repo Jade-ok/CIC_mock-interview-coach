@@ -98,7 +98,7 @@ class BrowserSessionProtocol:
         max_tokens = self._number(config, "maxTokens", 1024, int)
         temperature = self._number(config, "temperature", 0.7, float)
         top_p = self._number(config, "topP", 0.9, float)
-        endpointing = config.get("endpointingSensitivity", "HIGH")
+        endpointing = config.get("endpointingSensitivity", "LOW")
         voice_id = config.get("voiceId", "matthew")
         if endpointing not in {"LOW", "MEDIUM", "HIGH"}:
             raise BrowserProtocolError("endpointingSensitivity must be LOW, MEDIUM, or HIGH")
