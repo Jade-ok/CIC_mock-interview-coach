@@ -1,17 +1,17 @@
 """Orchestrator for the Analyst Lambda — wires the full analysis pipeline."""
 
 try:
-    from .prompt_builder import build_converse_request
-    from .bedrock_client import call_converse, BedrockCallFailed
+    from .prompt_builder import build_chat_request
+    from .bedrock_client import call_chat_completion, BedrockCallFailed
     from .parser import (
         SchemaValidationError,
         check_analysis_warnings,
-        parse_converse_response,
+        parse_chat_response,
     )
 except ImportError:  # Lambda loads modules from the function root.
-    from prompt_builder import build_converse_request
-    from bedrock_client import call_converse, BedrockCallFailed
-    from parser import SchemaValidationError, check_analysis_warnings, parse_converse_response
+    from prompt_builder import build_chat_request
+    from bedrock_client import call_chat_completion, BedrockCallFailed
+    from parser import SchemaValidationError, check_analysis_warnings, parse_chat_response
 
 
 def analyze(payload: dict) -> dict:
@@ -19,8 +19,8 @@ def analyze(payload: dict) -> dict:
 
     Steps:
     1. Extract resume_text and job_posting_text from payload (already validated by handler)
-    2. Build the Bedrock Converse API request
-    3. Call Bedrock once (transport failures are surfaced immediately)
+    2. Build the Bedrock Mantle Chat Completions request
+    3. Call Bedrock Mantle once (transport failures are surfaced immediately)
     4. Parse and validate the response
     5. On SchemaValidationError, retry the Bedrock call ONE more time
     6. Check for analysis warnings (deterministic)
@@ -40,17 +40,16 @@ def analyze(payload: dict) -> dict:
     resume_text = payload["resume_text"]
     job_posting_text = payload["job_posting_text"]
 
-    # Build the Converse API request
-    request = build_converse_request(resume_text, job_posting_text)
+    request = build_chat_request(resume_text, job_posting_text)
 
     # Call Bedrock and parse — retry once on schema validation failure
     try:
-        response = call_converse(request)
-        analyst_output = parse_converse_response(response)
+        response = call_chat_completion(request)
+        analyst_output = parse_chat_response(response)
     except SchemaValidationError:
         # Schema validation failed — retry with a fresh Bedrock call
-        response = call_converse(request)
-        analyst_output = parse_converse_response(response)
+        response = call_chat_completion(request)
+        analyst_output = parse_chat_response(response)
 
     # Check for data quality warnings (deterministic logic)
     warnings = check_analysis_warnings(analyst_output, resume_text, job_posting_text)

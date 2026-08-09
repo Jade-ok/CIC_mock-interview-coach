@@ -28,18 +28,18 @@
 
 - [x] Define `SYSTEM_PROMPT` constant with co-op calibration, 1-5 scoring dimensions, and tone directive
 - [x] Implement `_format_user_message(conversation, analyst_output)` to format the user message, extracting target_role and resume_job_alignment from the structured analyst_output object
-- [x] Implement `_build_tool_config()` returning the toolConfig dict with submit_evaluation schema and forced tool choice
+- [x] Implement `_build_tool_config()` returning the OpenAI-compatible submit_evaluation function and forced tool choice
 - [x] Implement `build(conversation, analyst_output)` returning (system, messages, tool_config) tuple
 - [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
 - [x] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 
 ## Task 4: Implement Bedrock Client
 
-- [x] Initialize boto3 bedrock-runtime client for us-east-1 with retry disabled (handled manually)
+- [x] Implement SigV4-signed Bedrock Mantle Chat Completions requests in us-east-1
 - [x] Implement `invoke(system, messages, tool_config)` with retry logic (max 2 attempts)
-- [x] Implement `_extract_tool_input(response)` to pull tool_use input from Converse API response
-- [x] Raise `EvaluationError` on total failure or missing tool_use block
-- [x] Write unit tests with mocked boto3 client: success case, retry on first failure, both attempts fail
+- [x] Implement `_extract_tool_input(response)` to parse the forced function arguments from Chat Completions
+- [x] Raise `EvaluationError` on total failure or missing function call
+- [x] Write unit tests with mocked Mantle HTTP responses: success, retry, terminal failure, and malformed output
 
 ## Task 5: Implement Scorer
 
@@ -72,4 +72,4 @@
 - [x] Verify response JSON matches the defined output schema
 - [x] Add requirements.txt or pyproject.toml with boto3 dependency
 - [x] Keep the infrastructure template aligned with the Lambda runtime configuration (300s timeout, Python 3.12 runtime)
-- [x] Document environment variables needed (if any) and IAM permissions (bedrock:InvokeModel)
+- [x] Document credential-chain behavior and model-scoped Bedrock Mantle IAM permissions

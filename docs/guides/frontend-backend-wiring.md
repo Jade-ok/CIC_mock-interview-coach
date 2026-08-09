@@ -44,7 +44,7 @@ Hosted mode reads `VITE_PDF_PARSER_URL`, `VITE_ANALYST_URL`, `VITE_INTERVIEWER_U
 
 ### Local development workflow
 
-Local testing requires AWS credentials with Sonnet 4.6 and Nova 2 Sonic access. Configure either `AWS_PROFILE` or environment-based access keys, confirm the identity with `aws sts get-caller-identity`, and start `backend.local_server:app`. PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity.
+Local testing requires AWS credentials with GPT OSS 120B and Nova 2 Sonic access. Configure either `AWS_PROFILE` or environment-based access keys, confirm the identity with `aws sts get-caller-identity`, and start `backend.local_server:app`. PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity.
 
 Local mode runs the application services on the development machine. Bedrock model requests are authenticated with the active AWS identity shown by `aws sts get-caller-identity`. Never commit account identifiers or credentials.
 

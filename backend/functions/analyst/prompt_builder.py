@@ -1,6 +1,6 @@
-"""Prompt construction for the Analyst agent's Bedrock Converse API call."""
+"""Prompt construction for the Analyst's Bedrock Mantle request."""
 
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"
+MODEL_ID = "openai.gpt-oss-120b"
 
 SYSTEM_PROMPT = """You are a resume analyst for a mock behavioral interview coaching application \
 designed for university students and new graduates.
@@ -37,20 +37,19 @@ RULES:
 - Do NOT invent information that is not in the resume or job posting."""
 
 
-def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
-    """Construct the Bedrock Converse API request for analyst analysis.
+def build_chat_request(resume_text: str, job_posting_text: str) -> dict:
+    """Construct the Bedrock Mantle Chat Completions request.
 
     Builds a complete request dict with system prompt, user message containing
-    resume and job posting text, and toolConfig forcing structured JSON output
-    via the analyst_output tool definition.
+    resume and job posting text, plus a forced function call that returns
+    structured JSON through the analyst_output definition.
 
     Args:
         resume_text: Extracted text content from the candidate's resume.
         job_posting_text: Extracted text content from the target job posting.
 
     Returns:
-        dict ready to pass to boto3 bedrock-runtime client.converse(**request).
-        Contains modelId, system, messages, toolConfig, and inferenceConfig.
+        A Chat Completions request with a forced structured-output function.
     """
     user_message = (
         "## Candidate Resume\n\n"
@@ -65,40 +64,41 @@ def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
     )
 
     return {
-        "modelId": MODEL_ID,
-        "system": [{"text": SYSTEM_PROMPT}],
+        "model": MODEL_ID,
         "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
             {
                 "role": "user",
-                "content": [{"text": user_message}],
+                "content": user_message,
             }
         ],
-        "toolConfig": _build_tool_config(),
-        "inferenceConfig": {
-            "maxTokens": 8192,
-            "temperature": 0.0,
-        },
+        **_build_tool_config(),
+        "max_tokens": 8192,
+        "temperature": 0.0,
+        "reasoning_effort": "low",
     }
 
 
 def _build_tool_config() -> dict:
-    """Build the toolConfig dict with analyst_output tool schema and forced tool choice."""
+    """Build OpenAI-compatible tools with a forced analyst_output call."""
     return {
         "tools": [
             {
-                "toolSpec": {
+                "type": "function",
+                "function": {
                     "name": "analyst_output",
                     "description": (
                         "Produce a structured analysis of the candidate's resume "
                         "against the job posting for behavioral interview preparation."
                     ),
-                    "inputSchema": {
-                        "json": _analyst_output_schema()
-                    },
+                    "parameters": _analyst_output_schema(),
                 }
             }
         ],
-        "toolChoice": {"tool": {"name": "analyst_output"}},
+        "tool_choice": {
+            "type": "function",
+            "function": {"name": "analyst_output"},
+        },
     }
 
 

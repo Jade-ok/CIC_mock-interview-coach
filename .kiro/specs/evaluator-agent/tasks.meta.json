@@ -314,7 +314,7 @@
         "timestamp": 1786048191552
       }
     ],
-    "Implement `_extract_tool_input(response)` to pull tool_use input from Converse API response": [
+    "Implement `_extract_tool_input(response)` to parse forced function arguments from Chat Completions": [
       {
         "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
         "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",
@@ -610,7 +610,7 @@
         "timestamp": 1786048706805
       }
     ],
-    "Document environment variables needed (if any) and IAM permissions (bedrock:InvokeModel)": [
+    "Document credential-chain behavior and Bedrock Mantle IAM permissions": [
       {
         "executionId": "3a6f66c2-3afb-4e51-9c04-f554a753fc57",
         "chatSessionId": "sess_0c64ac84-6090-4c65-a6c8-d9bef4d5cc6c",

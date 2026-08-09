@@ -7,13 +7,13 @@
 The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that form the intake and analysis stage of the mock interview coaching app:
 
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
-2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Converse API with tool_use to force structured JSON output, validates the response against the analyst_output schema, and returns it to the frontend.
+2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Mantle Chat Completions with a forced function call, validates the response against the analyst_output schema, and returns it to the frontend.
 
 The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
-- tool_use pattern — we define the analyst_output schema as a "tool" in the Bedrock Converse API call, forcing Claude to produce valid JSON. This eliminates brittle text parsing.
+- Forced function pattern — the analyst_output schema is supplied as a Chat Completions function and selected through `tool_choice`, producing structured JSON arguments without brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
 - Bounded retry — each Bedrock client call makes one transport attempt. The orchestrator makes one additional call only when the first response fails schema validation, for a maximum of two Bedrock calls within the 300-second Lambda budget.
 
@@ -26,7 +26,7 @@ sequenceDiagram
     participant Browser
     participant PdfParser as pdf_parser Lambda
     participant Analyst as analyst Lambda
-    participant Bedrock as Bedrock (Claude)
+    participant Bedrock as Bedrock Mantle (GPT OSS)
     participant Interviewer as interviewer Lambda
     participant AgentCore as AgentCore voice relay
     participant NovaSonic as Nova Sonic
@@ -35,8 +35,8 @@ sequenceDiagram
     Browser->>PdfParser: POST resume PDF + job posting (base64/text)
     PdfParser-->>Browser: extracted text (resume_text, job_posting_text)
     Browser->>Analyst: POST extracted text
-    Analyst->>Bedrock: Converse API (tool_use)
-    Bedrock-->>Analyst: tool_use response (structured JSON)
+    Analyst->>Bedrock: Chat Completions (forced function)
+    Bedrock-->>Analyst: forced function response (structured JSON)
     Analyst-->>Browser: analyst_output (schema v1.0)
     Browser->>Interviewer: POST analyst_output
     Interviewer-->>Browser: runtime context (for Nova Sonic)
@@ -199,45 +199,45 @@ def detect_invocation_mode(event: dict) -> dict:
     """Same dual-mode detection as pdf_parser."""
 ```
 
-#### prompt_builder.py — Claude Prompt Construction
+#### prompt_builder.py — GPT OSS Prompt Construction
 
 ```python
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"  # swappable
+MODEL_ID = "openai.gpt-oss-120b"
 
-def build_converse_request(resume_text: str, job_posting_text: str) -> dict:
+def build_chat_request(resume_text: str, job_posting_text: str) -> dict:
     """
-    Constructs the Bedrock Converse API request with:
+    Constructs the Bedrock Mantle Chat Completions request with:
     - System prompt (analyst persona, instructions)
     - User message (resume_text + job_posting_text)
-    - toolConfig with analyst_output schema as a tool definition
-    - toolChoice forcing the model to call the analyst_output tool
+    - OpenAI-compatible function definition with the analyst_output schema
+    - tool_choice forcing the model to call analyst_output
     
     The tool definition's inputSchema mirrors schemas/analyst_output.json.
-    This forces Claude to produce structured JSON matching the schema.
+    This forces GPT OSS to produce structured JSON matching the schema.
     
     Returns:
-        dict ready to pass to bedrock_client.converse(**request)
+        dict ready to pass to bedrock_client.call_chat_completion(request)
     """
 ```
 
-#### bedrock_client.py — Bedrock Converse API Call
+#### bedrock_client.py — Bedrock Mantle Chat Completions Call
 
 ```python
 REGION = "us-east-1"
 MAX_ATTEMPTS = 1
 
-def call_converse(request: dict) -> dict:
+def call_chat_completion(request: dict) -> dict:
     """
-    Calls Bedrock Converse API with a bounded transport-attempt limit.
+    Signs and calls Bedrock Mantle with a bounded transport-attempt limit.
     
     Transport failures are surfaced after one attempt. The orchestrator owns
     the only retry: one fresh call after schema-invalid model output.
     
     Args:
-        request: Converse API request dict from prompt_builder.
+        request: Chat Completions request dict from prompt_builder.
     
     Returns:
-        Raw Converse API response dict.
+        Raw Chat Completions response dict.
     
     Raises:
         BedrockCallFailed: After MAX_ATTEMPTS failures, with reason.
@@ -247,9 +247,9 @@ def call_converse(request: dict) -> dict:
 #### parser.py — Response Parsing and Validation
 
 ```python
-def parse_converse_response(response: dict) -> dict:
+def parse_chat_response(response: dict) -> dict:
     """
-    Extracts the tool_use result from the Converse response.
+    Extracts the analyst_output function arguments from the Chat Completions response.
     Validates the extracted JSON against the analyst_output schema structure.
     
     Validation checks:
@@ -387,48 +387,47 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
 }
 ```
 
-### Bedrock Converse API Request Structure (analyst)
+### Bedrock Mantle Chat Completions Request Structure (analyst)
 
 ```python
 {
-    "modelId": "global.anthropic.claude-sonnet-4-6",
+    "model": "openai.gpt-oss-120b",
     "messages": [
+        {"role": "system", "content": "<analyst persona and instructions>"},
         {
             "role": "user",
-            "content": [{"text": "<system instructions + resume_text + job_posting_text>"}]
+            "content": "<resume_text + job_posting_text>"
         }
     ],
-    "system": [{"text": "<analyst persona and instructions>"}],
-    "toolConfig": {
-        "tools": [
-            {
-                "toolSpec": {
-                    "name": "analyst_output",
-                    "description": "Produce a structured analysis of the candidate's resume against the job posting",
-                    "inputSchema": {
-                        "json": {
-                            # Full analyst_output.json schema as JSON Schema
-                            "type": "object",
-                            "properties": {...},
-                            "required": [...]
-                        }
-                    }
+    "tools": [
+        {
+            "type": "function",
+            "function": {
+                "name": "analyst_output",
+                "description": "Produce a structured resume analysis",
+                "parameters": {
+                    "type": "object",
+                    "properties": {...},
+                    "required": [...]
                 }
             }
-        ],
-        "toolChoice": {"tool": {"name": "analyst_output"}}
-    }
+        }
+    ],
+    "tool_choice": {"type": "function", "function": {"name": "analyst_output"}},
+    "max_tokens": 8192,
+    "temperature": 0.0,
+    "reasoning_effort": "low"
 }
 ```
 
-The `toolChoice` field forces the model to call the `analyst_output` tool, guaranteeing structured JSON output. The `inputSchema` mirrors `schemas/analyst_output.json` converted to JSON Schema format.
+The `tool_choice` field forces the model to call `analyst_output`. Its `parameters` mirror `schemas/analyst_output.json` as JSON Schema.
 
-### Converse API Response Parsing
+### Chat Completions Response Parsing
 
 The response contains:
 ```python
-response["output"]["message"]["content"][0]["toolUse"]["input"]
-# → This is the analyst_output dict
+arguments = response["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+analyst_output = json.loads(arguments)
 ```
 
 ### Key Constants
@@ -436,7 +435,7 @@ response["output"]["message"]["content"][0]["toolUse"]["input"]
 | Constant | Value | Location |
 |----------|-------|----------|
 | REGION | `"us-east-1"` | `bedrock_client.py` |
-| MODEL_ID | `"global.anthropic.claude-sonnet-4-6"` | `prompt_builder.py` |
+| MODEL_ID | `"openai.gpt-oss-120b"` | `prompt_builder.py` |
 | MAX_ATTEMPTS | `1` | `bedrock_client.py` |
 | MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
@@ -579,7 +578,7 @@ if schema validation fails:
 
 - `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
 - `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
-- Analyst operational tests cover the Bedrock timeout/retry configuration, Sonnet 4.6 model, 8,192-token budget, and one schema-recovery call.
+- Analyst operational tests cover the Bedrock timeout/retry configuration, GPT OSS 120B model, 8,192-token budget, and one schema-recovery call.
 - Evaluator and Interviewer have their own unit suites under their function directories.
 - There is currently no PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
 

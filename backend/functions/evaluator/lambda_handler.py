@@ -24,7 +24,7 @@ def handler(event: dict, context) -> dict:
     Orchestrates the evaluation flow:
     1. Validate input
     2. Build evaluation prompt
-    3. Call Bedrock Converse API
+    3. Call Bedrock Mantle Chat Completions
     4. Extract and aggregate scores
     5. Assemble response
 
@@ -45,7 +45,7 @@ def handler(event: dict, context) -> dict:
             analyst_output=payload["analyst_output"],
         )
 
-        # 3. Call Bedrock Converse API
+        # 3. Call Bedrock Mantle Chat Completions
         llm_response = bedrock_client.invoke(system, messages, tool_config)
 
         # 4. Extract and aggregate scores
