@@ -60,6 +60,17 @@ describe('sessionReducer', () => {
     });
   });
 
+  describe('SESSION_TOKEN_READY', () => {
+    it('stores the opaque token in active session state', () => {
+      const result = sessionReducer(initialState, {
+        type: 'SESSION_TOKEN_READY',
+        payload: { sessionToken: 'opaque-token' },
+      });
+      expect(result.hostedSessionToken).toBe('opaque-token');
+      expect(result.error).toBeNull();
+    });
+  });
+
   describe('AGENT1_SUCCESS', () => {
     it('stores nova_sonic_context and sets agent1Ready', () => {
       const result = sessionReducer(initialState, {
@@ -81,6 +92,19 @@ describe('sessionReducer', () => {
       });
       expect(result.error?.code).toBe('AGENT1_FAILED');
       expect(result.error?.retryable).toBe(true);
+    });
+  });
+
+  it('preserves a non-retryable voice-session failure', () => {
+    const result = sessionReducer(initialState, {
+      type: 'WS_CONNECT_FAILED',
+      payload: { message: 'Interview session expired.', retryable: false },
+    });
+
+    expect(result.error).toEqual({
+      code: 'WS_CONNECT_FAILED',
+      message: 'Interview session expired.',
+      retryable: false,
     });
   });
 
@@ -299,6 +323,26 @@ describe('sessionReducer', () => {
       expect(result).toEqual(initialState);
     });
   });
+
+  describe('RETRY_INTERVIEW', () => {
+    it('preserves analysis but clears admission so a new interview is counted', () => {
+      const result = sessionReducer({
+        ...initialState,
+        phase: 'feedback',
+        uploadData: { pdf: new File([], 'test.pdf'), jdText: 'job' },
+        hostedSessionToken: 'old-token',
+        analystOutput: { candidate_profile: {} },
+        novaSonicContext: 'context',
+        agent1Ready: true,
+      }, { type: 'RETRY_INTERVIEW' });
+
+      expect(result.phase).toBe('waiting');
+      expect(result.hostedSessionToken).toBeNull();
+      expect(result.analystOutput).toEqual({ candidate_profile: {} });
+      expect(result.novaSonicContext).toBe('context');
+      expect(result.agent1Ready).toBe(true);
+    });
+  });
 });
 
 // ---------- maybeStartSession Tests ----------
@@ -483,6 +527,7 @@ describe('PBT: Property 8 — Practice Mode isolation', () => {
       textInputState: fc.constantFrom('idle', 'composing') as fc.Arbitrary<SessionState['textInputState']>,
       practiceMode: fc.boolean(),
       uploadData: fc.constant(null),
+      hostedSessionToken: fc.constant(null),
       analystOutput: fc.constant(null),
       transcript: fc.array(
         fc.record({

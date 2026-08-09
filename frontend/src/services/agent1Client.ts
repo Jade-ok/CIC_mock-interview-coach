@@ -5,6 +5,7 @@
 
 import type { Agent1Response } from '@/types/session';
 import { API_ENDPOINTS, jsonPostInit } from '@/services/apiConfig';
+import { InterviewAdmissionError } from '@/services/interviewSessionClient';
 
 export interface Agent1Request {
   pdf: File;
@@ -17,6 +18,7 @@ export interface Agent1Request {
  */
 export async function callAgent1(
   request: Agent1Request,
+  sessionToken: string,
   signal?: AbortSignal
 ): Promise<Agent1Response> {
   // Step 1: Convert PDF to base64 and call PDF Parser
@@ -25,14 +27,15 @@ export async function callAgent1(
   const parseResponse = await fetch(
     API_ENDPOINTS.pdfParser,
     await jsonPostInit({
+      session_token: sessionToken,
       resume: { content: base64Pdf, format: 'pdf' },
       job_posting: { content: request.jdText, format: 'text' },
     }, signal)
   );
 
   const parseResult = await parseResponse.json();
-  if (parseResult.status !== 'success') {
-    throw new Error(`PDF parsing failed: ${parseResult.error}`);
+  if (!parseResponse.ok || parseResult.status !== 'success') {
+    throw pipelineError(parseResponse, parseResult, 'PDF parsing failed');
   }
 
   const { resume_text, job_posting_text } = parseResult.data;
@@ -40,12 +43,12 @@ export async function callAgent1(
   // Step 2: Call analyst with extracted text
   const analystResponse = await fetch(
     API_ENDPOINTS.analyst,
-    await jsonPostInit({ resume_text, job_posting_text }, signal)
+    await jsonPostInit({ session_token: sessionToken, resume_text, job_posting_text }, signal)
   );
 
   const analystResult = await analystResponse.json();
-  if (analystResult.status !== 'success') {
-    throw new Error(`Analysis failed: ${analystResult.error}`);
+  if (!analystResponse.ok || analystResult.status !== 'success') {
+    throw pipelineError(analystResponse, analystResult, 'Analysis failed');
   }
 
   const analystOutput = analystResult.data;
@@ -53,14 +56,12 @@ export async function callAgent1(
   // Step 3: Call interviewer to get runtime context
   const interviewerResponse = await fetch(
     API_ENDPOINTS.interviewer,
-    await jsonPostInit({ analyst_output: analystOutput }, signal)
+    await jsonPostInit({ session_token: sessionToken, analyst_output: analystOutput }, signal)
   );
 
   const interviewerResult = await interviewerResponse.json();
   if (!interviewerResponse.ok || interviewerResult.success !== true) {
-    throw new Error(
-      `Interviewer setup failed: ${interviewerResult.error_message || interviewerResponse.statusText}`
-    );
+    throw pipelineError(interviewerResponse, interviewerResult, 'Interviewer setup failed');
   }
 
   const novaSonicContext = interviewerResult.runtime_context;
@@ -69,6 +70,21 @@ export async function callAgent1(
     nova_sonic_context: novaSonicContext,
     analyst_output: analystOutput,
   };
+}
+
+function pipelineError(
+  response: Response,
+  payload: Record<string, unknown>,
+  prefix: string
+): Error {
+  const detail = String(
+    payload.error_message || payload.error || response.statusText || `HTTP ${response.status}`
+  );
+  const message = `${prefix}: ${detail}`;
+  if (response.status >= 400) {
+    return new InterviewAdmissionError(message, response.status >= 500);
+  }
+  return new Error(message);
 }
 
 /**

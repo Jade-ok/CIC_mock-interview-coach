@@ -191,6 +191,7 @@ describe('Preservation: callAgent3() receives transcript and analyst_output', ()
           }) as unknown as typeof globalThis.fetch;
 
           const request: Agent3Request = {
+            session_token: 'test-session-token',
             conversation: pairs.map(([question, answer], index) => ({
               point_id: `point_${Math.floor(index / 2) + 1}`,
               turn_type: index % 2 === 0 ? 'main_question' : 'follow_up',

@@ -168,7 +168,7 @@ The application uses three specialized agents connected through structured JSON 
 2. **Interviewer Agent:** Combines the personalized analysis with the interview structure and student profile, then conducts the spoken interview through Nova 2 Sonic.
 3. **Evaluator Agent:** Reviews the completed question-and-answer pairs together with the original analysis and generates the final feedback report.
 
-The browser orchestrates the workflow and retains the active session state. Each Lambda remains stateless, and Amazon S3 stores interview configuration rather than candidate sessions or uploaded documents.
+The browser orchestrates the workflow and retains the active interview content. Amazon S3 stores interview configuration rather than uploaded documents, while a small DynamoDB table holds only expiring hashed demo-session metadata and counters.
 
 ### Architecture Diagram
 
@@ -177,11 +177,13 @@ flowchart TD
     User --> Frontend[React frontend<br/>AWS Amplify Hosting]
     Frontend --> CloudFront[Amazon CloudFront<br/>API distribution]
 
+    CloudFront --> Admission[Demo Session<br/>AWS Lambda]
     CloudFront --> PDF[PDF Parser<br/>AWS Lambda]
     CloudFront --> Analyst[Analyst Agent<br/>AWS Lambda]
     CloudFront --> Interviewer[Interviewer Agent<br/>AWS Lambda]
     CloudFront --> Evaluator[Evaluator Agent<br/>AWS Lambda]
     CloudFront --> VoiceSession[Voice Session<br/>AWS Lambda]
+    Admission --> Quotas[Amazon DynamoDB<br/>Expiring quota records]
 
     Analyst <--> GPT[Amazon Bedrock<br/>OpenAI GPT OSS 120B]
     Evaluator <--> GPT
@@ -272,9 +274,12 @@ Two GitHub Actions release paths keep the hosted application synchronized with `
 
 ### Security and Cost Controls
 
-The hosted application intentionally does not require an end-user login, so its public entry points are protected and monitored at the infrastructure level:
+The hosted application intentionally does not require an end-user login. Its security and cost controls include:
 
-- All five Lambda Function URLs require AWS IAM authentication. CloudFront Origin Access Control signs hosted origin requests, while anonymous requests sent directly to the Function URLs are rejected.
+- All six Lambda Function URLs require AWS IAM authentication. CloudFront Origin Access Control signs hosted origin requests, while anonymous requests sent directly to the Function URLs are rejected.
+- The deployed demo admits at most 100 interview sessions per UTC day and at most 5 per trusted viewer IP per UTC day. Source-level parameter bounds prevent either value from being raised above those ceilings; the global limit can later be lowered to 5 without an application rewrite.
+- Every hosted pipeline stage requires the IP-bound, two-hour opaque session token. Each token permits at most 2 PDF Parser, 2 Analyst, 2 Interviewer, 2 Evaluator, and 3 Voice Session attempts, preventing one admitted session from repeatedly invoking paid work.
+- A CloudFront viewer-request guard rejects unknown API paths and methods other than `POST` and `OPTIONS` before they reach Lambda.
 - Browser CORS is limited to the deployed Amplify origin and the configured localhost development origin.
 - The Voice Session Lambda returns short-lived, role-scoped AgentCore WebSocket URLs instead of exposing AWS credentials to the browser.
 - The frontend and backend enforce a 4 MiB PDF limit, and every job description is limited to 5,000 characters.
@@ -282,7 +287,7 @@ The hosted application intentionally does not require an end-user login, so its 
 - CloudWatch alarms monitor invocations, errors, and throttling for every hosted function. Amazon SNS delivers alert notifications, and AWS Budgets tracks account-level spending against a default monthly budget.
 - An emergency switch can set all hosted functions to zero concurrency. Optional normal concurrency caps remain disabled unless the AWS account has sufficient Lambda concurrency quota.
 
-These controls reduce accidental usage and direct endpoint exposure, but the no-login CloudFront API remains publicly reachable. CORS is a browser policy rather than authentication, and alarms and budget notifications do not automatically stop spending. AWS WAF is not provisioned, avoiding its fixed baseline cost for the current small-scale deployment.
+Atomic admission enforces the configured global daily ceiling. CORS controls browser access, while alarms and budget notifications provide monitoring rather than an automatic spending stop. AWS WAF is not provisioned, avoiding its fixed baseline cost for the current small-scale deployment.
 
 ### Important Implementation Notes
 
@@ -356,8 +361,6 @@ aws --version
 
 Install or update AWS CLI v2 using the [official AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) if the `aws` or `aws login` command is unavailable.
 
-> **Shell note:** The environment-variable and file-loading examples below use macOS/Linux syntax. In Windows PowerShell, replace `export NAME="value"` with `$env:NAME="value"` and use the Windows virtual-environment commands shown in the backend step.
-
 <br>
 
 **1. Clone the Repository**
@@ -371,31 +374,39 @@ cd CIC_mock-interview-coach
 
 **2. Authenticate with AWS**
 
-The simplest option is to sign in through the browser using an AWS Console account with access to both models. This stores refreshable temporary credentials for local development. The console identity must have the AWS-managed [`SignInLocalDevelopmentAccess`](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SignInLocalDevelopmentAccess.html) policy; IAM Identity Center users should use the profile option below.
+Choose **one** of the following three authentication options.
+
+**Option 1: Sign in through the browser**
+
+Use an AWS Console account with access to both models. This stores refreshable temporary credentials for local development. The console identity must have the AWS-managed [`SignInLocalDevelopmentAccess`](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/SignInLocalDevelopmentAccess.html) policy.
 
 ```bash
 aws login
-export AWS_REGION="us-east-1"
+export AWS_REGION="us-east-1"  # On Windows use: $env:AWS_REGION="us-east-1"
 ```
 
-Alternatively, use an existing IAM Identity Center profile:
+IAM Identity Center users can sign in with an existing profile instead:
 
 ```bash
 aws sso login --profile "<profile-name>"
-export AWS_PROFILE="<profile-name>"
-export AWS_REGION="us-east-1"
+export AWS_PROFILE="<profile-name>"  # On Windows use: $env:AWS_PROFILE="<profile-name>"
+export AWS_REGION="us-east-1"        # On Windows use: $env:AWS_REGION="us-east-1"
 ```
 
-Temporary credentials can also be exported directly in the backend terminal:
+**Option 2: Export temporary credentials**
+
+Export the credentials directly in the terminal that will run the backend:
 
 ```bash
-export AWS_ACCESS_KEY_ID="..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_SESSION_TOKEN="..."
-export AWS_REGION="us-east-1"
+export AWS_ACCESS_KEY_ID="..."      # On Windows use: $env:AWS_ACCESS_KEY_ID="..."
+export AWS_SECRET_ACCESS_KEY="..."  # On Windows use: $env:AWS_SECRET_ACCESS_KEY="..."
+export AWS_SESSION_TOKEN="..."      # On Windows use: $env:AWS_SESSION_TOKEN="..."
+export AWS_REGION="us-east-1"       # On Windows use: $env:AWS_REGION="us-east-1"
 ```
 
-To keep temporary credentials in a local file, create `backend/.env.local` with the following values:
+**Option 3: Load temporary credentials from a local file**
+
+Create `backend/.env.local` with the following values:
 
 ```dotenv
 AWS_ACCESS_KEY_ID=...
@@ -404,13 +415,7 @@ AWS_SESSION_TOKEN=...
 AWS_REGION=us-east-1
 ```
 
-On macOS or Linux, load the file into the terminal before starting the backend:
-
-```bash
-set -a
-source backend/.env.local
-set +a
-```
+The local backend loads this file automatically on macOS, Linux, and Windows.
 
 Environment files are ignored by Git. Never commit AWS credentials, place them in a `VITE_*` variable, or expose them to browser code.
 

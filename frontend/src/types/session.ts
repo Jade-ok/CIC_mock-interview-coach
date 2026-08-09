@@ -12,6 +12,7 @@ export interface SessionState {
   textInputState: TextInputState;
   practiceMode: boolean;
   uploadData: UploadData | null;
+  hostedSessionToken: string | null;
   analystOutput: AnalystOutput | null;
   transcript: TranscriptEntry[];
   livePartial: { role: 'interviewer' | 'user'; text: string } | null;
@@ -55,10 +56,11 @@ export interface SessionError {
 
 export type SessionAction =
   | { type: 'SUBMIT_UPLOAD'; payload: { pdf: File; jdText: string } }
+  | { type: 'SESSION_TOKEN_READY'; payload: { sessionToken: string } }
   | { type: 'AGENT1_SUCCESS'; payload: Agent1Response }
-  | { type: 'AGENT1_FAILED'; payload: { message: string } }
+  | { type: 'AGENT1_FAILED'; payload: { message: string; retryable?: boolean } }
   | { type: 'WS_CONNECTED' }
-  | { type: 'WS_CONNECT_FAILED'; payload: { message: string } }
+  | { type: 'WS_CONNECT_FAILED'; payload: { message: string; retryable?: boolean } }
   | { type: 'SESSION_START_ACKED' }
   | { type: 'WS_DISCONNECTED'; payload: { reason: string } }
   | { type: 'WS_RECONNECT_SUCCESS' }
@@ -91,6 +93,7 @@ export interface Agent1Response {
 }
 
 export interface Agent3Request {
+  session_token: string;
   conversation: Array<{
     point_id: string;
     turn_type: 'main_question' | 'follow_up';

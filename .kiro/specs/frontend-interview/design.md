@@ -12,7 +12,8 @@ Local development connects to `backend.local_server:app` for the HTTP pipeline a
 
 ```text
 Amplify-hosted React/Vite browser
-  └─ HTTPS → public CloudFront API distribution (OAC)
+  └─ HTTPS → CloudFront API distribution (OAC)
+               ├─ private Demo Session Function URL → DynamoDB admission table
                ├─ private PDF Parser Function URL
                ├─ private Analyst Function URL (OpenAI GPT OSS 120B)
                ├─ private Interviewer Function URL + S3 configuration
@@ -25,10 +26,16 @@ Hosted integration requirements:
 
 - Production builds select the configured CloudFront HTTPS API base URL with `VITE_RUNTIME_MODE=hosted`; the voice-session response supplies a temporary signed WSS URL.
 - Amplify Hosting, the Voice Session Lambda, and the signed AgentCore WebSocket flow are deployed; the application intentionally has no end-user login.
-- One public CloudFront API distribution routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus exactly `http://localhost:5173` for hosted-mode local testing.
-- Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them. Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
-- Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
+- One CloudFront API distribution routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus exactly `http://localhost:5173` for hosted-mode local testing.
 - The protocol is unit-tested and has been exercised through the hosted browser/Nova path; real reconnection and session-restoration edge cases remain targeted verification work.
+
+## Security and Cost Controls
+
+- Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them.
+- Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
+- Hosted processing begins with an atomic admission request. Defaults are 100 interviews globally and 5 per trusted viewer IP per UTC day. The two-hour opaque token is stored only as a SHA-256 digest, bound to the viewer-IP digest, and used with bounded per-stage attempts.
+- A CloudFront viewer-request function rejects unknown API paths and methods other than `POST` or `OPTIONS` before they reach a Lambda origin.
+- Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
 
 ## Screen Flow
 
@@ -37,7 +44,7 @@ Upload → Waiting Room → Interview → Feedback
 ```
 
 1. Upload stores the selected PDF and job description in session state.
-2. Waiting Room starts the HTTP analysis pipeline and WebSocket connection in parallel.
+2. Waiting Room obtains an interview token, runs the HTTP analysis pipeline with that token, then connects the WebSocket through an authorized Voice Session request.
 3. The interview starts only after both the Analyst context and WebSocket session acknowledgment are ready.
 4. Final Nova transcripts are accumulated in session state.
 5. At interview end, transcript entries are paired into the canonical Evaluator request.
@@ -54,12 +61,14 @@ Upload → Waiting Room → Interview → Feedback
 
 ### WaitingRoom
 
+- Obtain one hosted admission token before invoking any downstream stage; pure local mode receives the local sentinel token.
 - Call PDF Parser, Analyst, and Interviewer through `callAgent1`.
 - Connect the real WebSocket client by default.
 - Use `VITE_USE_MOCK_WEBSOCKET=true` only for intentional development mocking.
 - Send `session_start` once both HTTP context and socket connection are ready.
 - Transition after `session_start_ack`.
 - Retry only the failed side. Enforce a 30-second relay timeout and a 330-second Agent 1 timeout, aborting stale Agent 1 HTTP work before retry.
+- Preserve the current admission token during bounded stage retries. Practice Again clears it and requests a new interview admission.
 
 ### InterviewScreen
 
@@ -89,6 +98,7 @@ The reducer owns one in-memory interview session:
 interface SessionState {
   phase: 'upload' | 'waiting' | 'interview' | 'feedback';
   uploadData: { pdf: File; jdText: string } | null;
+  hostedSessionToken: string | null;
   analystOutput: Record<string, unknown> | null;
   novaSonicContext: string;
   transcript: TranscriptEntry[];
@@ -110,15 +120,17 @@ interface SessionState {
 
 `RESET` returns every field to `initialState`.
 
+`SESSION_TOKEN_READY` stores the opaque token only in memory. `RETRY_INTERVIEW` clears it so a new hosted interview consumes a new admission slot.
+
 ## HTTP Pipeline
 
 ### Agent 1 aggregate client
 
 `callAgent1` performs:
 
-1. PDF Parser: PDF base64 plus job description.
-2. Analyst: extracted resume and job-posting text.
-3. Interviewer: complete `analyst_output`.
+1. PDF Parser: session token, PDF base64, and job description.
+2. Analyst: session token plus extracted resume and job-posting text.
+3. Interviewer: session token plus complete `analyst_output`.
 
 It returns:
 
@@ -141,6 +153,7 @@ The request matches `schemas/interviewer_output.json`:
 
 ```typescript
 interface Agent3Request {
+  session_token: string;
   conversation: Array<{
     point_id: string;
     turn_type: 'main_question' | 'follow_up';
@@ -208,7 +221,7 @@ Evaluator failure keeps the transcript and Analyst output available for retry.
 
 ## Runtime Configuration
 
-Local development uses the combined backend on port 8080. Hosted builds receive one CloudFront HTTPS API base URL through the hosting environment; the voice-session route returns the temporary signed WSS URL at runtime. AWS credentials belong to backend runtime identities rather than browser configuration.
+Local development uses the combined backend on port 8080 and bypasses hosted admission. Hosted builds receive one CloudFront HTTPS API base URL through the hosting environment; `/session` returns the opaque interview token and `/voice-session` returns the temporary signed WSS URL at runtime. AWS credentials belong to backend runtime identities rather than browser configuration.
 
 ## Verification Properties
 
@@ -223,6 +236,7 @@ Local development uses the combined backend on port 8080. Hosted builds receive 
 9. `session_start` is sent only after context and socket readiness.
 10. `end_interview` waits for playback before automatic shutdown.
 11. The End button remains enabled throughout the interview.
+12. Hosted downstream requests cannot start until admission succeeds, and every stage uses the current in-memory session token.
 
 ## Remaining Work
 

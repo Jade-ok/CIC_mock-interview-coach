@@ -6,6 +6,7 @@
 import type { Agent3Request, SessionState, TranscriptEntry } from '@/types/session';
 import type { EvaluatorOutput } from '@/types/evaluator';
 import { API_ENDPOINTS, jsonPostInit } from '@/services/apiConfig';
+import { InterviewAdmissionError } from '@/services/interviewSessionClient';
 
 /** Controls whether the stub should simulate failure (for testing) */
 let simulateFailure = false;
@@ -26,6 +27,9 @@ export function buildAgent3Request(state: SessionState): Agent3Request {
   if (!state.analystOutput) {
     throw new Error('Cannot evaluate an interview without Analyst output.');
   }
+  if (!state.hostedSessionToken) {
+    throw new Error('Cannot evaluate an interview without an active interview session.');
+  }
 
   const conversation = pairConversation(state.transcript);
   // Six answer pairs means the scripted three-main/three-follow-up interview
@@ -39,6 +43,7 @@ export function buildAgent3Request(state: SessionState): Agent3Request {
     | undefined;
 
   return {
+    session_token: state.hostedSessionToken,
     analyst_output: state.analystOutput,
     conversation,
     interview_metadata: {
@@ -131,7 +136,10 @@ export async function callAgent3(request: Agent3Request): Promise<EvaluatorOutpu
   const result = await response.json().catch(() => null);
   if (!response.ok) {
     const message = result?.message || result?.error || response.statusText || `HTTP ${response.status}`;
-    throw new Error(`Evaluation failed: ${message}`);
+    throw new InterviewAdmissionError(
+      `Evaluation failed: ${message}`,
+      response.status >= 500
+    );
   }
 
   // The evaluator normally uses non-2xx status codes for errors, but retain a

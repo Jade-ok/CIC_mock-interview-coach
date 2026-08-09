@@ -26,6 +26,7 @@ function transcript(pairCount: number): TranscriptEntry[] {
 function stateWith(pairCount: number): SessionState {
   return {
     ...initialState,
+    hostedSessionToken: 'test-session-token',
     analystOutput,
     transcript: transcript(pairCount),
   };
@@ -56,6 +57,7 @@ describe('buildAgent3Request', () => {
       ended_early: false,
     });
     expect(request.analyst_output).toBe(analystOutput);
+    expect(request.session_token).toBe('test-session-token');
   });
 
   it('marks a partial interview as ended early and ignores an unanswered closing', () => {

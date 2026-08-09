@@ -1,18 +1,17 @@
 # Infrastructure
 
-AWS CDK application for the deployed Mock Interview Coach Lambda/S3 backend. It is one boundary of the full-stack architecture alongside Amplify Hosting and AgentCore Runtime.
+AWS CDK application for the deployed Mock Interview Coach backend. It defines the CloudFront, Lambda, S3, DynamoDB, monitoring, and budget resources alongside the separate Amplify Hosting and AgentCore Runtime boundaries.
 
 ## Provisioned Resources
 
-- Five Python 3.12 Lambdas: PDF Parser, Analyst, Interviewer, Evaluator, and Voice Session
+- Six Python Lambdas: Demo Session, PDF Parser, Analyst, Interviewer, Evaluator, and Voice Session
 - Private IAM-protected Function URLs for those Lambdas
-- A public CloudFront distribution with Lambda Function URL Origin Access Control
+- A CloudFront distribution with Lambda Function URL Origin Access Control
 - An S3 bucket containing the files from `backend/config/`
+- An on-demand DynamoDB table containing only expiring hashed session/quota records
+- A shared Lambda session-authorization layer
 - Model-scoped Bedrock Mantle permissions for Analyst and Evaluator to use `openai.gpt-oss-120b`
 - S3 read permission for Interviewer
-- Optional reserved-concurrency caps for all five hosted functions (disabled by default until the account quota supports them)
-- Invocation/error/throttle CloudWatch alarms, an SNS email topic, and a monthly AWS cost budget
-- A parameterized emergency switch that disables the hosted functions by setting reserved concurrency to zero
 
 The hosted application also includes:
 
@@ -23,15 +22,19 @@ The hosted application also includes:
 
 AgentCore is a serverless managed container runtime and is not part of this CDK stack. Amplify Hosting is also separate from this stack.
 
-The Lambda Function URLs use `AWS_IAM` authentication and accept origin calls from a single CloudFront distribution through Origin Access Control. The browser uses one public CloudFront API base URL; direct anonymous Function URL calls are rejected. The Voice Session role is scoped to one AgentCore runtime and its endpoints, and its signed URLs expire after five minutes. Alarms, the default $25 account-wide budget, hosted model/session caps, and the emergency switch reduce the remaining no-login exposure. Optional nonzero concurrency caps default off because the target AWS account must retain enough unreserved Lambda concurrency for them to deploy.
+The Lambda Function URLs use `AWS_IAM` authentication and accept origin calls from a single CloudFront distribution through Origin Access Control. Direct anonymous Function URL calls are rejected. The Voice Session role is scoped to one AgentCore runtime and its endpoints, and its signed URLs expire after five minutes.
 
-The stack does not provision AWS WAF, so it avoids WAF's fixed monthly web-ACL baseline. CloudFront remains usage-priced and publicly reachable; monitoring, bounded model calls, input limits, and the emergency switch remain necessary.
+## Security and Cost Controls
+
+The application intentionally has no end-user login. The Demo Session Lambda atomically admits at most 100 hosted sessions globally and 5 per trusted viewer IP per UTC day by default. Its two-hour opaque tokens are stored only as SHA-256 digests, bound to the viewer-IP digest, and constrained by per-stage attempt counts. The values are deployment parameters, and pure local mode bypasses these hosted admission controls. Alarms, the default $25 account-wide budget, hosted model/session caps, and the emergency switch provide additional cost controls. Optional nonzero concurrency caps default off because the target AWS account must retain enough unreserved Lambda concurrency for them to deploy.
+
+The stack does not provision AWS WAF, avoiding its fixed monthly web-ACL baseline. Monitoring, bounded model calls, input limits, and the emergency switch remain necessary.
 
 ## Automated Delivery
 
 Path-filtered GitHub Actions workflows publish changes from `main`. The application workflow serializes matching revisions by testing and deploying `MockInterviewStack` through CDK before building React/Vite and publishing that same revision to the existing manual Amplify app. Voice-relay changes update AgentCore separately; both paths reject stale revisions and share one production concurrency lock. AWS access uses temporary OIDC credentials from a role whose trust is restricted to the immutable repository identity and `refs/heads/main`; no long-lived AWS deployment keys are stored in GitHub.
 
-The deployment role ARN, Amplify app ID, and cost-alert email are repository variables. Account IDs, physical resource names, endpoint URLs, email values, and generated environment state stay out of tracked documentation. Changes to `deployment-automation-stack.ts` or its entry point are excluded from the application workflow and require an explicit update of that bootstrap stack.
+The deployment role ARN, Amplify app ID, and cost-alert email are repository variables. Optional hosted-limit variables supply the values described under Security and Cost Controls; source-level parameter bounds prevent larger values. Account IDs, physical resource names, endpoint URLs, email values, and generated environment state stay out of tracked documentation. Changes to `deployment-automation-stack.ts` or its entry point are excluded from the application workflow and require an explicit update of that bootstrap stack.
 
 ## Prerequisites
 

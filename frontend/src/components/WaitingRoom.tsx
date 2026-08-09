@@ -1,11 +1,16 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { callAgent1 } from '@/services/agent1Client';
-import { getVoiceWebSocketUrl } from '@/services/apiConfig';
+import { getVoiceWebSocketUrl, VoiceSessionError } from '@/services/apiConfig';
+import {
+  createInterviewSession,
+  InterviewAdmissionError,
+} from '@/services/interviewSessionClient';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 const WS_TIMEOUT_MS = 30000;
+const SESSION_TIMEOUT_MS = 30000;
 // Keep enough time for local 120-second schema recovery plus pipeline overhead.
 // Hosted Analyst execution is bounded earlier to one 55-second model attempt.
 const AGENT1_TIMEOUT_MS = 330000;
@@ -21,6 +26,7 @@ export function WaitingRoom() {
   const wsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wsClientRef = useRef<WebSocketClient | MockWebSocketClient | null>(null);
   const agent1CalledRef = useRef(false);
+  const sessionCalledRef = useRef(false);
   const wsCalledRef = useRef(false);
   const activeRef = useRef(true);
   const latestStateRef = useRef(state);
@@ -29,7 +35,8 @@ export function WaitingRoom() {
   const agent1AbortControllerRef = useRef<AbortController | null>(null);
   latestStateRef.current = state;
 
-  // Start parallel requests on mount
+  // Admission starts first. The token then authorizes Agent 1 and the voice
+  // connection, preventing unauthenticated repetition of paid hosted stages.
   useEffect(() => {
     activeRef.current = true;
     if (state.error?.code === 'WS_SESSION_INVALID') {
@@ -41,9 +48,15 @@ export function WaitingRoom() {
     return () => {
       activeRef.current = false;
       agent1RequestIdRef.current += 1;
-      if (!latestStateRef.current.agent1Ready) {
+      if (
+        !latestStateRef.current.hostedSessionToken
+        || !latestStateRef.current.agent1Ready
+      ) {
         agent1AbortControllerRef.current?.abort();
         agent1CalledRef.current = false;
+      }
+      if (!latestStateRef.current.hostedSessionToken) {
+        sessionCalledRef.current = false;
       }
       if (latestStateRef.current.wsConnectionState !== 'connected') {
         wsRequestIdRef.current += 1;
@@ -54,6 +67,33 @@ export function WaitingRoom() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (state.error) return;
+    if (
+      state.hostedSessionToken
+      && !state.agent1Ready
+      && !agent1CalledRef.current
+    ) {
+      startAgent1(state.hostedSessionToken);
+      startTimeouts();
+    }
+    if (
+      state.hostedSessionToken
+      && state.agent1Ready
+      && state.wsConnectionState === 'disconnected'
+      && !wsCalledRef.current
+    ) {
+      startWebSocket(state.hostedSessionToken);
+      startTimeouts();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.hostedSessionToken,
+    state.agent1Ready,
+    state.wsConnectionState,
+    state.error,
+  ]);
 
   // Watch for both ready → dispatch INTERVIEW_READY
   useEffect(() => {
@@ -68,7 +108,8 @@ export function WaitingRoom() {
   const startTimeouts = useCallback(() => {
     clearTimeoutTimers();
     const currentState = latestStateRef.current;
-    if (!currentState.agent1Ready) {
+    if (!currentState.hostedSessionToken || !currentState.agent1Ready) {
+      const waitingForAdmission = !currentState.hostedSessionToken;
       agent1TimeoutRef.current = setTimeout(() => {
         if (!activeRef.current) return;
         agent1RequestIdRef.current += 1;
@@ -76,11 +117,19 @@ export function WaitingRoom() {
         agent1AbortControllerRef.current?.abort();
         dispatch({
           type: 'AGENT1_FAILED',
-          payload: { message: 'Resume analysis timed out. Please try again.' },
+          payload: {
+            message: waitingForAdmission
+              ? 'Starting the interview timed out. Please try again.'
+              : 'Resume analysis timed out. Please try again.',
+          },
         });
-      }, AGENT1_TIMEOUT_MS);
+      }, waitingForAdmission ? SESSION_TIMEOUT_MS : AGENT1_TIMEOUT_MS);
     }
-    if (currentState.wsConnectionState !== 'connected') {
+    if (
+      currentState.hostedSessionToken
+      && currentState.agent1Ready
+      && currentState.wsConnectionState !== 'connected'
+    ) {
       wsTimeoutRef.current = setTimeout(() => {
         if (!activeRef.current) return;
         wsRequestIdRef.current += 1;
@@ -115,16 +164,52 @@ export function WaitingRoom() {
   }, [clearAgent1Timeout, clearWsTimeout]);
 
   const startRequests = useCallback(() => {
-    if (!state.agent1Ready && !agent1CalledRef.current) {
-      startAgent1();
-    }
-    if (state.wsConnectionState === 'disconnected' && !wsCalledRef.current) {
-      startWebSocket();
+    if (!state.hostedSessionToken && !sessionCalledRef.current) {
+      startSession();
+    } else if (
+      state.hostedSessionToken
+      && !state.agent1Ready
+      && !agent1CalledRef.current
+    ) {
+      startAgent1(state.hostedSessionToken);
+    } else if (
+      state.hostedSessionToken
+      && state.agent1Ready
+      && state.wsConnectionState === 'disconnected'
+      && !wsCalledRef.current
+    ) {
+      startWebSocket(state.hostedSessionToken);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startAgent1 = useCallback(async () => {
+  const startSession = useCallback(async () => {
+    sessionCalledRef.current = true;
+    const requestId = ++agent1RequestIdRef.current;
+    const abortController = new AbortController();
+    agent1AbortControllerRef.current = abortController;
+    try {
+      const sessionToken = await createInterviewSession(abortController.signal);
+      if (!activeRef.current || requestId !== agent1RequestIdRef.current) return;
+      dispatch({ type: 'SESSION_TOKEN_READY', payload: { sessionToken } });
+    } catch (err) {
+      if (!activeRef.current || requestId !== agent1RequestIdRef.current) return;
+      sessionCalledRef.current = false;
+      dispatch({
+        type: 'AGENT1_FAILED',
+        payload: {
+          message: err instanceof Error ? err.message : 'Unable to start an interview.',
+          retryable: err instanceof InterviewAdmissionError ? err.retryable : true,
+        },
+      });
+    } finally {
+      if (requestId === agent1RequestIdRef.current) {
+        agent1AbortControllerRef.current = null;
+      }
+    }
+  }, [dispatch]);
+
+  const startAgent1 = useCallback(async (sessionToken: string) => {
     agent1CalledRef.current = true;
     const requestId = ++agent1RequestIdRef.current;
     const abortController = new AbortController();
@@ -133,7 +218,11 @@ export function WaitingRoom() {
       if (!state.uploadData) {
         throw new Error('Upload data is missing. Please return and upload your résumé again.');
       }
-      const response = await callAgent1(state.uploadData, abortController.signal);
+      const response = await callAgent1(
+        latestStateRef.current.uploadData!,
+        sessionToken,
+        abortController.signal
+      );
       if (!activeRef.current || requestId !== agent1RequestIdRef.current) return;
       dispatch({ type: 'AGENT1_SUCCESS', payload: response });
     } catch (err) {
@@ -141,7 +230,10 @@ export function WaitingRoom() {
       agent1CalledRef.current = false;
       dispatch({
         type: 'AGENT1_FAILED',
-        payload: { message: err instanceof Error ? err.message : 'Agent 1 request failed.' },
+        payload: {
+          message: err instanceof Error ? err.message : 'Agent 1 request failed.',
+          retryable: err instanceof InterviewAdmissionError ? err.retryable : true,
+        },
       });
     } finally {
       if (requestId === agent1RequestIdRef.current) {
@@ -151,7 +243,7 @@ export function WaitingRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
-  const startWebSocket = useCallback(async () => {
+  const startWebSocket = useCallback(async (sessionToken: string) => {
     wsCalledRef.current = true;
     const requestId = ++wsRequestIdRef.current;
     const wsClient = createWsClient();
@@ -181,7 +273,7 @@ export function WaitingRoom() {
 
     try {
       await wsClient.connect({
-        urlProvider: getVoiceWebSocketUrl,
+        urlProvider: () => getVoiceWebSocketUrl(sessionToken),
         maxReconnectAttempts: 2,
         reconnectDelayMs: [1000, 2000],
       });
@@ -192,7 +284,10 @@ export function WaitingRoom() {
       wsCalledRef.current = false;
       dispatch({
         type: 'WS_CONNECT_FAILED',
-        payload: { message: err instanceof Error ? err.message : 'WebSocket connection failed.' },
+        payload: {
+          message: err instanceof Error ? err.message : 'WebSocket connection failed.',
+          retryable: err instanceof VoiceSessionError ? err.retryable : true,
+        },
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,12 +297,22 @@ export function WaitingRoom() {
     // Clear error
     // Partial retry: only retry failed items
     if (!state.agent1Ready && state.error?.code === 'AGENT1_FAILED') {
-      agent1CalledRef.current = false;
-      startAgent1();
+      if (!state.hostedSessionToken) {
+        sessionCalledRef.current = false;
+        startSession();
+      } else {
+        agent1CalledRef.current = false;
+        startAgent1(state.hostedSessionToken);
+      }
     }
-    if (!state.wsReady && state.wsConnectionState !== 'connected') {
+    if (
+      state.hostedSessionToken
+      && state.agent1Ready
+      && !state.wsReady
+      && state.wsConnectionState !== 'connected'
+    ) {
       wsCalledRef.current = false;
-      startWebSocket();
+      startWebSocket(state.hostedSessionToken);
     } else if (
       !state.wsReady
       && state.wsConnectionState === 'connected'
@@ -227,12 +332,14 @@ export function WaitingRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     state.agent1Ready,
+    state.hostedSessionToken,
     state.wsReady,
     state.wsConnectionState,
     state.novaSonicContext,
     state.error,
     dispatch,
     startAgent1,
+    startSession,
     startWebSocket,
     startTimeouts,
   ]);

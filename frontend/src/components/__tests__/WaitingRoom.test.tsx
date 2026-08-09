@@ -11,6 +11,13 @@ vi.mock('@/services/agent1Client', () => ({
   callAgent1: vi.fn(),
 }));
 
+vi.mock('@/services/interviewSessionClient', () => ({
+  createInterviewSession: vi.fn().mockResolvedValue('test-session-token'),
+  InterviewAdmissionError: class InterviewAdmissionError extends Error {
+    retryable = false;
+  },
+}));
+
 // Mock WebSocketClient
 vi.mock('@/services/webSocketClient', () => ({
   WebSocketClient: vi.fn().mockImplementation(() => ({
@@ -41,9 +48,11 @@ vi.mock('@/contexts/SessionContext', () => ({
 }));
 
 import { callAgent1 } from '@/services/agent1Client';
+import { createInterviewSession } from '@/services/interviewSessionClient';
 import { WebSocketClient } from '@/services/webSocketClient';
 
 const mockedCallAgent1 = vi.mocked(callAgent1);
+const mockedCreateInterviewSession = vi.mocked(createInterviewSession);
 const MockedWebSocketClient = vi.mocked(WebSocketClient);
 
 describe('WaitingRoom', () => {
@@ -52,11 +61,14 @@ describe('WaitingRoom', () => {
     mockState = {
       ...initialState,
       phase: 'waiting',
+      hostedSessionToken: 'test-session-token',
       uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
     };
     mockDispatch.mockClear();
     mockSetWebSocketClient.mockClear();
     mockedCallAgent1.mockClear();
+    mockedCreateInterviewSession.mockClear();
+    mockedCreateInterviewSession.mockResolvedValue('test-session-token');
     MockedWebSocketClient.mockClear();
 
     // Default: agent1 succeeds after a small delay
@@ -70,6 +82,22 @@ describe('WaitingRoom', () => {
   });
 
   describe('Loading State', () => {
+    it('waits for admission before starting paid stages', () => {
+      mockState = {
+        ...initialState,
+        phase: 'waiting',
+        hostedSessionToken: null,
+        uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
+      };
+      mockedCreateInterviewSession.mockReturnValue(new Promise(() => {}));
+
+      render(<WaitingRoom />);
+
+      expect(mockedCreateInterviewSession).toHaveBeenCalledOnce();
+      expect(mockedCallAgent1).not.toHaveBeenCalled();
+      expect(MockedWebSocketClient).not.toHaveBeenCalled();
+    });
+
     it('displays loading spinner and waiting message', () => {
       render(<WaitingRoom />);
 
@@ -90,7 +118,8 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
-        agent1Ready: false,
+        hostedSessionToken: 'test-session-token',
+        agent1Ready: true,
         wsReady: false,
       };
 
@@ -129,6 +158,7 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        hostedSessionToken: 'test-session-token',
         agent1Ready: false,
         wsConnectionState: 'connected',
         uploadData: { pdf: new File(['resume'], 'resume.pdf'), jdText: 'job' },
@@ -249,6 +279,7 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        hostedSessionToken: 'test-session-token',
         agent1Ready: false,
         wsReady: false,
         wsConnectionState: 'connected',
@@ -272,6 +303,7 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        hostedSessionToken: 'test-session-token',
         agent1Ready: false,
         wsReady: false,
         wsConnectionState: 'connected',
@@ -297,6 +329,7 @@ describe('WaitingRoom', () => {
       mockState = {
         ...initialState,
         phase: 'waiting',
+        hostedSessionToken: 'test-session-token',
         agent1Ready: true,
         wsReady: false,
         wsConnectionState: 'disconnected',
@@ -321,7 +354,7 @@ describe('WaitingRoom', () => {
   });
 
   describe('stale WebSocket callbacks', () => {
-    it('ignores the first mount callbacks under React Strict Mode', async () => {
+    it('ignores the first Agent 1 callback under React Strict Mode', async () => {
       render(
         <StrictMode>
           <WaitingRoom />
@@ -332,8 +365,10 @@ describe('WaitingRoom', () => {
         await Promise.resolve();
       });
 
-      expect(mockDispatch.mock.calls.filter(([action]) => action.type === 'WS_CONNECTED')).toHaveLength(1);
       expect(mockDispatch.mock.calls.filter(([action]) => action.type === 'AGENT1_SUCCESS')).toHaveLength(1);
+      // Voice starts only after the real context applies AGENT1_SUCCESS and
+      // re-renders with agent1Ready=true; this isolated mock does not do that.
+      expect(mockDispatch.mock.calls.filter(([action]) => action.type === 'WS_CONNECTED')).toHaveLength(0);
     });
 
     it('ignores a WebSocket connection that resolves after unmount', async () => {
@@ -412,7 +447,7 @@ describe('WaitingRoom', () => {
       fc.assert(
         fc.property(
           fc.record({
-            agent1Ready: fc.boolean(),
+            agent1Ready: fc.constant(true),
             wsReady: fc.boolean(),
           }),
           ({ agent1Ready, wsReady }) => {
@@ -422,6 +457,7 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              hostedSessionToken: 'test-session-token',
               agent1Ready,
               wsReady,
               wsConnectionState: 'disconnected',
@@ -498,6 +534,7 @@ describe('WaitingRoom', () => {
             mockState = {
               ...initialState,
               phase: 'waiting',
+              hostedSessionToken: 'test-session-token',
               agent1Ready: agent1Succeeded,
               wsReady: false,
               wsConnectionState: wsConnected ? 'connected' : 'disconnected',

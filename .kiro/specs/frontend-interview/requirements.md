@@ -17,13 +17,13 @@ This specification covers the React frontend and its use of existing HTTP and We
 
 ## 2. Waiting Room
 
-1. Entering the Waiting Room must start Agent 1 processing and WebSocket connection in parallel.
+1. Entering the Waiting Room must first obtain an interview-session token, then run Agent 1, then connect the WebSocket with that token.
 2. The real WebSocket client must be the default; mock use must require explicit configuration.
 3. `session_start` must not be sent until Agent 1 context and a connected socket both exist.
 4. The interview must not begin until `session_start_ack` is received.
 5. If the voice relay is not connected after 30 seconds, the UI must show a retryable connection error.
 6. Agent 1 may run for up to 330 seconds so local schema recovery and pipeline overhead can complete; hosted Analyst execution is bounded to one 55-second model attempt.
-7. Retry must preserve a successful or still-running dependency and retry only the failed dependency.
+7. Retry must preserve the existing session token. An Agent 1 failure reruns its PDF Parser → Analyst → Interviewer pipeline, while a WebSocket-only failure retains the completed Agent 1 response and retries only the connection.
 8. Going back must abort the active Agent 1 request, disconnect the active socket, and reset session state.
 
 ## 3. Voice Interview
@@ -62,6 +62,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 3. Conversation turns must contain `point_id`, `turn_type`, `question`, and `answer`.
 4. Nova is prompted for three main questions and one adaptive follow-up per main question, but the frontend does not enforce that sequence; six captured pairs are marked completed and fewer are marked ended early.
 5. The Evaluator response must be consumed as the direct response object from the CloudFront `/evaluator` route.
+6. Every hosted PDF Parser, Analyst, Interviewer, Evaluator, and Voice Session request must carry the current opaque `session_token`.
 
 ## 6. Connection Handling
 
@@ -72,20 +73,24 @@ This specification covers the React frontend and its use of existing HTTP and We
 5. `session_invalid` must show an explicit invalid-session error.
 6. Hosted mode must obtain a fresh five-minute SigV4-signed `wss://` URL from the Voice Session Lambda for each connection attempt.
 
-## 7. Hosted Architecture and Security
+## 7. Hosted Architecture
 
 1. The production static build must be hosted on AWS Amplify Hosting.
 2. The current application intentionally has no end-user login.
 3. The signed AgentCore URL authenticates the Voice Session Lambda role to AgentCore; it is not an end-user login mechanism.
 4. Permanent AWS credentials must never be embedded in browser code.
-5. The browser uses one public CloudFront API base URL. CloudFront OAC signs requests to five private `AWS_IAM` Function URLs, and CORS is restricted to the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing.
+5. The browser uses one CloudFront API base URL. CloudFront OAC signs requests to six private `AWS_IAM` Function URLs, and CORS is restricted to the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing.
 6. Hosted endpoint values must be supplied through environment configuration rather than committed source.
 7. The hosted application must support end-to-end verification from its Amplify origin.
-8. Hosted Lambdas must have invocation/error/throttle alarms and an AWS monthly cost budget with email notifications. A zero-concurrency emergency switch must be available. Optional normal concurrency caps must remain disabled unless the target AWS account quota supports them.
-9. Hosted Analyst/Evaluator calls must use bounded text inputs and a 4,096-token output ceiling; hosted Nova sessions must end after eight minutes.
-10. Pure local execution must leave the additional hosted text, output-token, and voice-duration guardrails disabled. Existing AWS quotas, the shared 4 MiB PDF limit, and the product-wide 5,000-character job-description limit still apply.
+## 8. Security and Cost Controls
 
-## 8. Accessibility and Presentation
+1. Hosted Lambdas must have invocation/error/throttle alarms and an AWS monthly cost budget with email notifications. A zero-concurrency emergency switch must be available. Optional normal concurrency caps must remain disabled unless the target AWS account quota supports them.
+2. Hosted Analyst/Evaluator calls must use bounded text inputs and a 4,096-token output ceiling; hosted Nova sessions must end after eight minutes.
+3. Pure local execution must leave the additional hosted text, output-token, and voice-duration guardrails disabled. Existing AWS quotas, the shared 4 MiB PDF limit, and the product-wide 5,000-character job-description limit still apply.
+4. Hosted admission must atomically enforce configurable UTC-day limits, defaulting to 100 interviews globally and 5 per trusted viewer IP. The issued token must expire after two hours, remain bound to that viewer IP, and have bounded attempts for each downstream stage.
+5. Pure local execution must bypass hosted daily admission and use the local sentinel token without DynamoDB.
+
+## 9. Accessibility and Presentation
 
 1. Interactive controls must have accessible names and keyboard behavior.
 2. Errors must be exposed with an alert role where appropriate.
@@ -106,9 +111,9 @@ Implemented and deployed:
 - Guide Panel and Practice Mode bubbles.
 - Typed FeedbackReport integration with runtime response validation.
 - Reducer, service, component, and protocol tests.
+- Hosted guardrails described in Security and Cost Controls.
 
 Still pending:
 
 - Transcript viewing from the FeedbackReport.
 - Real AgentCore reconnection and session-history restoration edge cases.
-- Optional stronger public-endpoint abuse controls beyond the implemented alarms, budget notifications, model/session caps, and emergency shutdown switch. Normal concurrency caps also remain optional until the target account quota supports them.

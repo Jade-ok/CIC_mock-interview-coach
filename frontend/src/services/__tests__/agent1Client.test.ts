@@ -38,7 +38,7 @@ describe('callAgent1', () => {
     const result = await callAgent1({
       pdf: new File(['resume'], 'resume.pdf', { type: 'application/pdf' }),
       jdText: 'job description',
-    }, abortController.signal);
+    }, 'test-session-token', abortController.signal);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
@@ -48,6 +48,9 @@ describe('callAgent1', () => {
     ]);
     for (const [, options] of fetchMock.mock.calls) {
       expect(options?.signal).toBe(abortController.signal);
+      expect(JSON.parse(String(options?.body))).toMatchObject({
+        session_token: 'test-session-token',
+      });
     }
     expect(result.analyst_output).toEqual(analystOutput);
     expect(result.nova_sonic_context).toBe('runtime context');
@@ -71,6 +74,6 @@ describe('callAgent1', () => {
     await expect(callAgent1({
       pdf: new File(['resume'], 'resume.pdf', { type: 'application/pdf' }),
       jdText: 'job description',
-    })).rejects.toThrow('Configuration unavailable');
+    }, 'test-session-token')).rejects.toThrow('Configuration unavailable');
   });
 });

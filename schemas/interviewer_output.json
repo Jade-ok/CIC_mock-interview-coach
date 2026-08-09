@@ -1,4 +1,6 @@
 {
+  "session_token": "string — opaque hosted admission token; pure local mode uses its local sentinel value",
+
   "analyst_output": "object — the complete Analyst output conforming to schemas/analyst_output.json, passed through unchanged",
 
   "conversation": [

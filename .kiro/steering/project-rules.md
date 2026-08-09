@@ -28,16 +28,16 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 ## Current Implementation
 
 - The React/Vite frontend owns navigation, UI state, uploaded content, the complete Analyst output, and the interview transcript for the active session.
-- There is no persistent application database or server-side session store.
-- One CloudFront API distribution routes to five private IAM-protected Function URLs for PDF Parser, Analyst, Interviewer, Evaluator, and voice-session signing.
+- There is no persistent interview-content database. An on-demand DynamoDB table stores only expiring SHA-256 session/viewer digests, UTC-day counters, and per-stage attempt counters for hosted admission control.
+- One CloudFront API distribution routes to six private IAM-protected Function URLs for Demo Session admission, PDF Parser, Analyst, Interviewer, Evaluator, and voice-session signing.
 - CDK uploads `backend/config/interview_structure.json` and `backend/config/student_interview_profile.json`; the Interviewer reads the resulting S3 object keys and returns a runtime-context string.
 - `backend/voice_agent/` contains the FastAPI/Python WebSocket relay, container assets, and current `@aws/agentcore` CLI/CDK configuration. Account- and runtime-specific deployment state stays in ignored local files.
-- The frontend defaults to strict local mode: four HTTP routes under `http://localhost:8080/api` and voice at `ws://localhost:8080/`. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
+- The frontend defaults to strict local mode: five HTTP routes under `http://localhost:8080/api` and voice at `ws://localhost:8080/`. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
 - Local development runs `backend.local_server:app`. PDF parsing and interview configuration use repository files; Analyst, Evaluator, and Nova use the developer's active AWS credentials. Hosted mode selects its environment-configured endpoints with `VITE_RUNTIME_MODE=hosted`. AWS credentials must never enter `VITE_*` variables.
 - `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter has focused unit coverage and is deployed behind the hosted signed-session path.
 - The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
 - AgentCore uses AWS IAM/SigV4. In hosted mode, the voice-session Lambda signs five-minute WebSocket URLs with a role scoped to the configured runtime. `.bedrock_agentcore.yaml` remains ignored legacy configuration and is not the canonical deployment path.
-- The application intentionally has no end-user login. The browser calls one CloudFront API base URL; Origin Access Control signs requests to the five `AWS_IAM` Function URL origins, so direct anonymous Function URL calls are rejected. CORS allows the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing. Hosted frontend releases are built and published to the existing Amplify app by GitHub Actions; `amplify.yml` remains the repository's Amplify monorepo build definition rather than the active release mechanism.
+- Hosted frontend releases are built and published to the existing Amplify app by GitHub Actions; `amplify.yml` remains the repository's Amplify monorepo build definition rather than the active release mechanism.
 
 ## Hosted Architecture
 
@@ -46,16 +46,23 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - The browser requests a short-lived signed `wss://` URL from the voice-session Lambda before opening Amazon Bedrock AgentCore Runtime. It does not receive permanent AWS credentials or call Bedrock directly.
 - The Python voice relay runs in AgentCore Runtime. AgentCore is a serverless, AWS-managed container runtime, not an EC2 server maintained by this project.
 - The relay translates the agreed browser protocol, maintains connection-scoped state, and invokes `amazon.nova-2-sonic-v1:0` through Bedrock's bidirectional streaming API.
-- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in four pipeline Lambda functions. A fifth Lambda signs voice-session URLs. S3 stores the deployed interview configuration; object versioning is not enabled. CDK is the source of truth for backend infrastructure.
-- The deployed no-login design exposes one CloudFront API distribution while keeping all five Function URLs private behind OAC. The stack reduces exposure with one 55-second hosted model attempt, invocation/error/throttle alarms, an email-backed AWS cost budget, hosted model/session limits, and an emergency switch that sets function concurrency to zero. Optional normal concurrency caps default off until the account quota supports them.
+- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in four pipeline Lambda functions. A fifth Lambda signs voice-session URLs, and a sixth atomically admits hosted interviews. S3 stores the deployed interview configuration; DynamoDB stores only expiring admission metadata. CDK is the source of truth for backend infrastructure.
 
-The hosted Amplify, Lambda/S3, and AgentCore boundaries are deployed. Remaining operational work is to monitor the implemented cost controls, consider stronger request-level abuse protection if traffic grows, and verify reconnection, interruption, and shutdown edge cases whenever the voice path changes.
+The hosted Amplify, Lambda/S3, and AgentCore boundaries are deployed. Reconnection, interruption, and shutdown edge cases require verification whenever the voice path changes.
+
+## Security and Cost Controls
+
+- The application intentionally has no end-user login. The browser uses one CloudFront API distribution; Origin Access Control signs requests to six private `AWS_IAM` Function URL origins, so direct anonymous Function URL calls are rejected.
+- CORS allows the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing. An edge path/method allowlist rejects unsupported requests before origin invocation.
+- Hosted admission defaults to a hard global maximum of 100 interviews per UTC day and 5 per trusted viewer IP. A two-hour IP-bound opaque token authorizes bounded attempts for each pipeline stage.
+- Hosted workload controls include one 55-second model attempt, model input/output bounds, an eight-minute voice limit, invocation/error/throttle alarms, an email-backed AWS cost budget, and an emergency switch that sets function concurrency to zero. Optional normal concurrency caps default off until the account quota supports them.
+- Atomic admission prevents additional sessions beyond the configured global limit. CORS remains browser policy rather than authentication or rate limiting. Additional identity, challenge, or managed request filtering can be considered if usage requirements change.
 
 ## Automated Delivery
 
 - Pushes to `main` use path-filtered GitHub Actions workflows. Application changes run frontend/backend checks, reject stale revisions, deploy `MockInterviewStack`, then build and publish the matching React/Vite revision through the Amplify manual deployment API. Voice-relay changes test and deploy the existing AgentCore target separately; both release paths reject stale revisions and share the production concurrency group.
 - GitHub Actions obtains temporary AWS credentials through OIDC. The AWS trust is restricted to the immutable repository owner/repository identity and `refs/heads/main`; long-lived AWS access keys are not stored in GitHub.
-- Repository variables provide the deployment-role ARN, Amplify app identifier, and cost-alert email. These values must not be committed to documentation or source. Changes to the separate deployment-automation IAM/OIDC stack require an explicit bootstrap-stack update because its files are excluded from the application workflow.
+- Repository variables provide the deployment-role ARN, Amplify app identifier, cost-alert email, and optional hosted-limit values described under Security and Cost Controls. Environment-specific values must not be committed to documentation or source. Changes to the separate deployment-automation IAM/OIDC stack require an explicit bootstrap-stack update because its files are excluded from the application workflow.
 
 ## Contracts and Configuration
 
@@ -75,7 +82,7 @@ Known operational gaps must not be documented as completed behavior:
 
 - The three-main-question/three-follow-up sequence is model-directed and is not yet enforced by an application-side state machine.
 - Reconnection and full interruption/shutdown edge cases still require live regression checks when the voice protocol changes.
-- The no-login hosted design intentionally exposes one CloudFront API distribution. Private Function URLs, OAC signing, exact browser origins, one 55-second model attempt, alarms, an AWS cost budget, hosted text/output/session caps, and the emergency switch are implemented; optional normal concurrency caps require sufficient account quota, and stronger request-level abuse controls remain future hardening. CloudFront currently allows all methods and sends unmatched paths to the PDF Parser default origin; CORS is browser policy rather than authentication or rate limiting.
+- Hosted security and cost behavior must remain aligned with the dedicated Security and Cost Controls section above.
 - Hosted-only guardrails must be gated by `HOSTED_GUARDRAILS_ENABLED=true`. Pure local execution retains the 8,192-token model output budget and has no application-imposed eight-minute voice limit.
 
 ## Function Layouts
