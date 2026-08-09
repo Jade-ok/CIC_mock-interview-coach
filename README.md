@@ -173,7 +173,7 @@ The browser orchestrates the workflow and retains the active interview content. 
 
 ### Architecture Diagram
 
-![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.png)
+[![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.svg)](docs/Architecture/aws-architecture-diagram.svg)
 
 ### Resume and Job Analysis
 
@@ -270,6 +270,8 @@ The hosted application intentionally does not require an end-user login. Its sec
 - An emergency switch can set all hosted functions to zero concurrency. Optional normal concurrency caps remain disabled unless the AWS account has sufficient Lambda concurrency quota.
 
 Atomic admission enforces the configured global daily ceiling. CORS controls browser access, while alarms and budget notifications provide monitoring rather than an automatic spending stop. AWS WAF is not provisioned, avoiding its fixed baseline cost for the current small-scale deployment.
+
+[![Monitoring and Cost Controls](docs/Architecture/cost-control-diagram.png)](docs/Architecture/cost-control-diagram.png)
 
 ### Important Implementation Notes
 
