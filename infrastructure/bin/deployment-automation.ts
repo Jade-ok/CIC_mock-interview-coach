@@ -10,5 +10,7 @@ new DeploymentAutomationStack(app, 'MockInterviewDeploymentAutomationStack', {
     region: 'us-east-1',
   },
   githubOwner: 'Jade-ok',
+  githubOwnerId: '171692196',
   githubRepository: 'CIC_mock-interview-coach',
+  githubRepositoryId: '1325534595',
 });

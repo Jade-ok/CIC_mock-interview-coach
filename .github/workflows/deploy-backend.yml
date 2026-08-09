@@ -6,7 +6,11 @@ on:
     paths:
       - 'backend/functions/**'
       - 'backend/config/**'
+      - 'backend/requirements-dev.txt'
+      - 'backend/requirements-local.txt'
       - 'infrastructure/**'
+      - '!infrastructure/bin/deployment-automation.ts'
+      - '!infrastructure/lib/deployment-automation-stack.ts'
       - 'schemas/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
@@ -27,7 +31,6 @@ jobs:
     name: Test and deploy CDK stack
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: production
 
     steps:
       - name: Check out repository

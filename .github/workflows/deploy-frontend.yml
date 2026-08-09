@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'frontend/**'
-      - 'amplify.yml'
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
@@ -25,7 +24,6 @@ jobs:
     name: Build and publish Amplify site
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: production
 
     steps:
       - name: Check out repository

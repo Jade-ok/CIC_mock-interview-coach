@@ -4,7 +4,9 @@ import { Construct } from 'constructs';
 
 export interface DeploymentAutomationStackProps extends cdk.StackProps {
   readonly githubOwner: string;
+  readonly githubOwnerId: string;
   readonly githubRepository: string;
+  readonly githubRepositoryId: string;
 }
 
 /**
@@ -29,7 +31,9 @@ export class DeploymentAutomationStack extends cdk.Stack {
       clientIds: ['sts.amazonaws.com'],
     });
 
-    const subject = `repo:${props.githubOwner}/${props.githubRepository}:ref:refs/heads/main`;
+    const subject =
+      `repo:${props.githubOwner}@${props.githubOwnerId}/` +
+      `${props.githubRepository}@${props.githubRepositoryId}:ref:refs/heads/main`;
     const deployRole = new iam.Role(this, 'GitHubActionsDeployRole', {
       assumedBy: new iam.WebIdentityPrincipal(githubProvider.openIdConnectProviderArn, {
         StringEquals: {
