@@ -1,6 +1,6 @@
 # Project Summary
 
-> Active product and implementation summary. Last verified: 2026-08-08.
+> Active product and implementation summary. Last verified: 2026-08-09.
 
 Build a voice-based résumé deep-dive mock interview app for students and internship candidates.
 
@@ -82,11 +82,12 @@ The Evaluator contract requires:
 
 When invoked with a valid request, it generates:
 
-- a score for each question across concrete example, situation/action/result, link to job, and quantifiable outcome
+- a score for each question across concrete example, STAR structure, link to job, and quantifiable outcome
 - four aggregated dimension scores and an overall score
 - a readiness label
 - strengths
 - improvements
+- keywords covered and not covered
 - contextual advice
 - interview metadata passed through from the request
 
@@ -136,7 +137,7 @@ The sequence is:
 - follow-up answer
 - move to the next interview point
 
-Nova is instructed to end after the third follow-up answer and send the mapped conversation to the Evaluator. The frontend maps final transcript entries to `schemas/interviewer_output.json`.
+Nova is instructed to end after the third follow-up answer by calling `end_interview`. The frontend maps final transcript entries to `schemas/interviewer_output.json` and invokes the Evaluator.
 
 The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. The three-main-question/three-follow-up sequence is still directed by Nova's context rather than guaranteed by application-side state tracking.
 

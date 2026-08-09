@@ -1,6 +1,6 @@
 # Guide Panel v2 — Design
 
-> Maintained design. Last verified against the current frontend: 2026-08-08. This document supersedes the earlier predictive-question Guide Panel designs.
+> Maintained design. Last verified against the current frontend: 2026-08-09. This document supersedes the earlier predictive-question Guide Panel designs.
 
 ## Overview
 

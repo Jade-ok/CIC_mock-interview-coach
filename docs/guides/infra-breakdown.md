@@ -50,7 +50,7 @@ One stack defines the HTTP backend and interview configuration. The AgentCore vo
 | PDF Parser Lambda | `PdfParserFunction` | Extracts text from uploaded resumes using pypdf |
 | Voice Session Lambda | `VoiceSessionFunction` | Creates five-minute signed AgentCore WebSocket URLs |
 
-Every Lambda gets a private **Function URL** with `AWS_IAM` authentication. A single CloudFront distribution uses Origin Access Control to sign requests to those origins. Local requests reach the same handler logic through `backend.local_server:app`. The application intentionally has no end-user login, so the stack applies exact hosted browser origins, alarms, a monthly cost budget, workload limits, an emergency switch, and scoped IAM roles to the public CloudFront surface.
+Every Lambda gets a private **Function URL** with `AWS_IAM` authentication. A single CloudFront distribution uses Origin Access Control to sign requests to those origins. Local requests reach the same handler logic through `backend.local_server:app`. The application intentionally has no end-user login, so the stack applies exact hosted browser origins, alarms, a monthly cost budget, workload limits, an emergency switch, and scoped IAM roles to the public CloudFront surface. CloudFront currently accepts all HTTP methods, and its default behavior sends unmatched paths to PDF Parser; handler validation still rejects invalid requests, but this remains a request-surface hardening opportunity. CORS controls browser access and is not authentication or rate limiting.
 
 The names above are CDK construct IDs. Because `functionName` is not set, CloudFormation generates the deployed physical Lambda names.
 
@@ -130,6 +130,8 @@ Two automatic release paths respond to matching changes on `main`:
 
 The workflows obtain short-lived AWS credentials through GitHub OIDC. Application releases share one concurrency group, reject stale revisions, and deploy the backend before publishing the matching frontend. The deployment role trust is restricted to this repository's `main` branch, and permanent AWS access keys are not stored in repository configuration.
 
+The application workflow requires repository variables for the deployment-role ARN, Amplify app ID, and cost-alert email. Changes to the separate deployment-automation IAM/OIDC stack are intentionally excluded from the application workflow and require an explicit deployment of that bootstrap stack.
+
 ---
 
 ## Local Development Gotchas
@@ -139,5 +141,6 @@ The workflows obtain short-lived AWS credentials through GitHub OIDC. Applicatio
 | Missing AWS identity at startup | Configure an AWS profile or temporary environment credentials, then confirm with `aws sts get-caller-identity`. |
 | Model access error | Confirm the active AWS identity can invoke GPT OSS 120B and Nova 2 Sonic in `us-east-1`. |
 | Python import error | Install `backend/requirements-local.txt` in the active virtual environment. |
-| Port 8080 is already in use | Run `lsof -nP -iTCP:8080 -sTCP:LISTEN`, stop the previous local backend, and retry. The frontend is fixed to port 8080 in local mode. |
-| Upload rejected | The frontend and backend both enforce the 4 MiB (4,194,304-byte) PDF limit. |
+| Port 8080 is already in use | Run `lsof -nP -iTCP:8080 -sTCP:LISTEN`, stop the previous local backend, and retry. The backend uses port 8080; Vite normally uses port 5173. |
+| Hosted-mode CORS failure from local Vite | Use exactly `http://localhost:5173`; stop the existing Vite listener rather than allowing a fallback to port 5174. |
+| Upload rejected | The frontend and backend both enforce the 4 MiB (4,194,304 bytes) PDF limit. |

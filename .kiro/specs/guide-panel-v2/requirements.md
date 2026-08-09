@@ -1,6 +1,6 @@
 # Guide Panel v2 — Requirements
 
-> Maintained requirements. Last verified against `frontend/src/components/GuidePanel.tsx`: 2026-08-08. This specification supersedes `interview-guide-star-cards` and `guide-panel-ux-improvements`.
+> Maintained requirements. Last verified against `frontend/src/components/GuidePanel.tsx`: 2026-08-09. This specification supersedes `interview-guide-star-cards` and `guide-panel-ux-improvements`.
 
 ## Purpose
 

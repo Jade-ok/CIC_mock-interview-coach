@@ -1,6 +1,6 @@
 # Frontend Interview Tasks
 
-> Maintained implementation checklist. Last verified: 2026-08-08.
+> Maintained implementation checklist. Last verified: 2026-08-09.
 
 - [x] 1. Create the Vite, React, and TypeScript frontend structure.
   - Add component, hook, service, reducer, type, utility, worklet, and test directories.
@@ -24,7 +24,7 @@
 
 - [x] 5. Implement Upload Screen.
   - Support file selection and drag-and-drop.
-  - Enforce PDF MIME type and the shared 4 MB frontend/backend limit.
+  - Enforce PDF MIME type and the shared 4 MiB (4,194,304 bytes) frontend/backend limit.
   - Require job-description text.
   - Store the submitted inputs for Waiting Room.
 

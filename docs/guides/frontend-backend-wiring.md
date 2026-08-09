@@ -1,15 +1,15 @@
 # Frontend–Backend Wiring Status
 
-> Current-state guide. Last verified: 2026-08-08.
+> Current-state guide. Last verified: 2026-08-09.
 
 ## Hosted Architecture
 
 ```text
 React/Vite browser on AWS Amplify Hosting
-  ├─ HTTPS ─> PDF Parser / Analyst / Interviewer / Evaluator Lambdas
-  └─ HTTPS ─> Voice Session Lambda ─> short-lived signed WSS
-                                      └─ Amazon Bedrock AgentCore Runtime
-                               └─ Python voice relay ─> Nova 2 Sonic
+  └─ HTTPS ─> public CloudFront API distribution (OAC)
+                ├─> private PDF Parser / Analyst / Interviewer / Evaluator Function URLs
+                └─> private Voice Session Function URL ─> short-lived signed WSS
+                                                        └─ AgentCore relay ─> Nova 2 Sonic
 
 CDK ─> five Lambdas + S3 interview configuration
 ```
@@ -22,7 +22,7 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 
 ## What Exists Today
 
-- The CDK stack defines five private IAM-protected Lambda Function URLs, one CloudFront OAC gateway, and an S3 configuration bucket.
+- The CDK stack defines five private IAM-protected Lambda Function URLs, one CloudFront OAC distribution, and an S3 configuration bucket.
 - The Python relay runs locally and on an AgentCore Runtime. Environment-specific runtime state is not tracked in this repository.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify hosts the production React build. Its app identifier, domain, and environment-specific endpoint values are not tracked in this documentation.
@@ -83,7 +83,7 @@ npm ci
 npm run dev
 ```
 
-PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity. With `VITE_RUNTIME_MODE=local` (the default), `VITE_API_BASE_URL` is ignored and no deployed endpoint is required. Setting the mode explicitly to `hosted` exercises the bounded hosted services. The additional hosted text/output/session guardrails are disabled in the pure local path; local model calls retain the 8,192-token output budget and local voice has no application-imposed eight-minute limit. The product-wide 5,000-character job-description and 4 MiB PDF limits still apply, as do AWS quotas. Never commit account identifiers or credentials.
+PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity. With `VITE_RUNTIME_MODE=local` (the default), `VITE_API_BASE_URL` is ignored and no deployed endpoint is required. Setting the mode explicitly to `hosted` exercises the bounded hosted services. Hosted-mode browser testing must use `http://localhost:5173`, the exact local origin allowed by hosted CORS; stop another Vite process instead of accepting Vite's fallback to port 5174. The additional hosted text/output/session guardrails are disabled in the pure local path; local model calls retain the 8,192-token output budget and local voice has no application-imposed eight-minute limit. The product-wide 5,000-character job-description and 4 MiB PDF limits still apply, as do AWS quotas. Never commit account identifiers or credentials.
 
 The hosted Amplify build requests a short-lived signed WebSocket URL from the voice-session Lambda. Permanent AWS credentials are never Vite variables because `VITE_*` values are bundled into browser code.
 
@@ -104,7 +104,7 @@ Request:
 
 Response envelope: `{"status": "success", "data": {...}}` or `{"status": "error", "error": "..."}`.
 
-The frontend and backend both enforce a 4 MiB (4,194,304-byte) PDF limit so oversized files are rejected before upload.
+The frontend and backend both enforce a 4 MiB (4,194,304 bytes) PDF limit so oversized files are rejected before upload.
 
 ### Analyst
 
@@ -139,7 +139,7 @@ Canonical completed-interview request shape (`schemas/interviewer_output.json`):
 }
 ```
 
-The Evaluator returns the feedback object directly in the Function URL body; it does not wrap success as `{status, data}`.
+The Evaluator returns the feedback object directly through the CloudFront `/evaluator` response body; it does not wrap success as `{status, data}`.
 
 The frontend retains the full Analyst output, pairs the final transcript into question-answer turns, sends this canonical request, and consumes the direct feedback body.
 
@@ -163,7 +163,7 @@ In the hosted architecture, the public browser requests a short-lived signed Age
 - The submitted PDF/JD and complete Analyst output are retained in active session state for downstream calls.
 - Feedback offers **Retry with This Resume**, which preserves the uploaded inputs and analysis, and **Retry with New Resume**, which resets the flow to upload.
 
-The hosted application intentionally has no end-user login. Its public CloudFront gateway and model-backed operations require cost monitoring and tightly scoped infrastructure roles; the raw Function URLs are private.
+The hosted application intentionally has no end-user login. Its public CloudFront API distribution and model-backed operations require cost monitoring and tightly scoped infrastructure roles; the raw Function URLs are private.
 
 ## Verification Checklist
 

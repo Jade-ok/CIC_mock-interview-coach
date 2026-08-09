@@ -1,6 +1,6 @@
 # Frontend Interview Requirements
 
-> Maintained product requirements. Last verified: 2026-08-08.
+> Maintained product requirements. Last verified: 2026-08-09.
 
 ## Scope
 
@@ -10,7 +10,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 
 1. The Upload Screen must accept a resume PDF and job-description text.
 2. A file with a MIME type other than `application/pdf` must be rejected.
-3. PDFs larger than 4 MB must be rejected before upload, matching the PDF Parser's backend limit.
+3. PDFs larger than 4 MiB (4,194,304 bytes) must be rejected before upload, matching the PDF Parser's backend limit.
 4. The Submit button must remain disabled until both a file and non-empty job-description text exist.
 5. Submission must store the actual `File` and job-description text in session state.
 6. Job-description text must be capped at 5,000 characters in every runtime mode.
@@ -61,7 +61,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 2. The Evaluator request must match `schemas/interviewer_output.json`.
 3. Conversation turns must contain `point_id`, `turn_type`, `question`, and `answer`.
 4. Nova is prompted for three main questions and one adaptive follow-up per main question, but the frontend does not enforce that sequence; six captured pairs are marked completed and fewer are marked ended early.
-5. The Evaluator response must be consumed as the direct Function URL response body.
+5. The Evaluator response must be consumed as the direct response object from the CloudFront `/evaluator` route.
 
 ## 6. Connection Handling
 
@@ -78,7 +78,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 2. The current application intentionally has no end-user login.
 3. The signed AgentCore URL authenticates the Voice Session Lambda role to AgentCore; it is not an end-user login mechanism.
 4. Permanent AWS credentials must never be embedded in browser code.
-5. The browser uses one public CloudFront API base URL. CloudFront OAC signs requests to five private `AWS_IAM` Function URLs, and CORS is restricted to the configured Amplify origin and local Vite origin.
+5. The browser uses one public CloudFront API base URL. CloudFront OAC signs requests to five private `AWS_IAM` Function URLs, and CORS is restricted to the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing.
 6. Hosted endpoint values must be supplied through environment configuration rather than committed source.
 7. The hosted application must support end-to-end verification from its Amplify origin.
 8. Hosted Lambdas must have invocation/error/throttle alarms and an AWS monthly cost budget with email notifications. A zero-concurrency emergency switch must be available. Optional normal concurrency caps must remain disabled unless the target AWS account quota supports them.

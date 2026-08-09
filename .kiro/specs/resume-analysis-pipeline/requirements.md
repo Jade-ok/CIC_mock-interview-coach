@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-08. In the hosted architecture, an Amplify-hosted React client invokes this CDK-managed Lambda pipeline; live voice uses short-lived signed WSS to AgentCore rather than direct browser-to-Bedrock access.
+> Maintained requirements. Last verified: 2026-08-09. In the hosted architecture, an Amplify-hosted React client invokes this CDK-managed Lambda pipeline through the CloudFront OAC distribution; live voice uses short-lived signed WSS to AgentCore rather than direct browser-to-Bedrock access.
 
 ## Introduction
 

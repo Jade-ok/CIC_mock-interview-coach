@@ -1,6 +1,6 @@
 # Design Document
 
-> Maintained design. Last verified: 2026-08-08.
+> Maintained design. Last verified: 2026-08-09.
 
 ## Overview
 
@@ -12,16 +12,15 @@ All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The
 
 ### High-Level Flow
 
-```
-┌─────────────┐     ┌───────────┐     ┌────────────────┐     ┌────────────────┐
-│ Function URL│────▶│ Validator │────▶│ Prompt Builder │────▶│ Bedrock Client │
-└─────────────┘     └───────────┘     └────────────────┘     └────────────────┘
-                                                                       │
-                                                                       ▼
-┌─────────────┐     ┌────────────────┐     ┌──────────────────────────────────┐
-│  Response   │◀────│ Response       │◀────│ Scorer (aggregate + classify)    │
-│  (JSON)     │     │ Assembler      │     └──────────────────────────────────┘
-└─────────────┘     └────────────────┘
+```text
+CloudFront /evaluator route
+  -> private AWS_IAM Function URL
+  -> validator
+  -> prompt builder
+  -> Bedrock Mantle Chat Completions (GPT OSS 120B)
+  -> scorer
+  -> response assembler
+  -> JSON response through CloudFront
 ```
 
 ### Module Structure
@@ -42,7 +41,7 @@ backend/functions/evaluator/
 
 ### 1. lambda_handler.py (Orchestrator)
 
-**Responsibility:** Entry point for Lambda invocation via Function URL. Parses the event, delegates to each module in sequence, and returns the final HTTP response.
+**Responsibility:** Entry point for the CloudFront `/evaluator` route's private Function URL origin. Parses the event, delegates to each module in sequence, and returns the final HTTP response.
 
 ```python
 def handler(event, context):
@@ -86,7 +85,7 @@ def handler(event, context):
 **Responsibility:** Validates the incoming request payload against the expected schema.
 
 **Key behaviors:**
-- Parses JSON body from the Lambda Function URL event format
+- Parses the JSON body from the Function URL event format received through CloudFront OAC
 - Validates presence of conversation, interview_metadata, and analyst_output
 - Validates conversation length: minimum 1, maximum 6 question-answer pairs
 - Validates each turn contains required fields
