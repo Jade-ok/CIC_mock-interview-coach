@@ -1,6 +1,5 @@
 .contextual-advice {
-  padding: var(--section-gap) 0;
-  border-top: 1px solid var(--bg-control);
+  padding: 32px 0;
 }
 
 .contextual-advice__heading {

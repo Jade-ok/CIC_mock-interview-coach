@@ -4,6 +4,15 @@
   padding: var(--card-padding);
 }
 
+.dimension-card--interactive {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dimension-card--interactive:hover {
+  background: var(--bg-control);
+}
+
 .dimension-card__header {
   display: flex;
   justify-content: space-between;
@@ -28,4 +37,11 @@
   font-size: var(--font-small);
   color: var(--text-secondary);
   margin: 0 0 12px;
+}
+
+.dimension-card__rationale {
+  font-size: var(--font-small);
+  color: var(--accent-green);
+  margin: 12px 0 0;
+  line-height: 1.5;
 }

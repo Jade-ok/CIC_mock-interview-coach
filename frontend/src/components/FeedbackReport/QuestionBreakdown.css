@@ -1,6 +1,5 @@
 .question-breakdown {
-  padding: var(--section-gap) 0;
-  border-top: 1px solid var(--bg-control);
+  padding: 48px 0 32px;
 }
 
 .question-breakdown__header {
@@ -18,4 +17,11 @@
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.5;
+}
+
+.question-breakdown__hint {
+  font-size: var(--font-small);
+  color: var(--text-tertiary);
+  margin: 8px 0 0;
+  text-align: right;
 }

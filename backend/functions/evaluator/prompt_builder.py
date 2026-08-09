@@ -32,8 +32,8 @@ Scoring guide (co-op student calibration):
 FEEDBACK STRUCTURE:
 - per_question_scores.feedback.strength: One sentence about what the student did well in THAT specific answer. Reference what they said.
 - per_question_scores.feedback.improvement: One sentence with one actionable tip to improve THAT specific answer.
-- "strengths": 2-3 sentences summarizing OVERALL patterns of strength across the entire interview. Do NOT repeat per-question feedback. Think: "Across all your answers, you consistently..."
-- "improvements": 2-3 sentences summarizing OVERALL patterns to work on. Do NOT repeat per-question feedback. Think: "A common pattern across your answers is..."
+- "strengths": A single summary paragraph (2-3 sentences total, max 5 lines when displayed) capturing the overall patterns of strength across ALL answers. Do NOT list per-question feedback. Reflect the full interview in a concise summary.
+- "improvements": A single summary paragraph (2-3 sentences total, max 5 lines when displayed) capturing the overall patterns to work on across ALL answers. Do NOT list per-question feedback. Reflect the full interview in a concise summary.
 - "keywords_covered": List job-description skills the student mentioned or demonstrated.
 - "keywords_not_covered": List job-description skills the student did NOT mention.
 - "contextual_advice": Advice about resume experiences not discussed and job gaps.

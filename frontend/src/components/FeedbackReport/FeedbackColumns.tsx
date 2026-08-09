@@ -5,25 +5,21 @@ interface FeedbackColumnsProps {
   improvements: string[];
 }
 
+/**
+ * Overall Summary section — combines strengths and improvements into
+ * a concise summary paragraph instead of two separate lists.
+ */
 export function FeedbackColumns({ strengths, improvements }: FeedbackColumnsProps) {
-  const topStrengths = strengths.slice(0, 3);
-  const topImprovements = improvements.slice(0, 3);
+  // Combine into a single summary block — 1 strength + 1 improvement for brevity
+  const summary = [strengths[0], improvements[0]].filter(Boolean);
 
   return (
-    <section className="feedback-columns">
-      <div className="feedback-columns__column">
-        <h2 className="feedback-columns__heading">What you did well</h2>
-        {topStrengths.map((item, i) => (
-          <p key={i} className="feedback-columns__strength">{item}</p>
+    <section className="feedback-summary">
+      <h2 className="feedback-summary__heading">Overall Summary</h2>
+      <div className="feedback-summary__body">
+        {summary.map((sentence, i) => (
+          <p key={i} className="feedback-summary__sentence">{sentence}</p>
         ))}
-      </div>
-      <div className="feedback-columns__column">
-        <h2 className="feedback-columns__heading">What to work on next</h2>
-        <ul className="feedback-columns__list">
-          {topImprovements.map((item, i) => (
-            <li key={i} className="feedback-columns__improvement">{item}</li>
-          ))}
-        </ul>
       </div>
     </section>
   );
