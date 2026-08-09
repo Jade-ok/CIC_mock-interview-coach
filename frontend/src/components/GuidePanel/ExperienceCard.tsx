@@ -13,6 +13,7 @@ interface ExperienceCardProps {
   title: string;
   classification: StarClassification;
   keywordChips: string[];
+  animationDelay?: string;
 }
 
 export function ExperienceCard({
@@ -20,9 +21,14 @@ export function ExperienceCard({
   title,
   classification,
   keywordChips,
+  animationDelay,
 }: ExperienceCardProps) {
   return (
-    <li className="star-card" data-testid="experience-card">
+    <li
+      className="star-card guide-panel__card-entry"
+      data-testid="experience-card"
+      style={animationDelay ? { animationDelay } : undefined}
+    >
       <span className="star-card__label">Experience {index}</span>
 
       <p className="star-card__topic">{title}</p>

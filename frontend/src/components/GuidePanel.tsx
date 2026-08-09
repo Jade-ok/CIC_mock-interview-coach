@@ -89,18 +89,14 @@ export function GuidePanel({ analystOutput }: GuidePanelProps) {
               <span className="guide-panel__section-title">Experiences to Prepare</span>
               <ul className="guide-panel__list" data-testid="experience-card-list">
                 {panelData.experienceCards.map((card, i) => (
-                  <li
+                  <ExperienceCard
                     key={card.exp.experience_id}
-                    className="guide-panel__card-entry"
-                    style={{ animationDelay: `${(i + 1) * 120}ms` }}
-                  >
-                    <ExperienceCard
-                      index={card.index}
-                      title={card.exp.title}
-                      classification={card.classification}
-                      keywordChips={card.chips}
-                    />
-                  </li>
+                    index={card.index}
+                    title={card.exp.title}
+                    classification={card.classification}
+                    keywordChips={card.chips}
+                    animationDelay={`${(i + 1) * 120}ms`}
+                  />
                 ))}
               </ul>
             </div>

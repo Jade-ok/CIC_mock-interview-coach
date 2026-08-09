@@ -213,6 +213,23 @@ export function sessionReducer(
         textInputState: 'idle',
       };
 
+    case 'INTERVIEW_ENDING': {
+      // Flush any pending livePartial into transcript before ending
+      const ending = { ...state, turnState: 'ended' as const };
+      if (state.livePartial && state.livePartial.role === 'interviewer') {
+        return {
+          ...ending,
+          transcript: [...state.transcript, {
+            role: state.livePartial.role,
+            text: state.livePartial.text,
+            timestamp: new Date().toISOString(),
+          }],
+          livePartial: null,
+        };
+      }
+      return { ...ending, livePartial: null };
+    }
+
     case 'END_INTERVIEW':
       return {
         ...state,

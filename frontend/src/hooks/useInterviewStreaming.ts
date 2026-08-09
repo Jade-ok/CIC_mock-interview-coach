@@ -141,6 +141,9 @@ export function useInterviewStreaming({
 
   // --- Sub-tasks 2, 3, 4: Handle WS messages ---
   const handleWsMessage = useCallback((event: NovaSonicOutputEvent) => {
+    if (event.type !== 'audio_output') {
+      console.log('[DIAG] WS event:', event.type, event.type === 'tool_use' ? event.payload : '');
+    }
     const am = audioManagerRef.current;
 
     switch (event.type) {
@@ -195,8 +198,11 @@ export function useInterviewStreaming({
 
       // Sub-task 6: tool_use → handle end_interview
       case 'tool_use': {
+        console.log('[DIAG] tool_use received:', event.payload.toolName);
         if (event.payload.toolName === 'end_interview' && !endingRef.current) {
+          console.log('[DIAG] end_interview detected, dispatching INTERVIEW_ENDING');
           endingRef.current = true;
+          dispatchRef.current({ type: 'INTERVIEW_ENDING' });
           const lifecycleId = lifecycleIdRef.current;
 
           // Auto end sequence: wait for playback to finish → session_end → disconnect → feedback

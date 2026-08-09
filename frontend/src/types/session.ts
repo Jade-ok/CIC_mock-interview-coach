@@ -1,7 +1,7 @@
 import type { EvaluatorOutput } from './evaluator';
 
 export type InterviewPhase = 'upload' | 'waiting' | 'interview' | 'feedback';
-export type TurnState = 'ai_speaking' | 'user_turn' | 'idle';
+export type TurnState = 'ai_speaking' | 'user_turn' | 'idle' | 'ended';
 export type InputMode = 'voice' | 'text_only';
 export type TextInputState = 'idle' | 'composing';
 
@@ -83,6 +83,7 @@ export type SessionAction =
   | { type: 'TEXT_INPUT_START' }
   | { type: 'TEXT_INPUT_CLEAR' }
   | { type: 'END_INTERVIEW'; payload: { reason: 'auto' | 'manual' } }
+  | { type: 'INTERVIEW_ENDING' }
   | { type: 'AGENT3_LOADING' }
   | { type: 'AGENT3_SUCCESS'; payload: EvaluatorOutput }
   | { type: 'AGENT3_FAILED'; payload: { message: string; retryable?: boolean } }

@@ -259,11 +259,11 @@ export function WaitingRoom() {
               <div className="waiting-room__spinner-circle" />
             </div>
             <p className="waiting-room__message">
-              Preparing your interview
+              We are preparing your interview
             </p>
             <div className="waiting-room__status">
-              <StatusItem label="Reading your resume" ready={state.agent1Ready} />
-              <StatusItem label="Connecting to your interviewer" ready={state.wsReady} />
+              <StatusItem label="Reading your resume 📑" ready={state.agent1Ready} />
+              <StatusItem label="Connecting to your interviewer 🤖" ready={state.wsReady} />
             </div>
           </>
         ) : (

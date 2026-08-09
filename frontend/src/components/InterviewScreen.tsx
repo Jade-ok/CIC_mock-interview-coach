@@ -107,26 +107,16 @@ function PracticeModeToggle({
   const subtitle = practiceMode ? 'with guide & captions' : 'no assistance';
   const ariaLabel = practiceMode ? 'Switch to Live Mode' : 'Switch to Practice Mode';
 
-  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(true); // start visible
   const [tooltipText, setTooltipText] = useState(subtitle);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasAutoShownRef = useRef(false);
 
-  // Cleanup timer on unmount
+  // Auto-hide after initial mount (handles StrictMode correctly)
   useEffect(() => {
+    timerRef.current = setTimeout(() => setTooltipVisible(false), 2500);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, []);
-
-  // Auto-show once on mount (interview entry)
-  useEffect(() => {
-    if (hasAutoShownRef.current) return;
-    hasAutoShownRef.current = true;
-    setTooltipText(subtitle);
-    setTooltipVisible(true);
-    timerRef.current = setTimeout(() => setTooltipVisible(false), 2500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClick = useCallback(() => {
@@ -168,7 +158,7 @@ function EndButton({ onEnd }: { onEnd: () => void }) {
       aria-label="End"
       data-testid="end-button"
     >
-      End
+      Finish Interview
     </button>
   );
 }
@@ -385,7 +375,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     setRecording((prev) => !prev);
   }, [state.turnState]);
 
-  const micDisabled = state.turnState === 'ai_speaking';
+  const micDisabled = state.turnState === 'ai_speaking' || state.turnState === 'ended';
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
