@@ -103,15 +103,20 @@ function PracticeModeToggle({
   practiceMode: boolean;
   onToggle: () => void;
 }) {
+  const label = practiceMode ? 'Practice Mode' : 'Live Mode';
+  const subtitle = practiceMode ? 'with guide & captions' : 'clean, no assistance';
+  const ariaLabel = practiceMode ? 'Switch to Live Mode' : 'Switch to Practice Mode';
+
   return (
     <button
       className={`control-bar__practice-toggle ${practiceMode ? 'control-bar__practice-toggle--on' : ''}`}
       onClick={onToggle}
       type="button"
-      aria-label="Practice Mode toggle"
+      aria-label={ariaLabel}
       data-testid="practice-mode-toggle"
     >
-      Practice Mode {practiceMode ? '●' : '○'}
+      <span className="control-bar__toggle-label">{label}</span>
+      <span className="control-bar__toggle-subtitle">{subtitle}</span>
     </button>
   );
 }
@@ -670,16 +675,38 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           background-color: transparent;
           border: 1px solid var(--color-text-secondary, #A0A0A5);
           border-radius: 8px;
-          padding: 8px 14px;
-          font-size: 13px;
-          color: var(--color-text-secondary, #A0A0A5);
+          padding: 6px 14px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
           cursor: pointer;
-          transition: border-color 0.2s, color 0.2s;
+          transition: border-color 0.2s;
         }
 
         .control-bar__practice-toggle--on {
           border-color: var(--color-accent, #9AE05C);
+        }
+
+        .control-bar__toggle-label {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-text-secondary, #A0A0A5);
+          transition: color 0.2s;
+        }
+
+        .control-bar__practice-toggle--on .control-bar__toggle-label {
           color: var(--color-accent, #9AE05C);
+        }
+
+        .control-bar__toggle-subtitle {
+          font-size: 11px;
+          color: rgba(160, 160, 165, 0.7);
+          transition: color 0.2s;
+        }
+
+        .control-bar__practice-toggle--on .control-bar__toggle-subtitle {
+          color: rgba(154, 224, 92, 0.6);
         }
 
         .control-bar__end-btn {
