@@ -12,6 +12,7 @@ export function DimensionScoresGrid({ dimensions, perQuestionScores }: Dimension
   return (
     <section className="dimension-scores-grid">
       <h2 className="dimension-scores-grid__title">How your answers scored</h2>
+      <p className="dimension-scores-grid__hint">Tap a card to see why</p>
       <div className="dimension-scores-grid__grid">
         {DIMENSION_KEYS.map((key) => {
           const dimKey = key as keyof OverallScores['dimensions'];

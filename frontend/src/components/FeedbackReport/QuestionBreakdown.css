@@ -18,3 +18,10 @@
   margin: 0;
   line-height: 1.5;
 }
+
+.question-breakdown__hint {
+  font-size: var(--font-small);
+  color: var(--text-tertiary);
+  margin: 8px 0 0;
+  text-align: right;
+}
