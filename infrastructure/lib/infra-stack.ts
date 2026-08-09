@@ -6,8 +6,7 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
-const CLAUDE_MODEL_ID = 'global.anthropic.claude-sonnet-4-6';
-const CLAUDE_FOUNDATION_MODEL_ID = 'anthropic.claude-sonnet-4-6';
+const TEXT_MODEL_ID = 'openai.gpt-oss-120b';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -46,14 +45,8 @@ export class InfraStack extends cdk.Stack {
       'test_event.json',
     ];
 
-    const claudeBedrockResources = [
-      `arn:${cdk.Aws.PARTITION}:bedrock:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:inference-profile/${CLAUDE_MODEL_ID}`,
-      `arn:${cdk.Aws.PARTITION}:bedrock:${cdk.Aws.REGION}::foundation-model/${CLAUDE_FOUNDATION_MODEL_ID}`,
-      `arn:${cdk.Aws.PARTITION}:bedrock:::foundation-model/${CLAUDE_FOUNDATION_MODEL_ID}`,
-    ];
-
     // ------------------------------------------------------------------
-    // 1. Analyst Lambda — Bedrock (Claude)
+    // 1. Analyst Lambda — Bedrock Mantle (GPT OSS 120B)
     // ------------------------------------------------------------------
     const analystFn = new lambda.Function(this, 'AnalystFunction', {
       runtime: lambda.Runtime.PYTHON_3_12,
@@ -62,18 +55,35 @@ export class InfraStack extends cdk.Stack {
         { exclude: functionAssetExcludes }
       ),
       handler: 'handler.lambda_handler',
-      // One initial Bedrock call plus one schema-recovery call may each use
+      // One initial Mantle call plus one schema-recovery call may each use
       // the Analyst client's 120-second read timeout.
       timeout: cdk.Duration.seconds(300),
       memorySize: 512,
     });
 
-    analystFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['bedrock:InvokeModel'],
-        resources: claudeBedrockResources,
-      })
-    );
+    const grantMantleInference = (fn: lambda.Function) => {
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: ['bedrock-mantle:CreateInference'],
+          resources: ['*'],
+          conditions: {
+            StringEquals: { 'bedrock-mantle:Model': TEXT_MODEL_ID },
+          },
+        })
+      );
+      fn.addToRolePolicy(
+        new iam.PolicyStatement({
+          actions: [
+            'bedrock-mantle:GetProject',
+            'bedrock-mantle:ListProjects',
+            'bedrock-mantle:ListTagsForResource',
+          ],
+          resources: ['*'],
+        })
+      );
+    };
+
+    grantMantleInference(analystFn);
 
     const analystUrl = analystFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
@@ -81,7 +91,7 @@ export class InfraStack extends cdk.Stack {
     });
 
     // ------------------------------------------------------------------
-    // 2. Evaluator Lambda — Bedrock (Claude)
+    // 2. Evaluator Lambda — Bedrock Mantle (GPT OSS 120B)
     // ------------------------------------------------------------------
     const evaluatorFn = new lambda.Function(this, 'EvaluatorFunction', {
       runtime: lambda.Runtime.PYTHON_3_12,
@@ -97,17 +107,12 @@ export class InfraStack extends cdk.Stack {
         }
       ),
       handler: 'lambda_handler.handler',
-      // The Evaluator performs at most two 120-second Bedrock attempts.
+      // The Evaluator performs at most two 120-second Mantle attempts.
       timeout: cdk.Duration.seconds(300),
       memorySize: 512,
     });
 
-    evaluatorFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['bedrock:InvokeModel'],
-        resources: claudeBedrockResources,
-      })
-    );
+    grantMantleInference(evaluatorFn);
 
     const evaluatorUrl = evaluatorFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,

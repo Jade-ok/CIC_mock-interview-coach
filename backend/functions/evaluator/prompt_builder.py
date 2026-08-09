@@ -1,4 +1,4 @@
-"""Prompt construction for the Evaluator agent's Bedrock Converse API call."""
+"""Prompt construction for the Evaluator's Bedrock Mantle request."""
 
 try:
     from .schemas import EVALUATION_TOOL_SCHEMA
@@ -43,18 +43,18 @@ Use supportive, constructive, student-friendly language in all feedback."""
 
 
 def build(conversation: list, analyst_output: dict) -> tuple:
-    """Build the system prompt, messages, and tool config for Bedrock Converse API.
+    """Build the system prompt, messages, and OpenAI-compatible tool config.
 
     Args:
         conversation: List of turn dicts with point_id, turn_type, question, answer.
         analyst_output: Structured JSON object from the Analyst agent.
 
     Returns:
-        Tuple of (system, messages, tool_config) ready for Bedrock Converse API.
+        Tuple of (system, messages, tool_config) for Bedrock Mantle.
     """
-    system = [{"text": SYSTEM_PROMPT}]
+    system = SYSTEM_PROMPT
     messages = [
-        {"role": "user", "content": [{"text": _format_user_message(conversation, analyst_output)}]}
+        {"role": "user", "content": _format_user_message(conversation, analyst_output)}
     ]
     tool_config = _build_tool_config()
     return system, messages, tool_config
@@ -165,14 +165,20 @@ def _format_user_message(conversation: list, analyst_output: dict) -> str:
 
 
 def _build_tool_config() -> dict:
-    """Build the toolConfig dict for Bedrock Converse API with forced tool choice."""
+    """Build an OpenAI-compatible forced submit_evaluation function."""
     return {
         "tools": [
             {
-                "toolSpec": EVALUATION_TOOL_SCHEMA
+                "type": "function",
+                "function": {
+                    "name": EVALUATION_TOOL_SCHEMA["name"],
+                    "description": EVALUATION_TOOL_SCHEMA["description"],
+                    "parameters": EVALUATION_TOOL_SCHEMA["inputSchema"]["json"],
+                },
             }
         ],
-        "toolChoice": {
-            "tool": {"name": "submit_evaluation"}
-        }
+        "tool_choice": {
+            "type": "function",
+            "function": {"name": "submit_evaluation"},
+        },
     }

@@ -45,7 +45,7 @@ def _valid_event(num_turns=2):
 
 
 def _mock_llm_response(num_questions=2):
-    """Create a mock LLM tool_use response."""
+    """Create mock parsed LLM function arguments."""
     return {
         "per_question_scores": [
             {

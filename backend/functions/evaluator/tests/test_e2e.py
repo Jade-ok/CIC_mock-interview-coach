@@ -18,7 +18,7 @@ VALID_READINESS_LABELS = [
     "Needs clearer examples",
 ]
 
-# Realistic LLM response simulating what Bedrock would return via tool_use
+# Realistic parsed function arguments returned by the Bedrock client
 MOCK_LLM_RESPONSE = {
     "per_question_scores": [
         {

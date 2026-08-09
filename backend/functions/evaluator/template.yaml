@@ -28,11 +28,17 @@ Resources:
         - Statement:
             - Effect: Allow
               Action:
-                - bedrock:InvokeModel
-              Resource:
-                - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/global.anthropic.claude-sonnet-4-6'
-                - !Sub 'arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/anthropic.claude-sonnet-4-6'
-                - !Sub 'arn:${AWS::Partition}:bedrock:::foundation-model/anthropic.claude-sonnet-4-6'
+                - bedrock-mantle:CreateInference
+              Resource: '*'
+              Condition:
+                StringEquals:
+                  bedrock-mantle:Model: openai.gpt-oss-120b
+            - Effect: Allow
+              Action:
+                - bedrock-mantle:GetProject
+                - bedrock-mantle:ListProjects
+                - bedrock-mantle:ListTagsForResource
+              Resource: '*'
 
 Outputs:
   EvaluatorFunctionUrl:

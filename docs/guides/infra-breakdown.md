@@ -42,8 +42,8 @@ One stack defines the HTTP backend and interview configuration. The AgentCore vo
 | Resource | Construct | Purpose |
 |----------|-----------|---------|
 | S3 Bucket | `InterviewConfigBucket` | Stores interview structure and interview profile JSON configs |
-| Analyst Lambda | `AnalystFunction` | Calls Bedrock (Claude) to analyze the resume against the job description |
-| Evaluator Lambda | `EvaluatorFunction` | Calls Bedrock (Claude) to score the candidate's interview transcript |
+| Analyst Lambda | `AnalystFunction` | Calls Bedrock Mantle (GPT OSS 120B) to analyze the resume against the job description |
+| Evaluator Lambda | `EvaluatorFunction` | Calls Bedrock Mantle (GPT OSS 120B) to score the candidate's interview transcript |
 | Interviewer Lambda | `InterviewerFunction` | Reads config from S3, builds runtime context for Nova Sonic (no LLM call) |
 | PDF Parser Lambda | `PdfParserFunction` | Extracts text from uploaded resumes using pypdf |
 
@@ -56,7 +56,7 @@ The names above are CDK construct IDs. Because `functionName` is not set, CloudF
 - **No API Gateway.** Function URLs provide the HTTP surface. CORS is configured on the URL resource itself (`allowedOrigins: ['*']`), not in Python code.
 - **No VPC.** Lambdas run in the default VPC-less mode for simplicity.
 - **Docker bundling for pypdf.** The PDF Parser uses CDK's `bundling` option to `pip install pypdf` into the deployment package at synth time.
-- **IAM permissions are inline.** `bedrock:InvokeModel` for Analyst/Evaluator and `s3:GetObject` (via `grantRead`) for Interviewer.
+- **IAM permissions are inline.** Model-scoped Bedrock Mantle inference for Analyst/Evaluator and `s3:GetObject` (via `grantRead`) for Interviewer.
 
 ---
 
@@ -115,6 +115,6 @@ AgentCore Runtime is a serverless managed container runtime, not a server that t
 | Issue | Fix |
 |-------|-----|
 | Missing AWS identity at startup | Configure an AWS profile or temporary environment credentials, then confirm with `aws sts get-caller-identity`. |
-| Model access error | Confirm the active AWS identity can invoke Sonnet 4.6 and Nova 2 Sonic in `us-east-1`. |
+| Model access error | Confirm the active AWS identity can invoke GPT OSS 120B and Nova 2 Sonic in `us-east-1`. |
 | Python import error | Install `backend/requirements-local.txt` in the active virtual environment. |
 | Upload rejected | The frontend and backend both enforce the 4 MB PDF limit. |

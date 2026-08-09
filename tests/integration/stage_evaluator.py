@@ -1,4 +1,4 @@
-"""Stage 3: Evaluator — runs in isolation with mocked Bedrock."""
+"""Stage 3: Evaluator — runs in isolation with mocked Bedrock Mantle."""
 import json
 import sys
 from pathlib import Path
@@ -33,8 +33,7 @@ CONVERSATION = [
      "answer": "A team member wanted one monolithic file. I pushed for separation. We compromised with clean modules but shared types. It saved debugging time."},
 ]
 
-MOCK_LLM_RESPONSE = {
-    "output": {"message": {"content": [{"toolUse": {"toolUseId": "e1", "name": "submit_evaluation", "input": {
+MOCK_TOOL_INPUT = {
         "per_question_scores": [
             {"question_text": "Walk me through a project?", "answer_summary": "TechCorp REST API, 85% coverage, 20 users.",
              "scores": {"concrete_example": 5, "situation_action_result": 4, "link_to_job": 4, "quantifiable_outcome": 5}},
@@ -64,7 +63,6 @@ MOCK_LLM_RESPONSE = {
             "Reference algorithms coursework when discussing problem-solving.",
             "Draw on code review workflow for sprint planning questions."
         ]
-    }}}]}}
 }
 
 interview_metadata = {
@@ -85,8 +83,20 @@ evaluator_event = {
     })
 }
 
-with patch("evaluator.bedrock_client._client") as mock_bedrock:
-    mock_bedrock.converse.return_value = MOCK_LLM_RESPONSE
+chat_response = {
+    "choices": [{
+        "message": {
+            "tool_calls": [{
+                "function": {
+                    "name": "submit_evaluation",
+                    "arguments": json.dumps(MOCK_TOOL_INPUT),
+                }
+            }]
+        }
+    }]
+}
+
+with patch("evaluator.bedrock_client._post_chat_completion", return_value=chat_response):
     from evaluator.lambda_handler import handler
     response = handler(evaluator_event, None)
 

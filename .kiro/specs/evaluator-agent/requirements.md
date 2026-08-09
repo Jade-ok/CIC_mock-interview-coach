@@ -10,7 +10,7 @@ The Interviewer is designed to ask 3 main questions, each followed by exactly 1 
 
 This entire system is calibrated for co-op seeking students, not experienced professionals. All scoring rubrics, feedback tone, and expectations are set at a level appropriate for students pursuing co-op placements. School projects, course work, hackathons, and team assignments are considered valid experience.
 
-The Evaluator is invoked exactly once per interview session and operates as a stateless AWS Lambda function using the Bedrock Converse API with tool_use.
+The Evaluator is invoked exactly once per interview session and operates as a stateless AWS Lambda function using Bedrock Mantle Chat Completions with a forced function call.
 
 ## Glossary
 
@@ -23,9 +23,9 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 - **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, situation_action_result, link_to_job, quantifiable_outcome)
 - **Readiness_Label**: A categorical assessment of the student's overall interview preparedness
 - **Feedback_Report**: The structured JSON output containing all scores, labels, and feedback
-- **Bedrock_Client**: The module responsible for calling the AWS Bedrock Converse API
+- **Bedrock_Client**: The module responsible for signing and calling the AWS Bedrock Mantle Chat Completions API
 - **Orchestrator**: The module that coordinates validation, prompt building, API calls, and response parsing
-- **Tool_Use**: The Bedrock Converse API pattern that forces the LLM to return structured JSON via a defined tool schema
+- **Forced_Function_Call**: The Chat Completions pattern that requires the LLM to return structured JSON arguments through a defined function schema
 
 ## Requirements
 
@@ -62,16 +62,14 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 ### Requirement 3: Bedrock API Invocation
 
-**User Story:** As a developer, I want the Evaluator to reliably call the Bedrock Converse API, so that evaluation results are generated consistently.
+**User Story:** As a developer, I want the Evaluator to reliably call Bedrock Mantle Chat Completions, so that evaluation results are generated consistently.
 
 #### Acceptance Criteria
 
-1. THE Bedrock_Client SHALL call the Converse API using model ID global.anthropic.claude-sonnet-4-6 in region us-east-1
-2. THE Bedrock_Client SHALL use the tool_use pattern to force structured JSON output matching the defined evaluation schema
-3. IF the Bedrock API call fails or returns an invalid response, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
-4. IF both attempts fail, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message
-
-**Current gap:** transport failures are retried, but malformed or missing tool output raises `EvaluationError` immediately and is not retried.
+1. THE Bedrock_Client SHALL call Bedrock Mantle Chat Completions using model ID `openai.gpt-oss-120b` in region `us-east-1`
+2. THE Bedrock_Client SHALL force the `submit_evaluation` function to return structured JSON matching the defined evaluation schema
+3. IF a transport or API failure occurs, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
+4. IF both transport/API attempts fail, or a successful response contains malformed function output, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message
 
 ### Requirement 4: Per-Question Scoring
 
@@ -148,7 +146,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 #### Acceptance Criteria
 
 1. IF an unexpected error occurs during evaluation, THEN THE Evaluator SHALL return a 500 status code with a JSON error response containing an error type and descriptive message
-2. IF the LLM response does not conform to the expected tool_use schema, THEN THE Evaluator SHALL attempt to parse partial results and retry once before returning an error
+2. IF the LLM response does not contain valid `submit_evaluation` function arguments, THEN THE Evaluator SHALL return an EvaluationError
 3. THE Evaluator SHALL log all errors with sufficient context for debugging without exposing sensitive student data in error responses
 
-**Current gap:** partial-result parsing is not implemented, and invalid tool output currently exits without the retry required above.
+Malformed function output exits immediately; only transport/API failures are retried.

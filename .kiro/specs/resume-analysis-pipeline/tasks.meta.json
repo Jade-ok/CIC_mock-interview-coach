@@ -67,7 +67,7 @@
         "timestamp": 1786046579086
       }
     ],
-    "5.2 Create analyst/prompt_builder.py with Converse API request construction": [
+    "5.2 Create analyst/prompt_builder.py with Mantle Chat Completions request construction": [
       {
         "executionId": "67493123-de24-4ef6-b50f-793375d9210c",
         "chatSessionId": "sess_2944d8fe-87fb-4de8-9840-0f02d586c863",
