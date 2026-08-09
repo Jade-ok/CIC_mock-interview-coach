@@ -86,7 +86,7 @@ def test_system_prompt_contains_calibration():
     assert "co-op" in SYSTEM_PROMPT
     assert "1-5" in SYSTEM_PROMPT
     assert "concrete_example" in SYSTEM_PROMPT
-    assert "situation_action_result" in SYSTEM_PROMPT
+    assert "star_structure" in SYSTEM_PROMPT
     assert "link_to_job" in SYSTEM_PROMPT
     assert "quantifiable_outcome" in SYSTEM_PROMPT
 

@@ -10,7 +10,7 @@ def _sample_per_question_scores():
             "answer_summary": "Led a team of 4 in SE course.",
             "scores": {
                 "concrete_example": 4,
-                "situation_action_result": 3,
+                "star_structure": 3,
                 "link_to_job": 4,
                 "quantifiable_outcome": 2,
             },
@@ -22,7 +22,7 @@ def _sample_overall_scores():
     return {
         "dimensions": {
             "concrete_example": 4.0,
-            "situation_action_result": 3.0,
+            "star_structure": 3.0,
             "link_to_job": 4.0,
             "quantifiable_outcome": 2.0,
         },

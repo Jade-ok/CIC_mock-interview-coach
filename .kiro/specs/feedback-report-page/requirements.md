@@ -49,7 +49,7 @@ The page follows the project's Midnight Green dark theme (defined in `.kiro/stee
 
 #### Acceptance Criteria
 
-1. THE dimension scores section SHALL display all four dimensions: concrete_example, situation_action_result, link_to_job, quantifiable_outcome
+1. THE dimension scores section SHALL display all four dimensions: concrete_example, star_structure, link_to_job, quantifiable_outcome
 2. EACH dimension SHALL show a human-readable label (e.g. "Concrete example", "Situation → Action → Result", "Link to the job", "Quantifiable outcome")
 3. EACH dimension SHALL show a brief explanation of what it measures (e.g. "Did you point to a real project or moment?")
 4. EACH dimension SHALL display the numeric average score (1 decimal place) alongside a visual Score_Bar

@@ -20,7 +20,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 - **Main_Question**: One of up to 3 primary interview questions asked by the Interviewer
 - **Follow_Up_Question**: A single follow-up question paired with each main question to probe deeper into the student's answer
 - **Analyst_Output**: The structured JSON output from the Analyst agent containing candidate profile, target role information, resume-job alignment (strong matches, partial matches, areas to explore), interview plan, selected experiences with relevance scores and candidate claims, and analysis warnings
-- **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, situation_action_result, link_to_job, quantifiable_outcome)
+- **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, star_structure, link_to_job, quantifiable_outcome)
 - **Readiness_Label**: A categorical assessment of the student's overall interview preparedness
 - **Feedback_Report**: The structured JSON output containing all scores, labels, and feedback
 - **Bedrock_Client**: The module responsible for signing and calling the AWS Bedrock Mantle Chat Completions API
@@ -78,7 +78,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 #### Acceptance Criteria
 
 1. WHEN the LLM returns scoring judgments, THE Evaluator SHALL produce a score object for each question-answer pair present in the transcript, regardless of whether the interview was completed in full
-2. THE Evaluator SHALL include scores for all four dimensions per question: concrete_example, situation_action_result, link_to_job, and quantifiable_outcome
+2. THE Evaluator SHALL include scores for all four dimensions per question: concrete_example, star_structure, link_to_job, and quantifiable_outcome
 3. THE Evaluator SHALL constrain each dimension score to an integer between 1 and 5 inclusive
 4. IF the LLM returns a score outside the 1-5 range, THEN THE Evaluator SHALL clamp the value to the nearest boundary (1 or 5)
 5. THE Evaluator SHALL score each answer against co-op student expectations, recognizing school projects, course work, hackathons, and team assignments as valid experience
