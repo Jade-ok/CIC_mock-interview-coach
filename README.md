@@ -172,25 +172,7 @@ The browser orchestrates the workflow and retains the active session state. Each
 
 ### Architecture Diagram
 
-```mermaid
-flowchart TD
-    User --> Frontend[React frontend<br/>AWS Amplify Hosting]
-    Frontend --> CloudFront[Amazon CloudFront<br/>API distribution]
-
-    CloudFront --> PDF[PDF Parser<br/>AWS Lambda]
-    CloudFront --> Analyst[Analyst Agent<br/>AWS Lambda]
-    CloudFront --> Interviewer[Interviewer Agent<br/>AWS Lambda]
-    CloudFront --> Evaluator[Evaluator Agent<br/>AWS Lambda]
-    CloudFront --> VoiceSession[Voice Session<br/>AWS Lambda]
-
-    Analyst <--> GPT[Amazon Bedrock<br/>OpenAI GPT OSS 120B]
-    Evaluator <--> GPT
-    S3[Amazon S3<br/>Interview configuration] --> Interviewer
-
-    VoiceSession -. Short-lived signed WebSocket URL .-> Frontend
-    Frontend <-->|Live audio and transcript events| AgentCore[Amazon Bedrock AgentCore<br/>Voice relay]
-    AgentCore <-->|Bidirectional speech stream| Nova[Amazon Bedrock<br/>Nova 2 Sonic]
-```
+![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.png)
 
 ### Resume and Job Analysis
 
