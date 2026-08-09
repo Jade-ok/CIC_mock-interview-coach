@@ -13,17 +13,17 @@ Shared conventions for the mock interview application. When this file and an old
 
 ## Models and Services
 
-Agents use the service appropriate to their role. Analyst and Evaluator intentionally share Sonnet 4.6.
+Agents use the service appropriate to their role. Analyst and Evaluator intentionally share GPT OSS 120B.
 
 | Component | Model / Service |
 |---|---|
-| Analyst | Bedrock Converse API — `global.anthropic.claude-sonnet-4-6` |
+| Analyst | Bedrock Mantle Chat Completions — `openai.gpt-oss-120b` |
 | Interviewer context builder | Lambda + S3; no model call |
 | Voice interviewer | Python relay on AgentCore Runtime + `amazon.nova-2-sonic-v1:0` |
-| Evaluator | Bedrock Converse API — `global.anthropic.claude-sonnet-4-6` |
+| Evaluator | Bedrock Mantle Chat Completions — `openai.gpt-oss-120b` |
 | PDF Parser | `pypdf`; no model call |
 
-All AWS runtime components use `us-east-1` unless an explicit deployment configuration says otherwise. Analyst and Evaluator use forced tool use for structured Bedrock output. Their retry behavior is implementation-specific; do not assume every invalid response is retried identically.
+All AWS runtime components use `us-east-1` unless an explicit deployment configuration says otherwise. Analyst and Evaluator use forced function calls for structured Bedrock output. Their retry behavior is implementation-specific; do not assume every invalid response is retried identically.
 
 ## Current Implementation
 

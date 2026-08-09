@@ -8,9 +8,9 @@ The browser manages all state. Each Lambda is stateless. No database, no S3 sess
 
 ```
 frontend/                    → Browser UI (holds state)
-backend/functions/analyst/  → Resume analysis (Claude Sonnet 4.6)
+backend/functions/analyst/  → Resume analysis (OpenAI GPT OSS 120B)
 backend/functions/interviewer/ → Interview context builder
-backend/functions/evaluator/   → Answer evaluation (Claude Sonnet 4.6)
+backend/functions/evaluator/   → Answer evaluation (OpenAI GPT OSS 120B)
 backend/functions/pdf_parser/  → PDF text extraction (pypdf)
 backend/voice_agent/         → Nova 2 Sonic WebSocket relay
 infrastructure/              → AWS CDK infrastructure definitions
@@ -19,7 +19,7 @@ infrastructure/              → AWS CDK infrastructure definitions
 ## Tech Stack
 
 - **Runtime**: Python 3.12 (AWS Lambda)
-- **LLM**: Amazon Bedrock Converse API (`tool_use` pattern)
+- **LLM**: Amazon Bedrock Mantle Chat Completions (forced function calls)
 - **Speech**: Amazon Nova 2 Sonic (local WebSocket relay for development; AgentCore when hosted)
 - **PDF**: pypdf
 - **Region**: us-east-1
@@ -35,7 +35,7 @@ backend/functions/analyst/
   orchestrator.py     # Business logic wiring
   validation.py       # Input validation
   prompt_builder.py   # Prompt construction
-  bedrock_client.py   # Bedrock Converse API call
+  bedrock_client.py   # Signed Bedrock Mantle API call
   parser.py           # Response parsing/validation
 ```
 
@@ -47,7 +47,7 @@ backend/functions/evaluator/
   lambda_handler.py     # Lambda entry point
   validator.py          # Input validation
   prompt_builder.py     # Prompt construction
-  bedrock_client.py     # Bedrock Converse API call/tool extraction
+  bedrock_client.py     # Signed Bedrock Mantle API call/tool extraction
   scorer.py             # Deterministic score aggregation
   response_assembler.py # Final response construction
   schemas.py            # Evaluator schema definitions
@@ -69,9 +69,9 @@ backend/functions/interviewer/
 
 | Agent | Model / Service |
 |-------|-----------------|
-| analyst | Bedrock — `global.anthropic.claude-sonnet-4-6` |
+| analyst | Bedrock Mantle — `openai.gpt-oss-120b` |
 | interviewer | Amazon Nova 2 Sonic (speech-to-speech via WebSocket) |
-| evaluator | Bedrock — `global.anthropic.claude-sonnet-4-6` |
+| evaluator | Bedrock Mantle — `openai.gpt-oss-120b` |
 | pdf_parser | pypdf only |
 
 ## Contracts
@@ -88,7 +88,7 @@ Inter-agent payload schemas are defined in `schemas/`:
 
 Local mode runs PDF parsing, Analyst, Interviewer context building, Evaluator, and the Nova voice relay on the development machine.
 
-The active AWS credentials must be able to invoke both `global.anthropic.claude-sonnet-4-6` and `amazon.nova-2-sonic-v1:0` in `us-east-1`. All model usage belongs to the AWS account shown by `aws sts get-caller-identity`.
+The active AWS credentials must be able to invoke both `openai.gpt-oss-120b` through Bedrock Mantle and `amazon.nova-2-sonic-v1:0` through Bedrock Runtime in `us-east-1`. All model usage belongs to the AWS account shown by `aws sts get-caller-identity`.
 
 Use any credential method supported by the AWS SDK. For a configured AWS profile:
 
@@ -127,7 +127,7 @@ Local mode uses `http://localhost:8080/api/*` for all four HTTP stages and `ws:/
 
 ## Hosted Architecture
 
-The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for Sonnet 4.6 and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
+The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for GPT OSS 120B and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
 
 ## Important Notes
 

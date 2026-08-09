@@ -4,7 +4,7 @@ Evaluates mock interview performance for co-op seeking students.
 
 ## Architecture
 
-Receives interview conversation + analyst output, calls Bedrock Converse API for scoring, then aggregates and returns a feedback report. The same handler runs behind the local `/api/evaluator` adapter and in the hosted Lambda architecture.
+Receives interview conversation + analyst output, calls Bedrock Mantle Chat Completions for scoring, then aggregates and returns a feedback report. The same handler runs behind the local `/api/evaluator` adapter and in the hosted Lambda architecture.
 
 During local development, `backend.local_server:app` invokes the handler directly. Its Bedrock request uses the AWS identity active in the local SDK credential chain.
 
@@ -25,24 +25,25 @@ See `../../../schemas/evaluator_output.json` for the current output shape.
 
 - **Runtime**: Python 3.12
 - **Region**: us-east-1
-- **Model**: global.anthropic.claude-sonnet-4-6
+- **Model**: openai.gpt-oss-120b
 - **Timeout**: 300 seconds (allows two 120-second application attempts plus overhead)
 
 ## IAM Permissions
 
-The standalone SAM template and CDK stack scope `bedrock:InvokeModel` to the Sonnet 4.6 inference profile and its required foundation-model resources:
+The standalone SAM template and CDK stack allow Mantle inference only for GPT OSS 120B, plus the Mantle project lookup actions required by the service:
 
 ```json
 {
   "Effect": "Allow",
-  "Action": ["bedrock:InvokeModel"],
-  "Resource": [
-    "arn:aws:bedrock:us-east-1:<account-id>:inference-profile/global.anthropic.claude-sonnet-4-6",
-    "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-6",
-    "arn:aws:bedrock:::foundation-model/anthropic.claude-sonnet-4-6"
-  ]
+  "Action": ["bedrock-mantle:CreateInference"],
+  "Resource": "*",
+  "Condition": {
+    "StringEquals": {"bedrock-mantle:Model": "openai.gpt-oss-120b"}
+  }
 }
 ```
+
+The role also permits `bedrock-mantle:GetProject`, `ListProjects`, and `ListTagsForResource`.
 
 ## Local Development
 

@@ -22,7 +22,7 @@ def extract_and_clamp(llm_response: dict) -> list:
     """Clamp all dimension scores to the 1-5 integer range.
 
     Args:
-        llm_response: The parsed tool_use output from the LLM containing
+        llm_response: The parsed function-call output from the LLM containing
             per_question_scores with raw score values.
 
     Returns:

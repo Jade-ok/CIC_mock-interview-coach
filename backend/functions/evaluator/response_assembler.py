@@ -14,7 +14,7 @@ def build(
         per_question_scores: List of per-question score objects (clamped).
         overall_scores: Dict with dimensions, total, and question_count.
         readiness_label: The deterministic readiness label string.
-        llm_response: The full LLM tool_use output (for feedback/strengths/improvements/advice).
+        llm_response: Parsed LLM function arguments (feedback, strengths, improvements, and advice).
         interview_metadata: Metadata passed through unchanged from input.
 
     Returns:

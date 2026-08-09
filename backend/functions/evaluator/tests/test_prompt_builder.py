@@ -76,7 +76,7 @@ def test_build_returns_tuple_of_three():
     assert len(result) == 3
 
     system, messages, tool_config = result
-    assert isinstance(system, list)
+    assert isinstance(system, str)
     assert isinstance(messages, list)
     assert isinstance(tool_config, dict)
 
@@ -176,11 +176,13 @@ def test_user_message_contains_organization():
 
 
 def test_tool_config_has_forced_choice():
-    """Verify toolChoice forces submit_evaluation."""
+    """Verify tool_choice forces submit_evaluation."""
     tool_config = _build_tool_config()
 
-    assert "toolChoice" in tool_config
-    assert tool_config["toolChoice"] == {"tool": {"name": "submit_evaluation"}}
+    assert tool_config["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "submit_evaluation"},
+    }
 
 
 def test_schema_has_required_fields():
