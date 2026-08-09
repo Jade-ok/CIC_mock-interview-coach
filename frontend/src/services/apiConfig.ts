@@ -6,38 +6,53 @@ function cleanUrl(value: string | undefined): string | undefined {
   return cleaned || undefined;
 }
 
-// The Vite development server always uses the complete local backend. Hosted
-// endpoints are selected only for a production build configured as hosted.
-export const RUNTIME_MODE = !import.meta.env.DEV && import.meta.env.VITE_RUNTIME_MODE === 'hosted'
+function hostedEndpoint(path: string): string {
+  const baseUrl = cleanUrl(import.meta.env.VITE_API_BASE_URL)?.replace(/\/$/, '');
+  if (!baseUrl) throw new Error('Missing hosted API base URL');
+  return `${baseUrl}/${path}`;
+}
+
+// Local is the default for development. Developers without AWS credentials can
+// explicitly select hosted endpoints in an ignored .env.local file.
+export const RUNTIME_MODE = import.meta.env.VITE_RUNTIME_MODE === 'hosted'
   ? 'hosted'
   : 'local';
 
-function endpoint(override: string | undefined, path: string): string {
+function endpoint(path: string): string {
   if (RUNTIME_MODE === 'local') return `${LOCAL_API_BASE_URL}/${path}`;
-
-  const hostedUrl = cleanUrl(override);
-  if (!hostedUrl) {
-    throw new Error(`Missing hosted API endpoint for ${path}`);
-  }
-  return hostedUrl;
+  return hostedEndpoint(path);
 }
 
 export const API_ENDPOINTS = {
-  pdfParser: endpoint(import.meta.env.VITE_PDF_PARSER_URL, 'pdf-parser'),
-  analyst: endpoint(import.meta.env.VITE_ANALYST_URL, 'analyst'),
-  interviewer: endpoint(import.meta.env.VITE_INTERVIEWER_URL, 'interviewer'),
-  evaluator: endpoint(import.meta.env.VITE_EVALUATOR_URL, 'evaluator'),
+  pdfParser: endpoint('pdf-parser'),
+  analyst: endpoint('analyst'),
+  interviewer: endpoint('interviewer'),
+  evaluator: endpoint('evaluator'),
 } as const;
+
+/** Build a JSON POST request. Hosted CloudFront OAC POSTs require a SHA-256
+ * payload hash so CloudFront can sign the private Function URL request. */
+export async function jsonPostInit(
+  payload: unknown,
+  signal?: AbortSignal
+): Promise<RequestInit> {
+  const body = JSON.stringify(payload);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+  if (RUNTIME_MODE === 'hosted') {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(body));
+    headers['x-amz-content-sha256'] = Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  return { method: 'POST', headers, body, signal };
+}
 
 export async function getVoiceWebSocketUrl(): Promise<string> {
   if (RUNTIME_MODE === 'local') return LOCAL_VOICE_WS_URL;
 
-  const sessionEndpoint = cleanUrl(import.meta.env.VITE_VOICE_SESSION_URL);
-  if (!sessionEndpoint) {
-    throw new Error('Missing hosted voice session endpoint');
-  }
-
-  const response = await fetch(sessionEndpoint, { method: 'POST' });
+  const response = await fetch(hostedEndpoint('voice-session'), await jsonPostInit({}));
   const payload: unknown = await response.json().catch(() => null);
   const url = (
     payload

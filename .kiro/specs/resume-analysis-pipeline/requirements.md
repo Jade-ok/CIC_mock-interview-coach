@@ -45,7 +45,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 1. WHEN the Format_Flag is set to `"pdf"`, THE PDF_Parser SHALL decode the base64-encoded job posting and extract text using pypdf.
 2. WHEN the Format_Flag is set to `"text"`, THE PDF_Parser SHALL accept the plain-text job posting content directly without PDF processing.
-3. IF the Format_Flag is missing or contains an unrecognized value, THEN THE PDF_Parser SHALL return a JSON error response indicating an invalid format flag.
+3. THE PDF_Parser SHALL reject a plain-text job posting longer than 5,000 characters in every invocation mode.
+4. IF the Format_Flag is missing or contains an unrecognized value, THEN THE PDF_Parser SHALL return a JSON error response indicating an invalid format flag.
 
 ### Requirement 3: Combined Document Intake
 
@@ -93,8 +94,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, analysis_warnings) in every Analyst_Output response.
 3. THE Analyst SHALL set `experience_type` to one of the allowed values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, or `"student_club"`.
 4. THE Analyst SHALL use the Mantle_Chat_API with a forced function call to produce JSON conforming to the defined schema.
-5. WHEN the Mantle_Chat_API response does not conform to the expected schema, THE Analyst SHALL retry the Bedrock call once (maximum 2 total attempts).
-6. IF the Analyst_Output still does not conform after the retry, THEN THE Analyst SHALL return an error response indicating schema validation failure.
+5. WHEN a local Mantle_Chat_API response does not conform to the expected schema, THE Analyst SHALL retry once; hosted execution SHALL return the schema error after its single call.
+6. IF the local Analyst_Output still does not conform after recovery, or the hosted output fails validation, THEN THE Analyst SHALL return a schema-validation error response.
 7. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
 
 ### Requirement 7: Analyst Bedrock Configuration
@@ -115,8 +116,9 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 1. THE Analyst SHALL validate that both resume_text and job_posting_text are present and non-empty strings before calling the Mantle_Chat_API.
 2. IF resume_text or job_posting_text is missing or empty, THEN THE Analyst SHALL return a JSON error response listing the missing or empty fields.
-3. WHEN a request is received in Function_URL_Mode, THE Analyst SHALL parse the JSON string from `event['body']` before validation.
-4. WHEN a request is received in Direct_Mode, THE Analyst SHALL use the event payload directly for validation.
+3. THE Analyst SHALL reject job_posting_text longer than 5,000 characters in every invocation mode.
+4. WHEN a request is received in Function_URL_Mode, THE Analyst SHALL parse the JSON string from `event['body']` before validation.
+5. WHEN a request is received in Direct_Mode, THE Analyst SHALL use the event payload directly for validation.
 
 ### Requirement 9: Bedrock API Error Handling
 
@@ -125,10 +127,10 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 #### Acceptance Criteria
 
 1. IF the Mantle_Chat_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator after the single transport attempt.
-2. IF the Mantle_Chat_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh Bedrock call (maximum 2 total calls).
-3. The Bedrock client SHALL use a 120-second request timeout and one transport attempt so the 300-second Lambda budget remains predictable.
+2. IF a local Mantle_Chat_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh call; hosted execution SHALL not make a recovery call.
+3. Hosted execution SHALL use one 55-second Bedrock request within a 60-second Lambda; local execution SHALL retain a 120-second request timeout and one optional schema-recovery call.
 
-**Current behavior:** transport errors are not retried. A schema-invalid model response receives one recovery call, for a maximum of two Bedrock calls.
+**Current behavior:** transport errors are not retried. Locally, a schema-invalid model response receives one recovery call; hosted execution uses one call total.
 
 ### Requirement 10: Analysis Warnings
 

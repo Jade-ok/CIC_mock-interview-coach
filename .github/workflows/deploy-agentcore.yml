@@ -17,7 +17,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: production-agentcore
+  group: production-application
   cancel-in-progress: false
 
 env:
@@ -48,6 +48,16 @@ jobs:
 
       - name: Run voice relay tests
         run: pytest -q tests/unit/test_voice_protocol.py
+
+      - name: Confirm revision is still current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo 'A newer main revision exists; refusing to deploy this stale relay revision.'
+            exit 1
+          }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

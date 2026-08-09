@@ -6,6 +6,7 @@ import json
 import pytest
 
 from pdf_parser.validation import (
+    MAX_JOB_POSTING_TEXT_CHARS,
     MAX_PDF_SIZE_BYTES,
     detect_invocation_mode,
     validate_request,
@@ -110,15 +111,26 @@ def test_rejects_pdf_job_posting_one_byte_over_size_limit():
     assert "4 MB size limit" in error
 
 
-def test_rejects_text_job_posting_over_size_limit():
-    content = "A" * (MAX_PDF_SIZE_BYTES + 1)
+def test_accepts_text_job_posting_at_character_limit():
+    content = "A" * MAX_JOB_POSTING_TEXT_CHARS
+
+    valid, error = validate_request(
+        {"job_posting": {"content": content, "format": "text"}}
+    )
+
+    assert valid is True
+    assert error is None
+
+
+def test_rejects_text_job_posting_over_character_limit():
+    content = "A" * (MAX_JOB_POSTING_TEXT_CHARS + 1)
 
     valid, error = validate_request(
         {"job_posting": {"content": content, "format": "text"}}
     )
 
     assert valid is False
-    assert "4 MB size limit" in error
+    assert "5000-character limit" in error
 
 
 def test_missing_job_posting_format_names_required_field():

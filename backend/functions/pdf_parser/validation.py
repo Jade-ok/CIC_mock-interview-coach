@@ -5,6 +5,7 @@ import json
 # 4 MB in bytes. Base64 encodes each three-byte block as four characters.
 MAX_PDF_SIZE_BYTES = 4_194_304
 MAX_BASE64_LENGTH = 4 * ((MAX_PDF_SIZE_BYTES + 2) // 3)
+MAX_JOB_POSTING_TEXT_CHARS = 5_000
 
 VALID_JOB_POSTING_FORMATS = ("pdf", "text")
 
@@ -43,7 +44,8 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
 
     Checks:
     - At least one document present (resume or job_posting)
-    - Decoded PDF or UTF-8 text content size <= 4 MiB per document
+    - Decoded PDF content size <= 4 MiB per document
+    - Plain-text job postings <= 5,000 characters
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
 
@@ -125,10 +127,14 @@ def _validate_job_posting(doc: dict) -> tuple[bool, str | None]:
 
     if format_flag == "pdf":
         too_large = _base64_content_exceeds_limit(content)
+        error = "job_posting exceeds the 4 MB size limit"
     else:
-        too_large = len(content.encode("utf-8")) > MAX_PDF_SIZE_BYTES
+        too_large = len(content) > MAX_JOB_POSTING_TEXT_CHARS
+        error = (
+            f"job_posting exceeds the {MAX_JOB_POSTING_TEXT_CHARS}-character limit"
+        )
 
     if too_large:
-        return False, "job_posting exceeds the 4 MB size limit"
+        return False, error
 
     return True, None

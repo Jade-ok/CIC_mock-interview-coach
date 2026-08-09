@@ -22,9 +22,11 @@ Amplify-hosted React/Vite browser
 
 Hosted integration requirements:
 
-- Production builds select their configured HTTPS and WSS endpoints with `VITE_RUNTIME_MODE=hosted`.
+- Production builds select the configured CloudFront HTTPS API base URL with `VITE_RUNTIME_MODE=hosted`; the voice-session response supplies a temporary signed WSS URL.
 - Amplify Hosting, the Voice Session Lambda, and the signed AgentCore WebSocket flow are deployed; the application intentionally has no end-user login.
-- Lambda Function URLs are public and use wildcard CORS.
+- One public CloudFront API gateway routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus the local Vite origin.
+- Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them. Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
+- Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
 - The protocol is unit-tested and has been exercised through the hosted browser/Nova path; real reconnection and session-restoration edge cases remain targeted verification work.
 
 ## Screen Flow
@@ -45,7 +47,7 @@ Upload → Waiting Room → Interview → Feedback
 ### UploadScreen
 
 - Accept one `application/pdf` file no larger than the shared 4 MB frontend/backend limit.
-- Accept job-description text.
+- Accept job-description text up to 5,000 characters and display its live count.
 - Disable submission when either required input is missing.
 - Pass the actual `File` and text to the session reducer.
 
@@ -205,7 +207,7 @@ Evaluator failure keeps the transcript and Analyst output available for retry.
 
 ## Runtime Configuration
 
-Local development uses the combined backend on port 8080. Hosted builds receive environment-specific HTTPS and WSS endpoints through the hosting environment. AWS credentials belong to backend runtime identities rather than browser configuration.
+Local development uses the combined backend on port 8080. Hosted builds receive one CloudFront HTTPS API base URL through the hosting environment; the voice-session route returns the temporary signed WSS URL at runtime. AWS credentials belong to backend runtime identities rather than browser configuration.
 
 ## Verification Properties
 

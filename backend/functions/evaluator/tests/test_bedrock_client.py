@@ -8,6 +8,8 @@ from evaluator.bedrock_client import (
     MAX_ATTEMPTS,
     MODEL_ID,
     REQUEST_TIMEOUT_SECONDS,
+    _max_attempts,
+    _request_timeout_seconds,
     _extract_tool_input,
     invoke,
 )
@@ -67,6 +69,14 @@ class TestInvoke:
     def test_timeout_fits_lambda_budget(self):
         assert REQUEST_TIMEOUT_SECONDS == 120
 
+    def test_hosted_mode_uses_one_55_second_attempt(self):
+        with patch.dict("os.environ", {"HOSTED_GUARDRAILS_ENABLED": "true"}):
+            assert _max_attempts() == 1
+            assert _request_timeout_seconds() == 55
+        with patch.dict("os.environ", {}, clear=True):
+            assert _max_attempts() == 2
+            assert _request_timeout_seconds() == 120
+
     @patch("evaluator.bedrock_client._post_chat_completion")
     def test_success_on_first_attempt(self, post):
         tool_input = {
@@ -87,7 +97,17 @@ class TestInvoke:
         assert post.call_count == 1
         request = post.call_args.args[0]
         assert request["model"] == "openai.gpt-oss-120b"
+        assert request["max_tokens"] == 8192
         assert request["reasoning_effort"] == "low"
+
+    @patch("evaluator.bedrock_client._post_chat_completion")
+    def test_hosted_mode_uses_bounded_output_budget(self, post):
+        post.return_value = _mock_chat_response({})
+
+        with patch.dict("os.environ", {"HOSTED_GUARDRAILS_ENABLED": "true"}):
+            invoke("test", [{"role": "user", "content": "test"}], {"tools": []})
+
+        assert post.call_args.args[0]["max_tokens"] == 4096
 
     @patch("evaluator.bedrock_client._post_chat_completion")
     def test_retries_on_first_failure(self, post):
@@ -103,6 +123,16 @@ class TestInvoke:
 
         assert result == tool_input
         assert post.call_count == 2
+
+    @patch("evaluator.bedrock_client._post_chat_completion")
+    def test_hosted_mode_does_not_retry_transport_failure(self, post):
+        post.side_effect = Exception("Temporary failure")
+
+        with patch.dict("os.environ", {"HOSTED_GUARDRAILS_ENABLED": "true"}):
+            with pytest.raises(EvaluationError, match="failed after 1 attempt"):
+                invoke("test", [{"role": "user", "content": "test"}], {"tools": []})
+
+        assert post.call_count == 1
 
     @patch("evaluator.bedrock_client._post_chat_completion")
     def test_raises_after_all_attempts_fail(self, post):

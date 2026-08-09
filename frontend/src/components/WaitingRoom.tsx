@@ -6,8 +6,8 @@ import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
 const WS_TIMEOUT_MS = 30000;
-// The Analyst Lambda allows two sequential 120-second Bedrock reads plus
-// parsing/Interviewer overhead. Do not report a false failure while it is live.
+// Keep enough time for local 120-second schema recovery plus pipeline overhead.
+// Hosted Analyst execution is bounded earlier to one 55-second model attempt.
 const AGENT1_TIMEOUT_MS = 330000;
 const USE_MOCK_WEBSOCKET = import.meta.env.VITE_USE_MOCK_WEBSOCKET === 'true';
 

@@ -62,8 +62,9 @@ Current implementation: `server.py` forwards browser audio through `send_audio_c
 1. Host the production React/Vite client on AWS Amplify Hosting.
 2. Create five-minute SigV4-signed `wss://` URLs through a Lambda role scoped to the configured AgentCore runtime.
 3. Do not expose long-lived AWS credentials or direct Bedrock Nova invocation permissions to browser code.
-4. Supply the five public Lambda endpoints through hosted environment configuration.
-5. The application intentionally has no end-user login; require budgets, usage monitoring, and targeted browser verification for public hosted operation.
+4. Supply one CloudFront API base URL through hosted environment configuration; its routes target private IAM-protected Function URLs through OAC.
+5. The application intentionally has no end-user login; hosted operation must use invocation/error/throttle alarms, an AWS cost budget, an emergency shutdown switch, and targeted browser verification. Optional normal concurrency caps depend on the target account quota.
+6. Hosted Nova sessions must have an eight-minute application limit. Pure local voice sessions must not enable that hosted limit.
 
 ## Evaluator Handoff
 

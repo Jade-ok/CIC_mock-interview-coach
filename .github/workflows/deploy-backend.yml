@@ -1,4 +1,4 @@
-name: Deploy Lambda backend
+name: Deploy hosted application
 
 on:
   push:
@@ -12,6 +12,7 @@ on:
       - '!infrastructure/bin/deployment-automation.ts'
       - '!infrastructure/lib/deployment-automation-stack.ts'
       - 'schemas/**'
+      - 'frontend/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
@@ -20,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: production-lambda-backend
+  group: production-application
   cancel-in-progress: false
 
 env:
@@ -28,16 +29,19 @@ env:
 
 jobs:
   deploy:
-    name: Test and deploy CDK stack
+    name: Test and deploy backend, then publish frontend
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Validate deployment configuration
-        run: test -n "${{ vars.AWS_DEPLOY_ROLE_ARN }}" || { echo "Missing AWS_DEPLOY_ROLE_ARN repository variable."; exit 1; }
+        run: |
+          test -n "${{ vars.AWS_DEPLOY_ROLE_ARN }}" || { echo "Missing AWS_DEPLOY_ROLE_ARN repository variable."; exit 1; }
+          test -n "${{ vars.AMPLIFY_APP_ID }}" || { echo "Missing AMPLIFY_APP_ID repository variable."; exit 1; }
+          test -n "${{ vars.COST_ALERT_EMAIL }}" || { echo "Missing COST_ALERT_EMAIL repository variable."; exit 1; }
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -66,6 +70,23 @@ jobs:
           npm run build
           npm test -- --runInBand
 
+      - name: Test frontend before changing hosted infrastructure
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+
+      - name: Confirm revision is still current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo 'A newer main revision exists; refusing to publish this stale revision.'
+            exit 1
+          }
+
       - name: Configure temporary AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -85,4 +106,53 @@ jobs:
         run: >-
           npx cdk deploy MockInterviewStack
           --parameters "MockInterviewStack:AgentCoreRuntimeArn=$AGENTCORE_RUNTIME_ARN"
+          --parameters "MockInterviewStack:HostedFrontendOrigin=https://main.${{ vars.AMPLIFY_APP_ID }}.amplifyapp.com"
+          --parameters "MockInterviewStack:CostAlertEmail=${{ vars.COST_ALERT_EMAIL }}"
           --require-approval never
+
+      - name: Load hosted API base URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_base_url="$(aws cloudformation describe-stacks --stack-name MockInterviewStack --query "Stacks[0].Outputs[?OutputKey=='ApiBaseUrl'].OutputValue | [0]" --output text)"
+          test -n "$api_base_url" && test "$api_base_url" != 'None' || { echo 'Missing MockInterviewStack output: ApiBaseUrl'; exit 1; }
+          {
+            echo 'VITE_RUNTIME_MODE=hosted'
+            echo "VITE_API_BASE_URL=$api_base_url"
+          } >> "$GITHUB_ENV"
+
+      - name: Build hosted frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Package frontend build
+        working-directory: frontend/dist
+        run: zip -qr "$RUNNER_TEMP/amplify.zip" .
+
+      - name: Publish Amplify deployment
+        shell: bash
+        env:
+          AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+        run: |
+          set -euo pipefail
+          aws amplify update-branch \
+            --app-id "$AMPLIFY_APP_ID" \
+            --branch-name main \
+            --no-enable-auto-build >/dev/null
+          deployment="$(aws amplify create-deployment --app-id "$AMPLIFY_APP_ID" --branch-name main)"
+          job_id="$(jq -r '.jobId' <<<"$deployment")"
+          upload_url="$(jq -r '.zipUploadUrl' <<<"$deployment")"
+          curl --fail --silent --show-error --request PUT --upload-file "$RUNNER_TEMP/amplify.zip" "$upload_url"
+          aws amplify start-deployment --app-id "$AMPLIFY_APP_ID" --branch-name main --job-id "$job_id" >/dev/null
+
+          for _ in {1..60}; do
+            status="$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name main --job-id "$job_id" --query 'job.summary.status' --output text)"
+            case "$status" in
+              SUCCEED) echo "Amplify deployment $job_id succeeded."; exit 0 ;;
+              FAILED|CANCELLED) echo "Amplify deployment $job_id ended with $status."; exit 1 ;;
+            esac
+            sleep 5
+          done
+
+          echo "Timed out waiting for Amplify deployment $job_id."
+          exit 1

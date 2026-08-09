@@ -1,10 +1,19 @@
 """Input validation for the Evaluator agent."""
 
 import json
+import os
 try:
     from .exceptions import ValidationError
 except ImportError:  # Lambda loads modules from the function root.
     from exceptions import ValidationError
+
+
+MAX_CONVERSATION_TEXT_CHARS = 60_000
+MAX_ANALYST_OUTPUT_CHARS = 120_000
+
+
+def _hosted_guardrails_enabled() -> bool:
+    return os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true"
 
 
 def parse_and_validate(event: dict) -> dict:
@@ -54,5 +63,25 @@ def parse_and_validate(event: dict) -> dict:
                 raise ValidationError(
                     f"Conversation turn {i} missing required field: {field}"
                 )
+
+    if not _hosted_guardrails_enabled():
+        return body
+
+    conversation_chars = sum(
+        len(str(turn.get("question", ""))) + len(str(turn.get("answer", "")))
+        for turn in conversation
+    )
+    if conversation_chars > MAX_CONVERSATION_TEXT_CHARS:
+        raise ValidationError(
+            f"Conversation exceeds {MAX_CONVERSATION_TEXT_CHARS} characters"
+        )
+
+    analyst_output_chars = len(
+        json.dumps(body["analyst_output"], ensure_ascii=False, separators=(",", ":"))
+    )
+    if analyst_output_chars > MAX_ANALYST_OUTPUT_CHARS:
+        raise ValidationError(
+            f"analyst_output exceeds {MAX_ANALYST_OUTPUT_CHARS} characters"
+        )
 
     return body

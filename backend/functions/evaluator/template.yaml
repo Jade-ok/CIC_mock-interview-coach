@@ -2,10 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: CIC Mock Interview Coach - Evaluator Agent
 
+Parameters:
+  HostedFrontendOrigin:
+    Type: String
+    AllowedPattern: https://.+
+
 Globals:
   Function:
     Runtime: python3.12
-    Timeout: 300
+    Timeout: 60
     MemorySize: 512
 
 Resources:
@@ -15,15 +20,20 @@ Resources:
       Handler: lambda_handler.handler
       CodeUri: .
       Description: Evaluates mock interview performance for co-op students
+      Environment:
+        Variables:
+          HOSTED_GUARDRAILS_ENABLED: 'true'
       FunctionUrlConfig:
-        AuthType: NONE
+        AuthType: AWS_IAM
         Cors:
           AllowOrigins:
-            - '*'
+            - !Ref HostedFrontendOrigin
+            - http://localhost:5173
           AllowMethods:
             - POST
           AllowHeaders:
             - Content-Type
+            - x-amz-content-sha256
       Policies:
         - Statement:
             - Effect: Allow
@@ -42,5 +52,5 @@ Resources:
 
 Outputs:
   EvaluatorFunctionUrl:
-    Description: Evaluator Function URL endpoint
+    Description: Private IAM-protected Evaluator Function URL
     Value: !GetAtt EvaluatorFunctionUrl.FunctionUrl
