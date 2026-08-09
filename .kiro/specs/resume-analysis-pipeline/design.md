@@ -1,6 +1,6 @@
 # Design Document: Resume Analysis Pipeline
 
-> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and authenticated AgentCore WSS are separate deployment boundaries.
+> Maintained design. Last verified: 2026-08-09. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and signed AgentCore WSS are separate hosted boundaries.
 
 ## Overview
 
@@ -9,13 +9,13 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Mantle Chat Completions with a forced function call, validates the response against the analyst_output schema, and returns it to the frontend.
 
-The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
+The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses one CloudFront API distribution with OAC in front of private Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
 - Forced function pattern — the analyst_output schema is supplied as a Chat Completions function and selected through `tool_choice`, producing structured JSON arguments without brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
-- Bounded retry — each Bedrock client call makes one transport attempt. The orchestrator makes one additional call only when the first response fails schema validation, for a maximum of two Bedrock calls within the 300-second Lambda budget.
+- Environment-aware recovery — hosted uses one 55-second Mantle call and does not make a schema-recovery call; local uses a 120-second transport timeout and makes one additional call only when the first response fails schema validation.
 
 ## Architecture
 
@@ -24,31 +24,40 @@ The React browser client orchestrates the pipeline: it calls pdf_parser first, t
 ```mermaid
 sequenceDiagram
     participant Browser
+    participant CloudFront as CloudFront API distribution
     participant PdfParser as pdf_parser Lambda
     participant Analyst as analyst Lambda
     participant Bedrock as Bedrock Mantle (GPT OSS)
     participant Interviewer as interviewer Lambda
+    participant VoiceSession as voice_session Lambda
     participant AgentCore as AgentCore voice relay
     participant NovaSonic as Nova Sonic
     participant Evaluator as evaluator Lambda
 
-    Browser->>PdfParser: POST resume PDF + job posting (base64/text)
-    PdfParser-->>Browser: extracted text (resume_text, job_posting_text)
-    Browser->>Analyst: POST extracted text
+    Browser->>CloudFront: POST /pdf-parser
+    CloudFront->>PdfParser: OAC-signed origin request
+    PdfParser-->>Browser: extracted text (via CloudFront)
+    Browser->>CloudFront: POST /analyst
+    CloudFront->>Analyst: OAC-signed extracted text
     Analyst->>Bedrock: Chat Completions (forced function)
     Bedrock-->>Analyst: forced function response (structured JSON)
-    Analyst-->>Browser: analyst_output (schema v1.0)
-    Browser->>Interviewer: POST analyst_output
-    Interviewer-->>Browser: runtime context (for Nova Sonic)
-    Browser->>AgentCore: authenticated WSS (voice interview)
+    Analyst-->>Browser: analyst_output via CloudFront (schema v1.0)
+    Browser->>CloudFront: POST /interviewer
+    CloudFront->>Interviewer: OAC-signed analyst_output
+    Interviewer-->>Browser: runtime context via CloudFront
+    Browser->>CloudFront: POST /voice-session
+    CloudFront->>VoiceSession: OAC-signed request
+    VoiceSession-->>Browser: signed WSS URL via CloudFront
+    Browser->>AgentCore: signed WSS (voice interview)
     AgentCore->>NovaSonic: Bedrock bidirectional stream
     NovaSonic-->>AgentCore: real-time audio/text
     AgentCore-->>Browser: real-time audio/text
-    Browser->>Evaluator: POST analyst_output + transcript
-    Evaluator-->>Browser: scored evaluation report
+    Browser->>CloudFront: POST /evaluator
+    CloudFront->>Evaluator: OAC-signed analyst_output + transcript
+    Evaluator-->>Browser: scored report via CloudFront
 ```
 
-The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines all four Lambdas and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
+The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines four pipeline Lambdas, the Voice Session Lambda, and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
 
 ### Internal Lambda Architecture
 
@@ -116,6 +125,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     - Decoded PDF size <= 4 MiB (4,194,304 bytes) per document
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
+    - Plain-text job posting content is no longer than 5,000 characters
     
     Returns:
         (is_valid, error_message_or_none)
@@ -189,7 +199,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     """
     Validates:
     - resume_text present and non-empty string
-    - job_posting_text present and non-empty string
+    - job_posting_text present, non-empty, and no longer than 5,000 characters in every invocation mode
     
     Returns:
         (is_valid, error_message_or_none)
@@ -414,7 +424,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
         }
     ],
     "tool_choice": {"type": "function", "function": {"name": "analyst_output"}},
-    "max_tokens": 8192,
+    "max_tokens": 4096,  // hosted; pure local mode retains 8192
     "temperature": 0.0,
     "reasoning_effort": "low"
 }
@@ -437,11 +447,11 @@ analyst_output = json.loads(arguments)
 | REGION | `"us-east-1"` | `bedrock_client.py` |
 | MODEL_ID | `"openai.gpt-oss-120b"` | `prompt_builder.py` |
 | MAX_ATTEMPTS | `1` | `bedrock_client.py` |
-| MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
+| MAX_PDF_SIZE_BYTES | `4_194_304` (4 MiB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
 | MIN_JOB_POSTING_WORDS | `30` | `parser.py` (analyst) |
 | SCHEMA_VERSION | `"1.0"` | `parser.py` (analyst) |
-| ALLOWED_EXPERIENCE_TYPES | `["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club"]` | `parser.py` (analyst) |
+| ALLOWED_EXPERIENCE_TYPES | `["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club", "research", "volunteering", "work_experience", "other"]` | `parser.py` (analyst) |
 
 
 
@@ -481,7 +491,7 @@ analyst_output = json.loads(arguments)
 
 ### Property 6: pdf_parser Validation Rejects Malformed Requests
 
-*For any* request payload that (a) contains neither `resume` nor `job_posting`, (b) has a PDF document exceeding 4 MB, or (c) is missing required sub-fields for a declared document, the pdf_parser SHALL return an error response and never attempt PDF processing.
+*For any* request payload that (a) contains neither `resume` nor `job_posting`, (b) has a PDF document exceeding 4 MiB (4,194,304 bytes), or (c) is missing required sub-fields for a declared document, the pdf_parser SHALL return an error response and never attempt PDF processing.
 
 **Validates: Requirements 4.1, 4.2, 4.3**
 
@@ -493,7 +503,7 @@ analyst_output = json.loads(arguments)
 
 ### Property 8: Schema Validator Rejects Non-Conforming Output
 
-*For any* dict that is missing required top-level keys, has `schema_version` != "1.0", contains an `experience_type` outside the allowed enum set, has a `relevance_score` outside [0.0, 1.0], or has more than 5 entries in `interview_plan`, the schema validator SHALL raise a validation error.
+*For any* dict that is missing required top-level keys, has `schema_version` != "1.0", contains a missing or non-string `experience_type`, has a `relevance_score` outside [0.0, 1.0], or has more than 5 entries in `interview_plan`, the schema validator SHALL raise a validation error. Known experience-type aliases SHALL map to canonical values, and unfamiliar non-empty strings SHALL map to `other`.
 
 **Validates: Requirements 5.5, 5.6, 6.1, 6.2, 6.3**
 
@@ -553,24 +563,24 @@ Validation failures use the error envelope/status indicators below. Extraction f
 | Missing/empty job_posting_text | `{"status": "error", "error": "Missing or empty fields: job_posting_text"}` | 400 |
 | Both fields missing/empty | `{"status": "error", "error": "Missing or empty fields: resume_text, job_posting_text"}` | 400 |
 | Malformed JSON in event['body'] | `{"status": "error", "error": "Failed to parse request body as JSON"}` | 400 |
-| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock API call failed after 1 attempt: <reason>"}` | 502 |
-| Bedrock response not parseable on the recovery call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
-| Schema validation failure on the recovery call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
+| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock Mantle call failed after 1 attempt: <reason>"}` | 502 |
+| Bedrock response not parseable after the allowed local recovery, or on the single hosted call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
+| Schema validation failure after the allowed local recovery, or on the single hosted call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
 | Unexpected exception | `{"status": "error", "error": "Internal error: <brief description>"}` | 500 |
 
 ### Retry Strategy (analyst)
 
 ```text
-orchestrator attempt 1
+local orchestrator attempt 1
   └─ bedrock_client: 1 transport attempt
   └─ parse and validate
-if schema validation fails:
+if local schema validation fails:
   orchestrator attempt 2
     └─ bedrock_client: 1 fresh transport attempt
     └─ parse and validate
 ```
 
-`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Schema-invalid model output receives one recovery call, so the maximum is two service calls.
+`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Local schema-invalid output receives one recovery call, for at most two service calls; hosted schema-invalid output is returned after its single call.
 
 ## Testing Strategy: Current and Planned
 
@@ -578,7 +588,7 @@ if schema validation fails:
 
 - `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
 - `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
-- Analyst operational tests cover the Bedrock timeout/retry configuration, GPT OSS 120B model, 8,192-token budget, and one schema-recovery call.
+- Analyst operational tests cover the Bedrock timeout/retry configuration, GPT OSS 120B model, the hosted 4,096/local 8,192-token budgets, hosted input caps, and one schema-recovery call.
 - Evaluator and Interviewer have their own unit suites under their function directories.
 - There is currently no PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
 

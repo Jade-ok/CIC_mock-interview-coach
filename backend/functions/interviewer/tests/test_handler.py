@@ -123,4 +123,5 @@ class TestUnhandledException:
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
         assert body["success"] is False
-        assert "boom" in body["error_message"]
+        assert body["error_message"] == "An unexpected error occurred"
+        assert "boom" not in body["error_message"]

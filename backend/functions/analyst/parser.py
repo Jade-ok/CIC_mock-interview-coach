@@ -11,7 +11,32 @@ ALLOWED_EXPERIENCE_TYPES = [
     "personal_project",
     "hackathon",
     "student_club",
+    "research",
+    "volunteering",
+    "work_experience",
+    "other",
 ]
+EXPERIENCE_TYPE_ALIASES = {
+    "class_project": "academic_project",
+    "club": "student_club",
+    "club_work": "student_club",
+    "co_op": "internship",
+    "coop": "internship",
+    "course_work": "coursework",
+    "employment": "work_experience",
+    "extracurricular": "student_club",
+    "part_time_work": "work_experience",
+    "professional_experience": "work_experience",
+    "professional_project": "work_experience",
+    "research_experience": "research",
+    "research_project": "research",
+    "school_project": "academic_project",
+    "side_project": "personal_project",
+    "student_organization": "student_club",
+    "volunteer": "volunteering",
+    "volunteer_work": "volunteering",
+    "work": "work_experience",
+}
 REQUIRED_TOP_LEVEL_KEYS = [
     "schema_version",
     "candidate_profile",
@@ -31,6 +56,24 @@ class SchemaValidationError(Exception):
     """Raised when the analyst output does not conform to the expected schema."""
 
     pass
+
+
+def normalize_experience_type(value):
+    """Map a model-provided experience label to a stable category.
+
+    Forced tool schemas reduce output variation but do not guarantee that a
+    model will always honor an enum. Known synonyms map to canonical values;
+    unfamiliar non-empty strings become ``other`` so one label cannot fail the
+    entire analysis.
+    """
+    if not isinstance(value, str) or not value.strip():
+        raise SchemaValidationError(
+            "experience_type must be a non-empty string"
+        )
+
+    normalized = value.strip().lower().replace("-", "_").replace(" ", "_")
+    canonical = EXPERIENCE_TYPE_ALIASES.get(normalized, normalized)
+    return canonical if canonical in ALLOWED_EXPERIENCE_TYPES else "other"
 
 
 def parse_chat_response(response: dict) -> dict:
@@ -93,13 +136,14 @@ def parse_chat_response(response: dict) -> dict:
 
     # Validate each experience
     for i, exp in enumerate(selected_experiences):
-        # Validate experience_type
-        exp_type = exp.get("experience_type")
-        if exp_type not in ALLOWED_EXPERIENCE_TYPES:
+        # Normalize model synonyms while preserving a stable downstream enum.
+        try:
+            exp_type = normalize_experience_type(exp.get("experience_type"))
+        except SchemaValidationError as exc:
             raise SchemaValidationError(
-                f"selected_experiences[{i}].experience_type '{exp_type}' "
-                f"is not in allowed set: {ALLOWED_EXPERIENCE_TYPES}"
-            )
+                f"selected_experiences[{i}].{exc}"
+            ) from exc
+        exp["experience_type"] = exp_type
 
         # Validate relevance_score
         score = exp.get("relevance_score")
@@ -113,6 +157,17 @@ def parse_chat_response(response: dict) -> dict:
                 f"selected_experiences[{i}].relevance_score {score} "
                 f"is outside valid range [0.0, 1.0]"
             )
+
+    # Keep the profile summary consistent when it contains the same aliases.
+    candidate_profile = result.get("candidate_profile")
+    if isinstance(candidate_profile, dict):
+        available_types = candidate_profile.get("experience_types_available")
+        if isinstance(available_types, list):
+            candidate_profile["experience_types_available"] = [
+                normalize_experience_type(value)
+                for value in available_types
+                if isinstance(value, str) and value.strip()
+            ]
 
     # Validate interview_plan count
     interview_plan = result["interview_plan"]

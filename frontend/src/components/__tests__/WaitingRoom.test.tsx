@@ -74,14 +74,14 @@ describe('WaitingRoom', () => {
       render(<WaitingRoom />);
 
       expect(screen.getByLabelText('Loading')).toBeInTheDocument();
-      expect(screen.getByText('Waiting for the host to let you in')).toBeInTheDocument();
+      expect(screen.getByText('We are preparing your interview')).toBeInTheDocument();
     });
 
     it('shows status items for Agent and WebSocket', () => {
       render(<WaitingRoom />);
 
-      expect(screen.getByText('Agent Analysis')).toBeInTheDocument();
-      expect(screen.getByText('Server Connection')).toBeInTheDocument();
+      expect(screen.getByText('Reading your resume 📑')).toBeInTheDocument();
+      expect(screen.getByText('Connecting to your interviewer 🤖')).toBeInTheDocument();
     });
   });
 

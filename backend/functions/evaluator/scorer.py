@@ -2,7 +2,7 @@
 
 DIMENSIONS = [
     "concrete_example",
-    "situation_action_result",
+    "star_structure",
     "link_to_job",
     "quantifiable_outcome",
 ]

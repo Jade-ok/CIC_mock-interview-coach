@@ -4,7 +4,7 @@
  */
 
 import type { Agent1Response } from '@/types/session';
-import { API_ENDPOINTS } from '@/services/apiConfig';
+import { API_ENDPOINTS, jsonPostInit } from '@/services/apiConfig';
 
 export interface Agent1Request {
   pdf: File;
@@ -22,15 +22,13 @@ export async function callAgent1(
   // Step 1: Convert PDF to base64 and call PDF Parser
   const base64Pdf = await fileToBase64(request.pdf);
 
-  const parseResponse = await fetch(API_ENDPOINTS.pdfParser, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const parseResponse = await fetch(
+    API_ENDPOINTS.pdfParser,
+    await jsonPostInit({
       resume: { content: base64Pdf, format: 'pdf' },
       job_posting: { content: request.jdText, format: 'text' },
-    }),
-    signal,
-  });
+    }, signal)
+  );
 
   const parseResult = await parseResponse.json();
   if (parseResult.status !== 'success') {
@@ -40,12 +38,10 @@ export async function callAgent1(
   const { resume_text, job_posting_text } = parseResult.data;
 
   // Step 2: Call analyst with extracted text
-  const analystResponse = await fetch(API_ENDPOINTS.analyst, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ resume_text, job_posting_text }),
-    signal,
-  });
+  const analystResponse = await fetch(
+    API_ENDPOINTS.analyst,
+    await jsonPostInit({ resume_text, job_posting_text }, signal)
+  );
 
   const analystResult = await analystResponse.json();
   if (analystResult.status !== 'success') {
@@ -55,12 +51,10 @@ export async function callAgent1(
   const analystOutput = analystResult.data;
 
   // Step 3: Call interviewer to get runtime context
-  const interviewerResponse = await fetch(API_ENDPOINTS.interviewer, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ analyst_output: analystOutput }),
-    signal,
-  });
+  const interviewerResponse = await fetch(
+    API_ENDPOINTS.interviewer,
+    await jsonPostInit({ analyst_output: analystOutput }, signal)
+  );
 
   const interviewerResult = await interviewerResponse.json();
   if (!interviewerResponse.ok || interviewerResult.success !== true) {

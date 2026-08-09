@@ -5,7 +5,12 @@
  * transition to the Interview screen without a real backend.
  */
 
-import type { WebSocketConnectionState, NovaSonicOutputEvent, WebSocketMessage } from './webSocketClient';
+import type {
+  WebSocketClientConfig,
+  WebSocketConnectionState,
+  NovaSonicOutputEvent,
+  WebSocketMessage,
+} from './webSocketClient';
 
 export class MockWebSocketClient {
   private state: WebSocketConnectionState = 'disconnected';
@@ -20,7 +25,7 @@ export class MockWebSocketClient {
   onReconnectFailed: () => void = () => {};
   onSessionInvalid: () => void = () => {};
 
-  connect(_config: { url: string; maxReconnectAttempts: number; reconnectDelayMs: number[] }): Promise<void> {
+  connect(_config: WebSocketClientConfig): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.connectReject = reject;
       this.connectTimer = setTimeout(() => {

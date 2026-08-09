@@ -5,11 +5,11 @@ import type { EvaluatorOutput } from '../../../types/evaluator';
 
 const mockData: EvaluatorOutput = {
   per_question_scores: [
-    { question_text: 'Q1?', feedback: { strength: 'Good example.', improvement: 'Add metrics.' }, scores: { concrete_example: 4, situation_action_result: 3, link_to_job: 4, quantifiable_outcome: 2 } },
-    { question_text: 'Q2?', feedback: { strength: 'Clear structure.', improvement: 'Link to role.' }, scores: { concrete_example: 5, situation_action_result: 4, link_to_job: 3, quantifiable_outcome: 3 } },
+    { question_text: 'Q1?', feedback: { strength: 'Good example.', improvement: 'Add metrics.' }, scores: { concrete_example: 4, star_structure: 3, link_to_job: 4, quantifiable_outcome: 2 } },
+    { question_text: 'Q2?', feedback: { strength: 'Clear structure.', improvement: 'Link to role.' }, scores: { concrete_example: 5, star_structure: 4, link_to_job: 3, quantifiable_outcome: 3 } },
   ],
   overall_scores: {
-    dimensions: { concrete_example: 4.5, situation_action_result: 3.5, link_to_job: 3.5, quantifiable_outcome: 2.5 },
+    dimensions: { concrete_example: 4.5, star_structure: 3.5, link_to_job: 3.5, quantifiable_outcome: 2.5 },
     total: 3.5,
   },
   question_count: 2,
@@ -35,7 +35,7 @@ describe('FeedbackReport (full page)', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
 
     // Header
-    expect(screen.getByText('CIC Mock Interview Coach')).toBeTruthy();
+    expect(screen.getByText('AI Mock Interview Coach')).toBeTruthy();
 
     // Hero
     expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeTruthy();
@@ -44,9 +44,9 @@ describe('FeedbackReport (full page)', () => {
     expect(screen.getByText('How your answers scored')).toBeTruthy();
     expect(screen.getAllByText('Concrete example').length).toBeGreaterThan(0);
 
-    // Feedback columns
-    expect(screen.getByText('What you did well')).toBeTruthy();
-    expect(screen.getByText('What to work on next')).toBeTruthy();
+    // Summary and keyword coverage
+    expect(screen.getByText('Overall Summary')).toBeTruthy();
+    expect(screen.getByText('Role requirements you covered')).toBeTruthy();
 
     // Contextual advice
     expect(screen.getByText('For your next interview')).toBeTruthy();
@@ -56,13 +56,14 @@ describe('FeedbackReport (full page)', () => {
     expect(screen.getByText('Q1?')).toBeTruthy();
     expect(screen.getByText('Q2?')).toBeTruthy();
 
-    // Footer
-    expect(screen.getAllByText('Practice again').length).toBeGreaterThan(0);
+    // Header/footer retry actions
+    expect(screen.getAllByText('Retry with This Resume').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Retry with New Resume').length).toBeGreaterThan(0);
   });
 
   it('passes correct question count', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
-    expect(screen.getByText(/2 questions answered/)).toBeTruthy();
+    expect(screen.getByText(/You answered 2 questions/)).toBeTruthy();
   });
 
   it('hides transcript controls until transcript viewing is implemented', () => {

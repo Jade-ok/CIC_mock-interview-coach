@@ -14,7 +14,7 @@ def _make_scores(ce=3, sar=3, ltj=3, qo=3):
     """Helper to create a score dict."""
     return {
         "concrete_example": ce,
-        "situation_action_result": sar,
+        "star_structure": sar,
         "link_to_job": ltj,
         "quantifiable_outcome": qo,
     }
@@ -24,7 +24,7 @@ def _make_question(scores_dict):
     """Helper to wrap scores into a question object."""
     return {
         "question_text": "Test question?",
-        "answer_summary": "Test answer.",
+        "feedback": {"strength": "Clear answer.", "improvement": "Add detail."},
         "scores": scores_dict,
     }
 
@@ -36,7 +36,7 @@ class TestExtractAndClamp:
         }
         result = extract_and_clamp(llm_response)
         assert result[0]["scores"]["concrete_example"] == 1
-        assert result[0]["scores"]["situation_action_result"] == 1
+        assert result[0]["scores"]["star_structure"] == 1
 
     def test_clamps_above_maximum_to_5(self):
         llm_response = {
@@ -44,7 +44,7 @@ class TestExtractAndClamp:
         }
         result = extract_and_clamp(llm_response)
         assert result[0]["scores"]["concrete_example"] == 5
-        assert result[0]["scores"]["situation_action_result"] == 5
+        assert result[0]["scores"]["star_structure"] == 5
 
     def test_valid_scores_unchanged(self):
         llm_response = {
@@ -52,7 +52,7 @@ class TestExtractAndClamp:
         }
         result = extract_and_clamp(llm_response)
         assert result[0]["scores"]["concrete_example"] == 3
-        assert result[0]["scores"]["situation_action_result"] == 4
+        assert result[0]["scores"]["star_structure"] == 4
         assert result[0]["scores"]["link_to_job"] == 2
         assert result[0]["scores"]["quantifiable_outcome"] == 5
 
@@ -63,7 +63,7 @@ class TestExtractAndClamp:
         result = extract_and_clamp(llm_response)
         # int() truncates toward zero
         assert result[0]["scores"]["concrete_example"] == 3
-        assert result[0]["scores"]["situation_action_result"] == 2
+        assert result[0]["scores"]["star_structure"] == 2
         assert result[0]["scores"]["link_to_job"] == 4
         assert result[0]["scores"]["quantifiable_outcome"] == 1
 
@@ -73,7 +73,7 @@ class TestAggregate:
         scores = [_make_question(_make_scores(ce=4, sar=3, ltj=5, qo=2))]
         result = aggregate(scores)
         assert result["dimensions"]["concrete_example"] == 4.0
-        assert result["dimensions"]["situation_action_result"] == 3.0
+        assert result["dimensions"]["star_structure"] == 3.0
         assert result["dimensions"]["link_to_job"] == 5.0
         assert result["dimensions"]["quantifiable_outcome"] == 2.0
         assert result["total"] == 3.5
@@ -88,7 +88,7 @@ class TestAggregate:
         result = aggregate(scores)
         assert result["question_count"] == 3
         assert result["dimensions"]["concrete_example"] == 4.0
-        assert result["dimensions"]["situation_action_result"] == 4.0
+        assert result["dimensions"]["star_structure"] == 4.0
         assert result["dimensions"]["link_to_job"] == 4.0
         assert result["dimensions"]["quantifiable_outcome"] == 3.0
         assert result["total"] == 3.8

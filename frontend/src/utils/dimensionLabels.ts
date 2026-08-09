@@ -8,9 +8,9 @@ export const DIMENSION_LABELS: Record<string, DimensionInfo> = {
     label: 'Concrete example',
     description: 'Did you point to a real project or moment?',
   },
-  situation_action_result: {
-    label: 'Situation \u2192 Action \u2192 Result',
-    description: 'Was the story easy to follow?',
+  star_structure: {
+    label: 'STAR structure',
+    description: 'Was the story structured as Situation, Task, Action, Result?',
   },
   link_to_job: {
     label: 'Link to the job',

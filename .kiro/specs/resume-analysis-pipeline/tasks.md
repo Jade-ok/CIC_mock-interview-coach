@@ -1,6 +1,6 @@
 # Implementation Plan: Resume Analysis Pipeline
 
-> These completed tasks cover the Lambda implementation. Amplify frontend hosting and authenticated AgentCore environment verification are tracked in the frontend/interviewer specs.
+> These completed tasks cover the Lambda implementation. Amplify frontend hosting and signed AgentCore environment verification are tracked in the frontend/interviewer specs.
 
 > Historical implementation record. Last reconciled with the refactored paths on 2026-08-07.
 
@@ -22,7 +22,7 @@ The original hackathon build used standalone test events. The repository now use
 - [x] 2. Implement pdf_parser — validation and invocation mode detection
   - [x] 2.1 Create `backend/functions/pdf_parser/validation.py`
     - Implement `detect_invocation_mode(event)` — if `event` has `body` key with string value, parse JSON from it; otherwise return event as-is
-    - Implement `validate_request(payload)` — check at least one document present, decoded PDF size ≤ 4 MiB (4,194,304 bytes), format flag is `"pdf"` or `"text"` for job_posting, required fields present
+    - Implement `validate_request(payload)` — check at least one document present, decoded PDF size ≤ 4 MiB (4,194,304 bytes), plain-text job posting ≤ 5,000 characters, format flag is `"pdf"` or `"text"` for job_posting, required fields present
     - Return `(is_valid, error_message_or_none)` tuple
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 11.1, 11.2_
 
@@ -60,7 +60,7 @@ The original hackathon build used standalone test events. The repository now use
 - [x] 5. Implement analyst — validation and invocation mode detection
   - [x] 5.1 Create `backend/functions/analyst/validation.py`
     - Implement `detect_invocation_mode(event)` — same dual-mode pattern as pdf_parser
-    - Implement `validate_request(payload)` — check `resume_text` and `job_posting_text` are present and non-empty strings
+    - Implement `validate_request(payload)` — check `resume_text` and `job_posting_text` are present and non-empty strings and enforce the product-wide 5,000-character job-posting limit
     - Return `(is_valid, error_message_or_none)` with specific field names in error
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 11.3, 11.4_
 
@@ -89,7 +89,7 @@ The original hackathon build used standalone test events. The repository now use
       - Extract and decode `analyst_output` arguments from the first Chat Completions function call
       - Validate all top-level keys present (`candidate_profile`, `target_role`, `resume_job_alignment`, `selected_experiences`, `analysis_warnings`, `schema_version`, `interview_plan`)
       - Validate `schema_version == "1.0"`
-      - Validate `experience_type` values in allowed enum set
+      - Normalize known `experience_type` aliases, map unfamiliar non-empty strings to `other`, and validate the resulting canonical enum
       - Validate `relevance_score` in [0.0, 1.0]
       - Validate `interview_plan` has max 5 entries
     - Implement `check_analysis_warnings(analyst_output, resume_text, job_posting_text) -> list[str]`

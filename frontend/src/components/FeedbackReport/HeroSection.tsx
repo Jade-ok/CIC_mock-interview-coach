@@ -13,7 +13,7 @@ interface HeroSectionProps {
 /** Short action phrase for each dimension, with highlight markers around key words. */
 const DIMENSION_ACTIONS: Record<string, string> = {
   concrete_example: 'Pick one **specific project** and name it.',
-  situation_action_result: 'Complete your **SAR structure** (Situation, Action, Result).',
+  star_structure: 'Structure your answer using **STAR** (Situation, Task, Action, Result).',
   link_to_job: 'Connect your example to **this role** explicitly.',
   quantifiable_outcome: 'Add a **number or measurable outcome** to every story.',
 };

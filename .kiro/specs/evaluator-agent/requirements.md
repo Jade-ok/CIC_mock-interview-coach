@@ -1,12 +1,12 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-07. This Lambda is part of the CDK-managed backend consumed by the target Amplify-hosted React client; Amplify/Auth deployment is not implied complete.
+> Maintained requirements. Last verified: 2026-08-09. This Lambda is a private Function URL origin reached through the CloudFront OAC distribution by the no-login Amplify-hosted React client.
 
 ## Introduction
 
 The Evaluator Agent is the third and final agent in the CIC Mock Interview Coach pipeline. After the Interviewer agent completes a turn-based interview session, the Evaluator receives the full interview conversation along with the analyst's structured assessment which combines analyst output and job-role alignment. It generates a scored feedback report assessing the student's interview performance across four fixed dimensions, provides an overall readiness label, and delivers actionable feedback with contextual advice.
 
-The Interviewer is designed to ask 3 main questions, each followed by exactly 1 follow-up question, for a maximum of 6 questions total in a complete interview. However, the student may stop the conversation at any time, so the transcript can contain anywhere from 1 to 6 question-answer pairs. The Evaluator must handle any transcript length and score only the questions that were actually answered.
+Nova is prompted to ask 3 main questions with 1 adaptive follow-up after each, but the application does not enforce model compliance with that sequence. The frontend submits the first 1 to 6 captured question-answer pairs. The Evaluator must handle that variable length and score only the questions that were actually answered.
 
 This entire system is calibrated for co-op seeking students, not experienced professionals. All scoring rubrics, feedback tone, and expectations are set at a level appropriate for students pursuing co-op placements. School projects, course work, hackathons, and team assignments are considered valid experience.
 
@@ -18,9 +18,9 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 - **Conversation**: The complete conversation history from the Interviewer agent as an array of turn objects, each containing point_id, turn_type, question, and answer fields (1 to 6 turns)
 - **Interview_Metadata**: Metadata about the interview session including candidate_level, target_role, completion status, and question counts — passed through to the response for frontend reference
 - **Main_Question**: One of up to 3 primary interview questions asked by the Interviewer
-- **Follow_Up_Question**: A single follow-up question paired with each main question to probe deeper into the student's answer
+- **Follow_Up_Question**: A follow-up question intended to probe deeper into the student's preceding answer; its presence is prompt-driven rather than application-enforced
 - **Analyst_Output**: The structured JSON output from the Analyst agent containing candidate profile, target role information, resume-job alignment (strong matches, partial matches, areas to explore), interview plan, selected experiences with relevance scores and candidate claims, and analysis warnings
-- **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, situation_action_result, link_to_job, quantifiable_outcome)
+- **Scoring_Dimension**: One of four fixed criteria used to evaluate each interview answer (concrete_example, star_structure, link_to_job, quantifiable_outcome)
 - **Readiness_Label**: A categorical assessment of the student's overall interview preparedness
 - **Feedback_Report**: The structured JSON output containing all scores, labels, and feedback
 - **Bedrock_Client**: The module responsible for signing and calling the AWS Bedrock Mantle Chat Completions API
@@ -68,7 +68,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 1. THE Bedrock_Client SHALL call Bedrock Mantle Chat Completions using model ID `openai.gpt-oss-120b` in region `us-east-1`
 2. THE Bedrock_Client SHALL force the `submit_evaluation` function to return structured JSON matching the defined evaluation schema
-3. IF a transport or API failure occurs, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
+3. IF a transport or API failure occurs locally, THEN THE Bedrock_Client SHALL retry once; hosted execution SHALL use one 55-second attempt
 4. IF both transport/API attempts fail, or a successful response contains malformed function output, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message
 
 ### Requirement 4: Per-Question Scoring
@@ -78,7 +78,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 #### Acceptance Criteria
 
 1. WHEN the LLM returns scoring judgments, THE Evaluator SHALL produce a score object for each question-answer pair present in the transcript, regardless of whether the interview was completed in full
-2. THE Evaluator SHALL include scores for all four dimensions per question: concrete_example, situation_action_result, link_to_job, and quantifiable_outcome
+2. THE Evaluator SHALL include scores for all four dimensions per question: concrete_example, star_structure, link_to_job, and quantifiable_outcome
 3. THE Evaluator SHALL constrain each dimension score to an integer between 1 and 5 inclusive
 4. IF the LLM returns a score outside the 1-5 range, THEN THE Evaluator SHALL clamp the value to the nearest boundary (1 or 5)
 5. THE Evaluator SHALL score each answer against co-op student expectations, recognizing school projects, course work, hackathons, and team assignments as valid experience
@@ -132,12 +132,13 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 #### Acceptance Criteria
 
-1. THE Evaluator SHALL return the Feedback_Report as a JSON object containing: per_question_scores, overall_scores, readiness_label, strengths, improvements, contextual_advice, and interview_metadata fields
+1. THE Evaluator SHALL return the Feedback_Report as a JSON object containing: per_question_scores, overall_scores, question_count, readiness_label, strengths, improvements, keywords_covered, keywords_not_covered, contextual_advice, and interview_metadata fields
 2. WHEN the evaluation succeeds, THE Evaluator SHALL return an HTTP 200 response with the Feedback_Report as the response body
-3. THE Evaluator SHALL ensure the per_question_scores field is an array with one entry per question actually answered, each containing the question text, student answer summary, and four dimension scores (each 1-5)
+3. THE Evaluator SHALL ensure the per_question_scores field is an array with one entry per question actually answered, each containing the question text, per-answer strength and improvement feedback, and four dimension scores (each 1-5)
 4. THE Evaluator SHALL ensure the overall_scores field contains the four dimension averages and the total overall score, all on the 1-5 scale
 5. THE Evaluator SHALL include a question_count field indicating how many questions were scored out of the maximum 6
 6. THE Evaluator SHALL pass through the interview_metadata object unchanged in the response for frontend reference
+7. THE Evaluator SHALL return keywords_covered and keywords_not_covered arrays derived from the target role and the interview evidence
 
 ### Requirement 10: Error Handling
 

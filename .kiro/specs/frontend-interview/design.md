@@ -1,30 +1,34 @@
 # Frontend Interview Design
 
-> Maintained design. Last verified: 2026-08-07.
+> Maintained design. Last verified: 2026-08-09.
 
 ## Overview
 
-The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume and job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
+The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume, pastes a job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
 
-Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and an authenticated `wss://` connection to AgentCore.
+Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and a short-lived signed `wss://` connection to AgentCore.
 
 ## Architecture
 
 ```text
 Amplify-hosted React/Vite browser
-  ├─ HTTPS → PDF Parser Lambda
-  │           → Analyst Lambda (OpenAI GPT OSS 120B)
-  │           → Interviewer Lambda + S3 configuration
-  ├─ authenticated WSS → AgentCore voice relay → Nova 2 Sonic
-  └─ HTTPS → Evaluator Lambda (OpenAI GPT OSS 120B)
+  └─ HTTPS → public CloudFront API distribution (OAC)
+               ├─ private PDF Parser Function URL
+               ├─ private Analyst Function URL (OpenAI GPT OSS 120B)
+               ├─ private Interviewer Function URL + S3 configuration
+               ├─ private Evaluator Function URL (OpenAI GPT OSS 120B)
+               └─ private Voice Session Function URL → signed WSS
+                                                       └─ AgentCore relay → Nova 2 Sonic
 ```
 
 Hosted integration requirements:
 
-- Production builds select their configured HTTPS and WSS endpoints with `VITE_RUNTIME_MODE=hosted`.
-- AgentCore authentication and Amplify hosting/authentication are not configured.
-- Lambda Function URLs are public and use wildcard CORS.
-- The protocol is unit-tested but has not been verified in a live browser/Nova session.
+- Production builds select the configured CloudFront HTTPS API base URL with `VITE_RUNTIME_MODE=hosted`; the voice-session response supplies a temporary signed WSS URL.
+- Amplify Hosting, the Voice Session Lambda, and the signed AgentCore WebSocket flow are deployed; the application intentionally has no end-user login.
+- One public CloudFront API distribution routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus exactly `http://localhost:5173` for hosted-mode local testing.
+- Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them. Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
+- Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
+- The protocol is unit-tested and has been exercised through the hosted browser/Nova path; real reconnection and session-restoration edge cases remain targeted verification work.
 
 ## Screen Flow
 
@@ -43,8 +47,8 @@ Upload → Waiting Room → Interview → Feedback
 
 ### UploadScreen
 
-- Accept one `application/pdf` file no larger than the shared 4 MB frontend/backend limit.
-- Accept job-description text.
+- Accept one `application/pdf` file no larger than the shared 4 MiB (4,194,304 bytes) frontend/backend limit.
+- Accept job-description text up to 5,000 characters and display its live count.
 - Disable submission when either required input is missing.
 - Pass the actual `File` and text to the session reducer.
 
@@ -62,7 +66,7 @@ Upload → Waiting Room → Interview → Feedback
 - Capture 16 kHz, 16-bit mono PCM audio.
 - Play 24 kHz, 16-bit mono PCM audio.
 - Show active-speaker state.
-- Allow text fallback while pausing microphone transmission during composition.
+- Require microphone access and show an accessible remediation message when permission is denied.
 - Accumulate only `FINAL` transcript events.
 - Allow barge-in by stopping queued playback on `interrupted`.
 - Keep the manual End button available at all times.
@@ -73,7 +77,9 @@ Upload → Waiting Room → Interview → Feedback
 - Show Evaluator loading and retry states.
 - Store the direct Evaluator response object.
 - Render successful results through the typed `FeedbackReport` components.
-- Keep transcript viewing explicitly pending; Practice Again resets the session.
+- Keep transcript viewing explicitly pending.
+- Offer `Retry with This Resume` to preserve upload/analysis/context and start a fresh voice session.
+- Offer `Retry with New Resume` to reset the application to Upload.
 
 ## State Model
 
@@ -85,11 +91,11 @@ interface SessionState {
   uploadData: { pdf: File; jdText: string } | null;
   analystOutput: Record<string, unknown> | null;
   novaSonicContext: string;
-  competencyGuides: CompetencyGuide[];
   transcript: TranscriptEntry[];
-  turnState: 'ai_speaking' | 'user_turn' | 'idle';
-  inputMode: 'voice' | 'text_only';
-  textInputState: 'idle' | 'composing';
+  livePartial: { role: 'interviewer' | 'user'; text: string } | null;
+  turnState: 'ai_speaking' | 'user_turn' | 'idle' | 'ended';
+  inputMode: 'voice' | 'text_only'; // retained legacy reducer state; no text-only UI
+  textInputState: 'idle' | 'composing'; // retained protocol/reducer state; no typed-answer UI
   practiceMode: boolean;
   elapsedSeconds: number;
   wsConnectionState: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -119,8 +125,7 @@ It returns:
 ```typescript
 interface Agent1Response {
   nova_sonic_context: string;
-  competency_guides: CompetencyGuide[];
-  analyst_output: Record<string, unknown>;
+  analyst_output?: Record<string, unknown>;
 }
 ```
 
@@ -147,7 +152,7 @@ interface Agent3Request {
 }
 ```
 
-The six scripted answers map in order to three points, each containing a main question and one follow-up. An unanswered final closing is not included. Six complete pairs produce `completed`; fewer pairs produce `ended_early`.
+Nova is prompted to ask three main questions and one adaptive follow-up after each, but application state does not guarantee that sequence. The mapper accepts the first six completed question-answer pairs, labels them by expected position, marks six pairs `completed`, and marks fewer pairs `ended_early`. An unanswered final closing is not included.
 
 ## WebSocket Protocol
 
@@ -157,7 +162,7 @@ Browser input events:
 |---|---|
 | `session_start` | Send runtime context and inference settings |
 | `audio_chunk` | Send base64 PCM microphone data |
-| `text_input` | Send a typed candidate response |
+| `text_input` | Supported by the relay protocol, but not exposed by the maintained browser UI |
 | `session_end` | Close the interview session |
 
 Relay output events:
@@ -180,7 +185,6 @@ Relay output events:
 - Microphone frames are captured through an AudioWorklet without blocking the main thread.
 - Echo cancellation and noise suppression are requested from the browser.
 - Playback uses chained `AudioBufferSourceNode` instances.
-- Text composition pauses outgoing audio frames without suspending the AudioContext.
 - Only final transcript stages are persisted.
 - Practice Mode affects presentation only and must never alter backend messages.
 
@@ -204,22 +208,21 @@ Evaluator failure keeps the transcript and Analyst output available for retry.
 
 ## Runtime Configuration
 
-Local development uses the combined backend on port 8080. Hosted builds receive environment-specific HTTPS and WSS endpoints through the hosting environment. AWS credentials belong to backend runtime identities rather than browser configuration.
+Local development uses the combined backend on port 8080. Hosted builds receive one CloudFront HTTPS API base URL through the hosting environment; the voice-session route returns the temporary signed WSS URL at runtime. AWS credentials belong to backend runtime identities rather than browser configuration.
 
 ## Verification Properties
 
-1. Non-PDF or over-4-MB uploads are rejected by the current frontend.
+1. Non-PDF or over-4-MiB uploads are rejected by the current frontend.
 2. Submit remains disabled until both inputs exist.
 3. Waiting Room times out unless both dependencies become ready.
 4. Retry invokes only the failed dependency.
 5. Barge-in stops playback immediately.
-6. Text composition pauses microphone transmission.
-7. Reconnection attempts remain bounded.
-8. Practice Mode changes UI only.
-9. Only final transcript events are retained, in order.
-10. `session_start` is sent only after context and socket readiness.
-11. `end_interview` waits for playback before automatic shutdown.
-12. The End button remains enabled throughout the interview.
+6. Reconnection attempts remain bounded.
+7. Practice Mode changes UI only.
+8. Only final transcript events are retained, in order.
+9. `session_start` is sent only after context and socket readiness.
+10. `end_interview` waits for playback before automatic shutdown.
+11. The End button remains enabled throughout the interview.
 
 ## Remaining Work
 

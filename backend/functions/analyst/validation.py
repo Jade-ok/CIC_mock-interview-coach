@@ -1,6 +1,15 @@
 """Input validation for the analyst Lambda."""
 
 import json
+import os
+
+
+MAX_RESUME_TEXT_CHARS = 60_000
+MAX_JOB_POSTING_TEXT_CHARS = 5_000
+
+
+def _hosted_guardrails_enabled() -> bool:
+    return os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true"
 
 
 def detect_invocation_mode(event: dict) -> dict:
@@ -48,5 +57,19 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
 
     if missing_fields:
         return (False, f"Missing or empty fields: {', '.join(missing_fields)}")
+
+    # This is a product constraint shared by the frontend, local adapter, and
+    # hosted Lambda rather than a hosted-only cost guardrail.
+    if len(payload["job_posting_text"]) > MAX_JOB_POSTING_TEXT_CHARS:
+        return (
+            False,
+            f"job_posting_text exceeds {MAX_JOB_POSTING_TEXT_CHARS} characters",
+        )
+
+    if not _hosted_guardrails_enabled():
+        return (True, None)
+
+    if len(payload["resume_text"]) > MAX_RESUME_TEXT_CHARS:
+        return (False, f"resume_text exceeds {MAX_RESUME_TEXT_CHARS} characters")
 
     return (True, None)

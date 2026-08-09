@@ -18,7 +18,7 @@ CRITICAL SCORING RULES:
 
 Score each question-answer pair on these four dimensions (1-5 integer scale):
 1. concrete_example (1-5): Did the student provide a specific, real example?
-2. situation_action_result (1-5): Did the answer follow SAR structure?
+2. star_structure (1-5): Did the answer follow STAR structure (Situation, Task, Action, Result)?
 3. link_to_job (1-5): Did the student connect their experience to the target role?
 4. quantifiable_outcome (1-5): Did the student include measurable results or impact?
 

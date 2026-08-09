@@ -1,22 +1,22 @@
 # Project Summary
 
-> Active product and implementation summary. Last verified: 2026-08-07.
+> Active product and implementation summary. Last verified: 2026-08-09.
 
 Build a voice-based résumé deep-dive mock interview app for students and internship candidates.
 
 The user uploads a résumé, pastes a target job description, completes a spoken interview, and receives student-appropriate feedback.
 
-The Analyst currently accepts internships, coursework, academic projects, personal projects, hackathons, and student clubs as selected experience types. The interview profile also intends to support research, volunteering, and part-time work, but the Analyst enum must be expanded before those types work end to end. The app should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
+The Analyst accepts internships, coursework, academic projects, personal projects, hackathons, student clubs, research, volunteering, and work experience. Common model synonyms are normalized to these stable categories, while unfamiliar non-empty labels become `other` so category wording cannot fail an otherwise valid analysis. The app should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
 
 ## Interview Format
 
-The interview includes:
+Nova is instructed to aim for:
 
 - 3 main questions
 - 1 adaptive follow-up after each main question
 - up to 6 spoken answers
 - an option to end the interview early
-- a Practice Mode UI with interviewer bubbles, competency guides, and keyword highlighting
+- a Practice Mode UI with interviewer-only captions plus Key Competencies and Experiences to Prepare
 
 The three interview areas are:
 
@@ -82,11 +82,12 @@ The Evaluator contract requires:
 
 When invoked with a valid request, it generates:
 
-- a score for each question across concrete example, situation/action/result, link to job, and quantifiable outcome
+- a score for each question across concrete example, STAR structure, link to job, and quantifiable outcome
 - four aggregated dimension scores and an overall score
 - a readiness label
 - strengths
 - improvements
+- keywords covered and not covered
 - contextual advice
 - interview metadata passed through from the request
 
@@ -136,21 +137,23 @@ The sequence is:
 - follow-up answer
 - move to the next interview point
 
-The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The frontend now maps final transcript entries to `schemas/interviewer_output.json`; live end-to-end verification remains pending.
+Nova is instructed to end after the third follow-up answer by calling `end_interview`. The frontend maps final transcript entries to `schemas/interviewer_output.json` and invokes the Evaluator.
 
-The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. Live deployed verification remains pending.
+The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. The three-main-question/three-follow-up sequence is still directed by Nova's context rather than guaranteed by application-side state tracking.
 
 ## AWS Services
 
 The agreed deployment architecture uses one AWS account:
 
 - AWS Amplify Hosting serves the React/Vite frontend.
-- An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
+- The public browser obtains a five-minute signed `wss://` URL from the voice-session Lambda and opens Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
 - AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
-- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke OpenAI GPT OSS 120B through Amazon Bedrock Mantle; the Interviewer Lambda builds context from configuration without making a model call.
+- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. A fifth Lambda signs short-lived AgentCore connection URLs. Analyst and Evaluator invoke OpenAI GPT OSS 120B through Amazon Bedrock Mantle; the Interviewer Lambda builds context from configuration without making a model call.
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration resources. AgentCore remains a separate hosted container boundary.
 
-The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads its Lambda and AgentCore endpoints from environment configuration. The four hosted Lambda Function URLs are currently public and must be protected before the application is shared publicly.
+The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads one CloudFront API base URL from environment configuration; CloudFront OAC signs requests to private Function URL origins. The no-login hosted design uses exact browser origins, one 55-second model attempt, invocation/error/throttle alarms, an email-backed AWS cost budget, hosted text/output/session limits, and an emergency function switch. Optional normal concurrency caps default off until the target account quota supports them. Pure local mode leaves the hosted timeout/retry/workload limits disabled while retaining AWS account quotas and the shared 4 MiB PDF limit.
 
-No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.
+The Amplify frontend, Lambda/S3 backend, and AgentCore relay are deployed. The application workflow serializes each matching `main` revision: it tests and deploys the CDK backend, then builds and publishes that same revision through the Amplify manual deployment API. Voice-relay changes use a separate AgentCore workflow; both release paths reject stale revisions and share one production lock. The workflows use short-lived AWS credentials from a GitHub OIDC role restricted to the immutable repository identity and the `main` branch.
+
+No database or permanent interview history is currently implemented. Practice Mode presentation is available in both local and hosted builds; cross-session history is not.

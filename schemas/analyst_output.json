@@ -6,7 +6,7 @@
     "education_summary": "string — summary of education background",
     "experience_summary": "string — summary of overall experience",
     "relevant_skills": ["string"],
-    "experience_types_available": ["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club"]
+    "experience_types_available": ["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club", "research", "volunteering", "work_experience", "other"]
   },
 
   "target_role": {
@@ -57,7 +57,7 @@
     {
       "experience_id": "exp_1",
       "title": "string — experience title",
-      "experience_type": "internship | coursework | academic_project | personal_project | hackathon | student_club",
+      "experience_type": "internship | coursework | academic_project | personal_project | hackathon | student_club | research | volunteering | work_experience | other",
       "organization": "string",
       "summary": "string — brief description",
       "candidate_claims": ["string — claims made in resume"],

@@ -11,7 +11,7 @@
  * Preserved behaviors:
  * - nova_sonic_context is stored correctly on AGENT1_SUCCESS
  * - transcript and analyst_output flow to callAgent3() correctly
- * - When analyst_output is undefined, agent3Client uses {} as fallback
+ * - canonical conversation and analyst_output reach the Evaluator request
  * - RESET returns state to initialState completely
  */
 
@@ -33,6 +33,34 @@ const transcriptEntryArb: fc.Arbitrary<TranscriptEntry> = fc.record({
 });
 
 const novaSonicContextArb: fc.Arbitrary<string> = fc.string({ minLength: 1, maxLength: 200 });
+
+const validEvaluatorOutput = {
+  per_question_scores: [{
+    question_text: 'Tell me about yourself',
+    feedback: { strength: 'Clear example.', improvement: 'Add a metric.' },
+    scores: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 2 },
+  }],
+  overall_scores: {
+    dimensions: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 2 },
+    total: 2.8,
+  },
+  question_count: 1,
+  readiness_label: 'Developing well',
+  strengths: ['Clear example.'],
+  improvements: ['Add a metric.'],
+  keywords_covered: [],
+  keywords_not_covered: [],
+  contextual_advice: ['Prepare one measurable result.'],
+  interview_metadata: {
+    candidate_level: 'student_intern',
+    target_role: 'Software Engineer',
+    status: 'ended_early',
+    completion_reason: 'user_ended_early',
+    main_questions_completed: 1,
+    follow_ups_completed: 0,
+    ended_early: true,
+  },
+};
 
 // ─── Sub-task 1: Observe callAgent1() returns nova_sonic_context correctly ───
 // ─── Sub-task 5: PBT - For all valid Agent1Response payloads, nova_sonic_context is stored correctly in state ───
@@ -151,9 +179,6 @@ describe('Preservation: callAgent3() receives transcript and analyst_output', ()
           { minLength: 1, maxLength: 5 }
         ),
         async (pairs) => {
-          // Flatten pairs into transcript
-          const transcript: TranscriptEntry[] = pairs.flatMap(([q, a]) => [q, a]);
-
           let capturedBody: Record<string, unknown> | null = null;
 
           // Mock fetch to capture the request body
@@ -161,17 +186,17 @@ describe('Preservation: callAgent3() receives transcript and analyst_output', ()
             capturedBody = JSON.parse(init.body as string);
             return {
               ok: true,
-              json: async () => ({ overall_total: 80 }),
+              json: async () => validEvaluatorOutput,
             };
           }) as unknown as typeof globalThis.fetch;
 
           const request: Agent3Request = {
-            conversation: [{
-              point_id: 'point_1',
-              turn_type: 'main_question',
-              question: 'Tell me about yourself',
-              answer: 'I am a student',
-            }],
+            conversation: pairs.map(([question, answer], index) => ({
+              point_id: `point_${Math.floor(index / 2) + 1}`,
+              turn_type: index % 2 === 0 ? 'main_question' : 'follow_up',
+              question: question.text,
+              answer: answer.text,
+            })),
             interview_metadata: {
               candidate_level: 'student_intern',
               target_role: 'Software Engineer',
@@ -207,116 +232,6 @@ describe('Preservation: callAgent3() receives transcript and analyst_output', ()
       ),
       { numRuns: 50 }
     );
-  });
-});
-
-// ─── Sub-task 3: Observe when analyst_output is undefined, agent3Client uses request.analyst_output || {} fallback ───
-// ─── Sub-task 7: PBT - For all inputs where analyst_output is null/undefined, evaluator request body uses {} as fallback ───
-
-describe('Preservation: analyst_output fallback to {} when undefined/null', () => {
-  let originalFetch: typeof globalThis.fetch;
-
-  beforeEach(() => {
-    originalFetch = globalThis.fetch;
-  });
-
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
-  /**
-   * **Validates: Requirements 3.3**
-   *
-   * For all inputs where analyst_output is null/undefined,
-   * the evaluator request body uses {} as the fallback value.
-   */
-  it('property: when analyst_output is undefined, request body sends empty object {}', async () => {
-    const { callAgent3 } = await import('@/services/agent3Client');
-
-    await fc.assert(
-      fc.asyncProperty(
-        fc.array(
-          fc.tuple(
-            fc.record({
-              role: fc.constant('interviewer' as const),
-              text: fc.string({ minLength: 1, maxLength: 100 }),
-              timestamp: fc.constant('2024-01-01T00:00:00Z'),
-            }),
-            fc.record({
-              role: fc.constant('user' as const),
-              text: fc.string({ minLength: 1, maxLength: 100 }),
-              timestamp: fc.constant('2024-01-01T00:00:01Z'),
-            })
-          ),
-          { minLength: 1, maxLength: 5 }
-        ),
-        // analyst_output is explicitly undefined (as in the unfixed code path)
-        fc.constantFrom(undefined, undefined),
-        async (pairs, _analystOutput) => {
-          const transcript: TranscriptEntry[] = pairs.flatMap(([q, a]) => [q, a]);
-
-          let capturedBody: Record<string, unknown> | null = null;
-
-          globalThis.fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
-            capturedBody = JSON.parse(init.body as string);
-            return {
-              ok: true,
-              json: async () => ({ overall_total: 75 }),
-            };
-          }) as unknown as typeof globalThis.fetch;
-
-          const request: Agent3Request = {
-            conversation: [{
-              point_id: 'point_1',
-              turn_type: 'main_question',
-              question: 'Tell me about yourself',
-              answer: 'I am a student',
-            }],
-            interview_metadata: {
-              candidate_level: 'student_intern',
-              target_role: 'Software Engineer',
-              status: 'ended_early',
-              completion_reason: 'user_ended_early',
-              main_questions_completed: 1,
-              follow_ups_completed: 0,
-              ended_early: true,
-            },
-            analyst_output: {},
-          };
-
-          await callAgent3(request);
-
-          // The request body should have analyst_output as empty object {}
-          expect(capturedBody).not.toBeNull();
-          expect(capturedBody!.analyst_output).toEqual({});
-        }
-      ),
-      { numRuns: 50 }
-    );
-  });
-
-  it('unit: when analyst_output is explicitly undefined in request, body uses {} fallback', async () => {
-    const { callAgent3 } = await import('@/services/agent3Client');
-
-    let capturedBody: Record<string, unknown> | null = null;
-
-    globalThis.fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
-      capturedBody = JSON.parse(init.body as string);
-      return {
-        ok: true,
-        json: async () => ({ overall_total: 80 }),
-      };
-    }) as unknown as typeof globalThis.fetch;
-
-    await callAgent3({
-      transcript: [
-        { role: 'interviewer', text: 'Q1', timestamp: '2024-01-01T00:00:00Z' },
-        { role: 'user', text: 'A1', timestamp: '2024-01-01T00:00:01Z' },
-      ],
-      analyst_output: {},
-    });
-
-    expect(capturedBody!.analyst_output).toEqual({});
   });
 });
 

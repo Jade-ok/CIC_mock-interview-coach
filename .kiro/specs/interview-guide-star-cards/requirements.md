@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Superseded historical specification. The maintained Guide Panel behavior is defined in `../guide-panel-v2/requirements.md`. Predictive-question labels and Korean user-facing copy below are preserved only as implementation history and are not current requirements.
+
 ## Introduction
 
 Replace the current competency-guide keyword-matching cards in the GuidePanel with static, analyst-driven STAR-method interview preparation cards. The new cards are derived from the Analyst output (`analystOutput.interview_plan`) at render time and provide the candidate with predicted questions, relevant skill chips, and STAR-framework answering hints. All existing guide-highlighting logic (keyword matcher, competencyGuides state) is removed as part of this change.
@@ -49,7 +51,7 @@ Replace the current competency-guide keyword-matching cards in the GuidePanel wi
 #### Acceptance Criteria
 
 1. THE GuidePanel SHALL render a maximum of 3 StarCards.
-2. THE GuidePanel SHALL display a top label reading "예상 질문 N" where N equals the card's 1-based index.
+2. THE GuidePanel SHALL display a top label reading "Expected Question N" where N equals the card's 1-based index.
 3. THE GuidePanel SHALL display the `topic` field as the most visually prominent text element on each card.
 4. THE GuidePanel SHALL display keyword chips below the topic showing the derived skill tags.
 5. THE GuidePanel SHALL display the matched STAR category's label, recommended element badges, and Korean reasoning string in a visually subdued style below the keyword chips.

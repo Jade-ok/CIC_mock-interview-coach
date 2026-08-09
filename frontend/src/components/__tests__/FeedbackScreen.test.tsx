@@ -10,7 +10,7 @@ describe('FeedbackScreen', () => {
         feedback: { strength: 'Named a specific project clearly.', improvement: 'Add measurable outcomes.' },
         scores: {
           concrete_example: 4,
-          situation_action_result: 3,
+          star_structure: 3,
           link_to_job: 4,
           quantifiable_outcome: 2,
         },
@@ -19,7 +19,7 @@ describe('FeedbackScreen', () => {
     overall_scores: {
       dimensions: {
         concrete_example: 4,
-        situation_action_result: 3,
+        star_structure: 3,
         link_to_job: 4,
         quantifiable_outcome: 2,
       },
@@ -126,7 +126,7 @@ describe('FeedbackScreen', () => {
     it('shows feedback result', () => {
       render(<FeedbackScreen {...resultProps} />);
       expect(screen.getByTestId('feedback-result')).toBeInTheDocument();
-      expect(screen.getByText('CIC Mock Interview Coach')).toBeInTheDocument();
+      expect(screen.getByText('AI Mock Interview Coach')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Your Interview Report' })).toBeInTheDocument();
     });
 

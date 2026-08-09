@@ -293,7 +293,7 @@ describe('useInterviewStreaming', () => {
     });
   });
 
-  describe('Sub-task 5: microphone denied → text-only mode', () => {
+  describe('Sub-task 5: microphone permission remediation', () => {
     it('should dispatch MIC_DENIED when AudioManager.initialize returns granted=false', async () => {
       const deniedAm = createMockAudioManager({ granted: false });
       const factory = vi.fn().mockReturnValue(deniedAm);
@@ -336,8 +336,8 @@ describe('useInterviewStreaming', () => {
       expect(deniedAm.startCapture).not.toHaveBeenCalled();
     });
 
-    it('should still handle audio_output events in text-only mode (Req 3.10)', async () => {
-      // Even when mic denied, audio playback should work
+    it('should still handle audio_output events after microphone denial', async () => {
+      // Incoming interviewer audio remains playable while the permission error is visible.
       const deniedAm = createMockAudioManager({ granted: false });
       const factory = vi.fn().mockReturnValue(deniedAm);
 

@@ -45,7 +45,7 @@ EVALUATION_TOOL_SCHEMA: dict = {
                                 "type": "object",
                                 "required": [
                                     "concrete_example",
-                                    "situation_action_result",
+                                    "star_structure",
                                     "link_to_job",
                                     "quantifiable_outcome"
                                 ],
@@ -56,11 +56,11 @@ EVALUATION_TOOL_SCHEMA: dict = {
                                         "maximum": 5,
                                         "description": "Did the student provide a specific, real example? (1-5)"
                                     },
-                                    "situation_action_result": {
+                                    "star_structure": {
                                         "type": "integer",
                                         "minimum": 1,
                                         "maximum": 5,
-                                        "description": "Did the answer follow SAR structure? (1-5)"
+                                        "description": "Did the answer follow STAR structure (Situation, Task, Action, Result)? (1-5)"
                                     },
                                     "link_to_job": {
                                         "type": "integer",

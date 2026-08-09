@@ -1,6 +1,7 @@
 """Lambda entry point for the analyst function."""
 
 import json
+import logging
 
 try:
     from .validation import detect_invocation_mode, validate_request
@@ -12,6 +13,8 @@ except ImportError:  # Lambda loads handler.py as a top-level module.
     from orchestrator import analyze
     from bedrock_client import BedrockCallFailed
     from parser import SchemaValidationError
+
+logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event: dict, context) -> dict:
@@ -47,8 +50,9 @@ def lambda_handler(event: dict, context) -> dict:
         return _error_response(f"Bedrock service error: {exc}", 502)
     except SchemaValidationError as exc:
         return _error_response(f"Response validation error: {exc}", 502)
-    except Exception as exc:
-        return _error_response(f"Internal error: {exc}", 500)
+    except Exception:
+        logger.exception("Unexpected error during resume analysis")
+        return _error_response("An unexpected error occurred", 500)
 
     # Step 4: Wrap result in success envelope
     return _success_response(analyst_output)

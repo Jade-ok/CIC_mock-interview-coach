@@ -35,10 +35,24 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should connect successfully and set state to connected', async () => {
       await client.connect(testConfig);
+      expect(client.getState()).toBe('connected');
+    });
+
+    it('should resolve a URL provider before connecting', async () => {
+      const urlProvider = vi.fn().mockResolvedValue(TEST_URL);
+
+      await client.connect({
+        urlProvider,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: [10, 20],
+      });
+
+      expect(urlProvider).toHaveBeenCalledTimes(1);
       expect(client.getState()).toBe('connected');
     });
 
@@ -92,6 +106,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer?.close();
+      mockServer?.stop();
     });
 
     it('should resolve when session_start_ack is received', async () => {
@@ -177,6 +192,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should send audio_chunk with correct format', async () => {
@@ -214,6 +230,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should send text_input with correct format', async () => {
@@ -250,6 +267,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer?.close();
+      mockServer?.stop();
     });
 
     it('should call onSessionInvalid when session_invalid is received', async () => {
@@ -312,6 +330,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should forward all output events to onMessage', async () => {
@@ -383,6 +402,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should attempt reconnection with exponential backoff delays', async () => {
@@ -437,6 +457,30 @@ describe('WebSocketClient', () => {
 
       client.disconnect();
       newServer.close();
+      newServer.stop();
+    });
+
+    it('should request a fresh URL for reconnection', async () => {
+      const urlProvider = vi.fn().mockResolvedValue(TEST_URL);
+      const onReconnectSuccess = vi.fn();
+      client.onReconnectSuccess = onReconnectSuccess;
+
+      await client.connect({
+        urlProvider,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: [200, 400],
+      });
+      mockServer.close();
+      await flush();
+
+      const newServer = new Server(TEST_URL);
+      await delay(300);
+
+      expect(urlProvider).toHaveBeenCalledTimes(2);
+      expect(onReconnectSuccess).toHaveBeenCalledTimes(1);
+      client.disconnect();
+      newServer.close();
+      newServer.stop();
     });
 
     it('should call onDisconnect when connection drops', async () => {
@@ -488,6 +532,7 @@ describe('WebSocketClient', () => {
       expect(onReconnectAttempt).toHaveBeenLastCalledWith(1);
 
       client.disconnect();
+      newServer.stop();
     });
   });
 
@@ -554,6 +599,7 @@ describe('WebSocketClient', () => {
             } finally {
               localClient.disconnect();
               server.close();
+              server.stop();
             }
           }
         ),
@@ -602,6 +648,7 @@ describe('WebSocketClient', () => {
             } finally {
               localClient.disconnect();
               server.close();
+              server.stop();
             }
           }
         ),

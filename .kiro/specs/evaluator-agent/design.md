@@ -1,10 +1,10 @@
 # Design Document
 
-> Maintained design. Last verified: 2026-08-07.
+> Maintained design. Last verified: 2026-08-09.
 
 ## Overview
 
-The Evaluator Agent is a stateless AWS Lambda function in the CDK-managed backend. It receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report for the React client (target host: AWS Amplify). It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly. This Lambda does not host the live WebSocket; that persistent stream is handled by the AgentCore serverless voice relay.
+The Evaluator Agent is a stateless AWS Lambda function in the deployed CDK-managed backend. It receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report for the Amplify-hosted React client. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly. This Lambda does not host the live WebSocket; that persistent stream is handled by the AgentCore serverless voice relay.
 
 All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The system handles variable-length conversations (1-6 question-answer pairs) without penalizing incomplete interviews. Each turn in the conversation (whether main_question or follow_up) is scored independently.
 
@@ -12,16 +12,15 @@ All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The
 
 ### High-Level Flow
 
-```
-┌─────────────┐     ┌───────────┐     ┌────────────────┐     ┌────────────────┐
-│ Function URL│────▶│ Validator │────▶│ Prompt Builder │────▶│ Bedrock Client │
-└─────────────┘     └───────────┘     └────────────────┘     └────────────────┘
-                                                                       │
-                                                                       ▼
-┌─────────────┐     ┌────────────────┐     ┌──────────────────────────────────┐
-│  Response   │◀────│ Response       │◀────│ Scorer (aggregate + classify)    │
-│  (JSON)     │     │ Assembler      │     └──────────────────────────────────┘
-└─────────────┘     └────────────────┘
+```text
+CloudFront /evaluator route
+  -> private AWS_IAM Function URL
+  -> validator
+  -> prompt builder
+  -> Bedrock Mantle Chat Completions (GPT OSS 120B)
+  -> scorer
+  -> response assembler
+  -> JSON response through CloudFront
 ```
 
 ### Module Structure
@@ -42,7 +41,7 @@ backend/functions/evaluator/
 
 ### 1. lambda_handler.py (Orchestrator)
 
-**Responsibility:** Entry point for Lambda invocation via Function URL. Parses the event, delegates to each module in sequence, and returns the final HTTP response.
+**Responsibility:** Entry point for the CloudFront `/evaluator` route's private Function URL origin. Parses the event, delegates to each module in sequence, and returns the final HTTP response.
 
 ```python
 def handler(event, context):
@@ -86,7 +85,7 @@ def handler(event, context):
 **Responsibility:** Validates the incoming request payload against the expected schema.
 
 **Key behaviors:**
-- Parses JSON body from the Lambda Function URL event format
+- Parses the JSON body from the Function URL event format received through CloudFront OAC
 - Validates presence of conversation, interview_metadata, and analyst_output
 - Validates conversation length: minimum 1, maximum 6 question-answer pairs
 - Validates each turn contains required fields
@@ -138,7 +137,7 @@ IMPORTANT CALIBRATION:
 
 Score each question-answer pair on these four dimensions (1-5 integer scale):
 1. concrete_example (1-5): Did the student provide a specific, real example?
-2. situation_action_result (1-5): Did the answer follow SAR structure?
+2. star_structure (1-5): Did the answer follow STAR structure?
 3. link_to_job (1-5): Did the student connect their experience to the target role?
 4. quantifiable_outcome (1-5): Did the student include measurable results or impact?
 
@@ -170,22 +169,29 @@ EVALUATION_TOOL_SCHEMA = {
     "inputSchema": {
         "json": {
             "type": "object",
-            "required": ["per_question_scores", "strengths", "improvements", "contextual_advice"],
+            "required": ["per_question_scores", "strengths", "improvements", "keywords_covered", "keywords_not_covered", "contextual_advice"],
             "properties": {
                 "per_question_scores": {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["question_text", "answer_summary", "scores"],
+                        "required": ["question_text", "feedback", "scores"],
                         "properties": {
                             "question_text": {"type": "string"},
-                            "answer_summary": {"type": "string"},
+                            "feedback": {
+                                "type": "object",
+                                "required": ["strength", "improvement"],
+                                "properties": {
+                                    "strength": {"type": "string"},
+                                    "improvement": {"type": "string"}
+                                }
+                            },
                             "scores": {
                                 "type": "object",
-                                "required": ["concrete_example", "situation_action_result", "link_to_job", "quantifiable_outcome"],
+                                "required": ["concrete_example", "star_structure", "link_to_job", "quantifiable_outcome"],
                                 "properties": {
                                     "concrete_example": {"type": "integer", "minimum": 1, "maximum": 5},
-                                    "situation_action_result": {"type": "integer", "minimum": 1, "maximum": 5},
+                                    "star_structure": {"type": "integer", "minimum": 1, "maximum": 5},
                                     "link_to_job": {"type": "integer", "minimum": 1, "maximum": 5},
                                     "quantifiable_outcome": {"type": "integer", "minimum": 1, "maximum": 5}
                                 }
@@ -203,6 +209,14 @@ EVALUATION_TOOL_SCHEMA = {
                     "items": {"type": "string"},
                     "description": "Specific, actionable improvement advice tied to scoring dimensions"
                 },
+                "keywords_covered": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "keywords_not_covered": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
                 "contextual_advice": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -216,12 +230,12 @@ EVALUATION_TOOL_SCHEMA = {
 
 ### 4. bedrock_client.py
 
-**Responsibility:** Signs and sends Bedrock Mantle Chat Completions requests with retry logic.
+**Responsibility:** Signs and sends environment-bounded Bedrock Mantle Chat Completions requests.
 
 **Key design decisions:**
 - Uses model ID `openai.gpt-oss-120b` in `us-east-1`
 - Forces the `submit_evaluation` function through `tool_choice`
-- Retries transport/API exceptions once (max 2 total attempts)
+- Hosted mode uses one 55-second attempt; local mode retries transport/API exceptions once (max 2 total attempts)
 - Does not retry malformed responses or missing tool output (`EvaluationError`)
 - Extracts JSON function arguments from the response
 
@@ -229,9 +243,11 @@ EVALUATION_TOOL_SCHEMA = {
 MODEL_ID = "openai.gpt-oss-120b"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
+HOSTED_REQUEST_TIMEOUT_SECONDS = 55
 
 def invoke(system: str, messages: list, tool_config: dict) -> dict:
-    for attempt in range(MAX_ATTEMPTS):
+    max_attempts = 1 if hosted_guardrails_enabled() else MAX_ATTEMPTS
+    for attempt in range(max_attempts):
         try:
             response = _post_chat_completion({
                 "model": MODEL_ID,
@@ -242,8 +258,8 @@ def invoke(system: str, messages: list, tool_config: dict) -> dict:
         except EvaluationError:
             raise
         except Exception as e:
-            if attempt == MAX_ATTEMPTS - 1:
-                raise EvaluationError(f"Bedrock API call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
+            if attempt == max_attempts - 1:
+                raise EvaluationError(f"Bedrock Mantle call failed after {max_attempts} attempts: {str(e)}")
     
 def _extract_tool_input(response: dict) -> dict:
     function = response["choices"][0]["message"]["tool_calls"][0]["function"]
@@ -263,7 +279,7 @@ def _extract_tool_input(response: dict) -> dict:
 - Classification is deterministic Python code, not LLM output
 
 ```python
-DIMENSIONS = ["concrete_example", "situation_action_result", "link_to_job", "quantifiable_outcome"]
+DIMENSIONS = ["concrete_example", "star_structure", "link_to_job", "quantifiable_outcome"]
 
 READINESS_THRESHOLDS = [
     (4.3, "Interview ready"),
@@ -416,10 +432,13 @@ class EvaluationError(Exception):
   "per_question_scores": [
     {
       "question_text": "Could you describe the project and what you personally contributed?",
-      "answer_summary": "Built frontend of multilingual communication app",
+      "feedback": {
+        "strength": "You grounded the answer in a specific multilingual app project.",
+        "improvement": "Add a measurable result from the project."
+      },
       "scores": {
         "concrete_example": 4,
-        "situation_action_result": 3,
+        "star_structure": 3,
         "link_to_job": 4,
         "quantifiable_outcome": 2
       }
@@ -428,7 +447,7 @@ class EvaluationError(Exception):
   "overall_scores": {
     "dimensions": {
       "concrete_example": 3.8,
-      "situation_action_result": 3.2,
+      "star_structure": 3.2,
       "link_to_job": 3.5,
       "quantifiable_outcome": 2.5
     },
@@ -442,6 +461,8 @@ class EvaluationError(Exception):
   "improvements": [
     "Try to include measurable outcomes — for example, how many endpoints did the API have? How much did test coverage improve?"
   ],
+  "keywords_covered": ["REST API", "testing"],
+  "keywords_not_covered": ["AWS", "Docker"],
   "contextual_advice": [
     "Your resume mentions a hackathon project with real-time data processing. This experience directly maps to the 'stream processing' requirement in the job description — consider using it for questions about technical challenges."
   ],
@@ -476,15 +497,15 @@ class EvaluationError(Exception):
 | 1-5 scale (not 1-10) | Simpler for students to interpret; reduces LLM scoring variance |
 | Variable-length averaging | Students can stop early; no penalty for incomplete interviews |
 | Co-op calibration in system prompt | Ensures LLM expectations match student-level experience |
-| Single retry on transport/API failure | Balances reliability with the 300-second Lambda timeout; malformed model output fails immediately |
+| Environment-aware transport attempts | Hosted uses one bounded attempt to limit cost; local retains one retry; malformed model output fails immediately |
 | Separate modules per concern | Testable units; clear responsibility boundaries |
 
 ## Constraints and Assumptions
 
-- Lambda timeout is 300 seconds so two 120-second Bedrock attempts plus connection and response-processing overhead fit in one invocation
+- Hosted Lambda timeout is 60 seconds with one 55-second Mantle attempt; local execution retains two 120-second transport attempts
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
 - Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)
 - No persistent storage; the Evaluator is fully stateless
-- Maximum expected conversation size: 6 turns (3 main questions + 3 follow-ups, each with point_id linking main to its follow-up)
+- Maximum submitted conversation size: 6 captured question-answer pairs. Nova is prompted for 3 mains plus 3 follow-ups, but the frontend does not enforce that semantic sequence.
 - interview_metadata is passed through to the response unchanged; it is not used in scoring logic

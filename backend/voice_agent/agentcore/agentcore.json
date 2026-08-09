@@ -22,6 +22,10 @@
         {
           "name": "MODEL_ID",
           "value": "amazon.nova-2-sonic-v1:0"
+        },
+        {
+          "name": "HOSTED_GUARDRAILS_ENABLED",
+          "value": "true"
         }
       ],
       "networkMode": "PUBLIC",

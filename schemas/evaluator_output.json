@@ -2,10 +2,13 @@
   "per_question_scores": [
     {
       "question_text": "string — the interview question that was asked",
-      "answer_summary": "string — brief summary of the student's answer",
+      "feedback": {
+        "strength": "string — one sentence describing what worked in this answer",
+        "improvement": "string — one actionable improvement for this answer"
+      },
       "scores": {
         "concrete_example": "integer 1-5 — did the student provide a specific, real example?",
-        "situation_action_result": "integer 1-5 — did the answer follow SAR structure?",
+        "star_structure": "integer 1-5 — did the answer follow STAR structure (Situation, Task, Action, Result)?",
         "link_to_job": "integer 1-5 — did the student connect their experience to the target role?",
         "quantifiable_outcome": "integer 1-5 — did the student include measurable results or impact?"
       }
@@ -15,7 +18,7 @@
   "overall_scores": {
     "dimensions": {
       "concrete_example": "float — average across all answered questions, rounded to 1 decimal",
-      "situation_action_result": "float — average across all answered questions, rounded to 1 decimal",
+      "star_structure": "float — average across all answered questions, rounded to 1 decimal",
       "link_to_job": "float — average across all answered questions, rounded to 1 decimal",
       "quantifiable_outcome": "float — average across all answered questions, rounded to 1 decimal"
     },
@@ -29,6 +32,10 @@
   "strengths": ["string — specific praise with direct quotes or references from the conversation"],
 
   "improvements": ["string — specific, actionable improvement advice tied to scoring dimensions"],
+
+  "keywords_covered": ["string — target-role keyword or skill demonstrated in the interview"],
+
+  "keywords_not_covered": ["string — target-role keyword or skill not demonstrated in the interview"],
 
   "contextual_advice": ["string — advice referencing unused resume experiences or job competency gaps from analyst_output"],
 

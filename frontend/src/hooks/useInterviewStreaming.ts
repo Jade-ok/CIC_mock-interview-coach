@@ -5,7 +5,7 @@
  * - Initializes AudioManager and starts mic capture on interview entry
  * - Wires audio chunks to WebSocket (audio_chunk events)
  * - Handles incoming WS events: audio_output, text_output, interrupted, session_invalid
- * - Handles mic permission denial → text-only mode (audio playback remains)
+ * - Handles mic permission denial with an accessible remediation state
  * - Cleans up on unmount
  *
  * Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.9, 3.10
@@ -120,7 +120,7 @@ export function useInterviewStreaming({
       if (cleanedUpRef.current) return;
 
       if (!granted) {
-        // Sub-task 5: Mic denied → text-only mode (audio playback still works)
+        // Sub-task 5: Mic denied → show permission remediation
         dispatchRef.current({ type: 'MIC_DENIED' });
         return;
       }

@@ -17,7 +17,7 @@ const MOCK_DATA: EvaluatorOutput = {
         strength: 'Your problem framing was clear and relatable — "students have to copy exam and quiz dates by hand" immediately communicates the real user pain you were solving. That customer-first thinking is exactly what SAP looks for.',
         improvement: 'Complete the full SAR arc before time runs out: Situation → Action (what YOU specifically did) → Result (what changed). You had a great Situation, but the Action and Result were missing. Practice narrating all three parts in under 90 seconds.',
       },
-      scores: { concrete_example: 2, situation_action_result: 1, link_to_job: 2, quantifiable_outcome: 1 },
+      scores: { concrete_example: 2, star_structure: 1, link_to_job: 2, quantifiable_outcome: 1 },
     },
     {
       question_text: 'Can you share how you handled bugs or user-reported issues after shipping the extension?',
@@ -25,7 +25,7 @@ const MOCK_DATA: EvaluatorOutput = {
         strength: 'You showed genuine self-awareness — you initially said there were no errors, then caught yourself and shared a real user issue. Mentioning the 29 active users was a strong instinct: real numbers are compelling evidence of impact.',
         improvement: 'Add more technical detail to your Action: "We used the WebExtensions API so the extension could run on Firefox and Chrome" is much stronger than "we extended our function to cross browser." Specificity builds credibility with technical interviewers.',
       },
-      scores: { concrete_example: 3, situation_action_result: 2, link_to_job: 1, quantifiable_outcome: 2 },
+      scores: { concrete_example: 3, star_structure: 2, link_to_job: 1, quantifiable_outcome: 2 },
     },
     {
       question_text: 'Can you tell me about the CareHando! Voice-Powered Handoff System you built during the hackathon, and what specific challenges you faced while developing the FastAPI backend?',
@@ -33,7 +33,7 @@ const MOCK_DATA: EvaluatorOutput = {
         strength: '',
         improvement: 'Your answer trailed off before reaching your technical contributions. Prepare a 2-sentence "anchor statement" for each major project: what YOU built, in what technology, and what it accomplished — a reliable starting point even when you\'re nervous.',
       },
-      scores: { concrete_example: 2, situation_action_result: 1, link_to_job: 2, quantifiable_outcome: 1 },
+      scores: { concrete_example: 2, star_structure: 1, link_to_job: 2, quantifiable_outcome: 1 },
     },
     {
       question_text: 'Can you share how you learned and applied a new technical concept independently in one of your projects, and what obstacles you overcame while doing so?',
@@ -41,13 +41,13 @@ const MOCK_DATA: EvaluatorOutput = {
         strength: 'Your learning-style insight — preferring to build something small and complete it — is a genuinely good frame for this question.',
         improvement: 'Anchor it to one specific project, technology, and obstacle. Without a concrete example, even a true answer reads as generic.',
       },
-      scores: { concrete_example: 1, situation_action_result: 2, link_to_job: 2, quantifiable_outcome: 1 },
+      scores: { concrete_example: 1, star_structure: 2, link_to_job: 2, quantifiable_outcome: 1 },
     },
   ],
   overall_scores: {
     dimensions: {
       concrete_example: 2.2,
-      situation_action_result: 1.5,
+      star_structure: 1.5,
       link_to_job: 1.5,
       quantifiable_outcome: 1.2,
     },
@@ -88,8 +88,8 @@ export function FeedbackPreview() {
   return (
     <FeedbackReport
       data={MOCK_DATA}
-      onPracticeAgain={() => alert('Practice Again clicked')}
-      onNewSession={() => alert('New Session clicked')}
+      onPracticeAgain={() => alert('Retry with This Resume clicked')}
+      onNewSession={() => alert('Retry with New Resume clicked')}
       onViewTranscript={() => alert('View Transcript clicked')}
     />
   );

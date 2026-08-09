@@ -1,6 +1,6 @@
 # Voice Agent Relay
 
-FastAPI WebSocket relay designed for deployment to Amazon Bedrock AgentCore Runtime. It connects each browser WebSocket session to an Amazon Nova 2 Sonic bidirectional stream.
+FastAPI WebSocket relay deployed to Amazon Bedrock AgentCore Runtime. It connects each browser WebSocket session to an Amazon Nova 2 Sonic bidirectional stream.
 
 AgentCore Runtime is a serverless managed container runtime. This project supplies the Python container and pays for usage; AWS manages the underlying hosts and scaling. The relay is still backend application code, but there is no EC2 server to provision or administer.
 
@@ -20,16 +20,18 @@ AgentCore Runtime is a serverless managed container runtime. This project suppli
 - Input audio: 16 kHz, 16-bit, mono LPCM
 - Output audio: 24 kHz, 16-bit, mono LPCM
 
-The browser and relay share the application-level `{type, payload}` contract defined by `frontend/src/services/webSocketClient.ts`. The relay owns Nova prompt/content identifiers, expands `session_start` into the required Nova event sequence, acknowledges setup with `session_start_ack`, routes audio through its bounded queue, and converts Nova audio/text/tool/interruption output back to browser events. For `end_interview`, the relay sends Nova's required `toolResult` immediately, waits for `completionEnd`, and only then releases the browser-facing `tool_use`; this preserves closing audio before shutdown. Focused unit tests cover the adapter; a live Nova browser session still needs end-to-end verification.
+The browser and relay share the application-level `{type, payload}` contract defined by `frontend/src/services/webSocketClient.ts`. The relay owns Nova prompt/content identifiers, expands `session_start` into the required Nova event sequence, acknowledges setup with `session_start_ack`, routes audio through its bounded queue, and converts Nova audio/text/tool/interruption output back to browser events. For `end_interview`, the relay sends Nova's required `toolResult` immediately, waits for `completionEnd`, and only then releases the browser-facing `tool_use`; this preserves closing audio before shutdown. Focused unit tests cover the adapter, and the signed hosted path is deployed.
 
-The target production path is:
+The hosted path is:
 
 ```text
 React/Vite on Amplify Hosting
-  └─ authenticated WSS ─> AgentCore Runtime relay ─> Nova 2 Sonic
+  └─ CloudFront `/voice-session` route (OAC)
+       └─ private Voice Session Function URL ─> short-lived signed WSS
+                                              └─ AgentCore relay ─> Nova 2 Sonic
 ```
 
-Amplify Hosting does not proxy or authenticate this WebSocket automatically. Browser authentication/authorization and the public `wss://` endpoint are planned but not implemented in the repository. Use short-lived credentials or tokens supported by the selected AgentCore authorizer; never bundle permanent AWS credentials into the frontend.
+The application has no end-user login. The browser calls the CloudFront `/voice-session` route; OAC invokes the private Voice Session Function URL, whose resource-scoped role creates a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly. Hosted sessions have an eight-minute application limit, and the Voice Session Lambda is covered by alarms and the stack's AWS cost budget. Its optional normal concurrency cap defaults off until the target account quota supports it; the zero-concurrency emergency switch remains available.
 
 ## Local Run
 
@@ -38,6 +40,7 @@ The combined local backend resolves credentials through boto3's standard chain. 
 ```bash
 export AWS_PROFILE="<profile-name>"
 export AWS_REGION="us-east-1"
+aws sso login --profile "<profile-name>" # IAM Identity Center profiles only
 ```
 
 Alternatively, export access keys in the relay terminal. `AWS_SESSION_TOKEN` is required only for temporary credentials:
@@ -62,10 +65,14 @@ aws sts get-caller-identity
 
 The combined server exposes HTTP handlers under `/api`, WebSocket routes at `/` and `/ws`, and health checks at `/api/health`, `/ping`, and `/health`.
 
+Pure local voice sessions do not enable the hosted eight-minute application limit. AWS service quotas and credential lifetime still apply.
+
 ## Hosted Runtime
 
-The hosted architecture runs this relay on AgentCore and serves the React frontend through Amplify. AgentCore, Amplify, and the Lambda/S3 backend are separate infrastructure boundaries. Environment-specific target files, generated runtime state, account IDs, endpoints, and credentials are not committed.
+The hosted architecture runs this relay on AgentCore and serves the React frontend through Amplify. AgentCore, Amplify, and the Lambda/S3 backend are deployed as separate infrastructure boundaries. Environment-specific target files, generated runtime state, account IDs, endpoints, and credentials are not committed.
+
+Changes under the voice-relay paths on `main` are tested and published by the AgentCore GitHub Actions workflow. It updates the existing AgentCore target through the pinned CLI and uses temporary AWS credentials from the repository's branch-restricted OIDC role.
 
 ## Verification
 
-`tests/unit/test_voice_protocol.py` covers the pure adapter and exercises the WebSocket endpoint with a fake Nova session manager, so it does not invoke paid services. Manual helpers remain under `backend/voice_agent/tools/`: `test_voice_agent.py`, `test_voice_client.html`, and `generate_test_context.py`. A live browser session covering real Nova audio, transcript, interruption, and shutdown remains pending.
+`tests/unit/test_voice_protocol.py` covers the pure adapter and exercises the WebSocket endpoint with a fake Nova session manager, so it does not invoke paid services. Manual helpers remain under `backend/voice_agent/tools/`: `test_voice_agent.py`, `test_voice_client.html`, and `generate_test_context.py`. Reconnection, interruption, and shutdown edge cases should still receive live regression checks whenever the protocol changes.

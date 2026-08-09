@@ -1,8 +1,8 @@
 # FeedbackReport Integration Status
 
-> Integrated, with transcript viewing still pending. Last verified: 2026-08-07.
+> Integrated, with a standalone full-transcript view still pending. Last verified: 2026-08-09.
 
-`FeedbackScreen.tsx` renders successful, runtime-validated Evaluator results through `FeedbackReport`. Practice Again resets the session. View Full Transcript controls remain hidden until a transcript view and callback are implemented.
+`FeedbackScreen.tsx` renders successful, runtime-validated Evaluator results through `FeedbackReport`. **Retry with This Resume** preserves the uploaded resume, job description, Analyst output, and Nova context, then returns to the waiting room to reconnect voice without rerunning analysis. **Retry with New Resume** clears session state and returns to Upload. View Full Transcript controls remain hidden until a standalone transcript view and callback are implemented; available transcript entries are already passed to the question breakdown.
 
 Hosting the React build on AWS Amplify does not change this component contract. The feedback data still comes from the Evaluator Lambda HTTP path; AgentCore and Nova 2 Sonic handle the live voice session, not report rendering or evaluation.
 
@@ -24,7 +24,9 @@ if (feedbackResult) {
   return (
     <FeedbackReport
       data={feedbackResult}
-      onPracticeAgain={onNewSession}
+      onPracticeAgain={onPracticeAgain}
+      onNewSession={onNewSession}
+      transcript={transcript}
     />
   );
 }

@@ -8,7 +8,7 @@ export interface PerQuestionScore {
   feedback: QuestionFeedback;
   scores: {
     concrete_example: number;
-    situation_action_result: number;
+    star_structure: number;
     link_to_job: number;
     quantifiable_outcome: number;
   };
@@ -19,7 +19,7 @@ export interface PerQuestionScore {
 export interface OverallScores {
   dimensions: {
     concrete_example: number;
-    situation_action_result: number;
+    star_structure: number;
     link_to_job: number;
     quantifiable_outcome: number;
   };

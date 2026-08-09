@@ -56,7 +56,7 @@ def _mock_llm_response(num_questions=2):
                 },
                 "scores": {
                     "concrete_example": 4,
-                    "situation_action_result": 3,
+                    "star_structure": 3,
                     "link_to_job": 4,
                     "quantifiable_outcome": 2,
                 },

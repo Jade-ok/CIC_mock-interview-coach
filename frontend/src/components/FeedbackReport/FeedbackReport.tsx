@@ -22,7 +22,7 @@ export function FeedbackReport({ data, onPracticeAgain, onNewSession, onViewTran
   return (
     <div className="feedback-report">
       <header className="feedback-report__header">
-        <span className="feedback-report__brand">CIC Mock Interview Coach</span>
+        <span className="feedback-report__brand">AI Mock Interview Coach</span>
         <nav className="feedback-report__nav">
           {onViewTranscript && (
             <button type="button" className="feedback-report__nav-link" onClick={onViewTranscript}>

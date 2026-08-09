@@ -32,7 +32,8 @@
     "student_club",
     "research",
     "volunteering",
-    "part_time_work"
+    "work_experience",
+    "other"
   ],
   "interviewer_rules": {
     "do_not_invent_resume_details": true,
