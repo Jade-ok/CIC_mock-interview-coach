@@ -4,6 +4,18 @@ import json
 import logging
 
 try:
+    from session_guard import SessionGuardError, authorize_stage, error_response
+except ImportError:
+    try:
+        from backend.functions.shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+    except ImportError:
+        from shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+
+try:
     from . import validator, prompt_builder, bedrock_client, scorer, response_assembler
     from .exceptions import ValidationError, EvaluationError
 except ImportError:  # Lambda loads lambda_handler.py as a top-level module.
@@ -35,6 +47,11 @@ def handler(event: dict, context) -> dict:
     Returns:
         An HTTP response dict with statusCode and JSON body.
     """
+    try:
+        authorize_stage(event, "evaluator")
+    except SessionGuardError as exc:
+        return error_response(exc)
+
     try:
         # 1. Parse and validate input
         payload = validator.parse_and_validate(event)

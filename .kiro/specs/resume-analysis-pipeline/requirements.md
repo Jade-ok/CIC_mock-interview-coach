@@ -70,6 +70,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 3. IF the request payload is missing required fields, THEN THE PDF_Parser SHALL return a JSON error response listing the missing fields.
 4. WHEN a request is received in Function_URL_Mode, THE PDF_Parser SHALL parse the JSON string from `event['body']` before validation.
 5. WHEN a request is received in Direct_Mode, THE PDF_Parser SHALL use the event payload directly for validation.
+6. WHEN hosted guardrails are enabled, THE PDF_Parser SHALL require a valid, unexpired, viewer-bound `session_token` and atomically claim the PDF Parser stage before processing.
+7. WHEN pure local mode is active, THE PDF_Parser SHALL process requests through the local admission sentinel without consuming hosted DynamoDB counters.
 
 ### Requirement 5: Analyst Resume and Job Posting Analysis
 
@@ -118,9 +120,11 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 1. THE Analyst SHALL validate that both resume_text and job_posting_text are present and non-empty strings before calling the Mantle_Chat_API.
 2. IF resume_text or job_posting_text is missing or empty, THEN THE Analyst SHALL return a JSON error response listing the missing or empty fields.
-3. THE Analyst SHALL reject job_posting_text longer than 5,000 characters in every invocation mode.
-4. WHEN a request is received in Function_URL_Mode, THE Analyst SHALL parse the JSON string from `event['body']` before validation.
-5. WHEN a request is received in Direct_Mode, THE Analyst SHALL use the event payload directly for validation.
+3. WHEN hosted guardrails are enabled, THE Analyst SHALL require the same valid, unexpired, viewer-bound `session_token` and atomically claim the Analyst stage before invoking the model.
+4. WHEN pure local mode is active, THE Analyst SHALL use the local admission sentinel and the active developer AWS identity without consuming hosted counters.
+5. THE Analyst SHALL reject job_posting_text longer than 5,000 characters in every invocation mode.
+6. WHEN a request is received in Function_URL_Mode, THE Analyst SHALL parse the JSON string from `event['body']` before validation.
+7. WHEN a request is received in Direct_Mode, THE Analyst SHALL use the event payload directly for validation.
 
 ### Requirement 9: Bedrock API Error Handling
 

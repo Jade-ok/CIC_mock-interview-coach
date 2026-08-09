@@ -15,6 +15,7 @@ All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The
 ```text
 CloudFront /evaluator route
   -> private AWS_IAM Function URL
+  -> hosted session/IP/attempt authorization
   -> validator
   -> prompt builder
   -> Bedrock Mantle Chat Completions (GPT OSS 120B)
@@ -41,29 +42,32 @@ backend/functions/evaluator/
 
 ### 1. lambda_handler.py (Orchestrator)
 
-**Responsibility:** Entry point for the CloudFront `/evaluator` route's private Function URL origin. Parses the event, delegates to each module in sequence, and returns the final HTTP response.
+**Responsibility:** Entry point for the CloudFront `/evaluator` route's private Function URL origin. It first authorizes the hosted session and claims one of two evaluation attempts, then parses the event, delegates to each module in sequence, and returns the final HTTP response. Pure local mode bypasses this hosted guard.
 
 ```python
 def handler(event, context):
     try:
-        # 1. Parse and validate input
+        # 1. Authorize hosted session/stage attempt
+        authorize_stage(event, "evaluator")
+
+        # 2. Parse and validate evaluator input
         payload = validator.parse_and_validate(event)
         
-        # 2. Build evaluation prompt
+        # 3. Build evaluation prompt
         system, messages, tool_config = prompt_builder.build(
             conversation=payload["conversation"],
             analyst_output=payload["analyst_output"]
         )
         
-        # 3. Call Bedrock Mantle Chat Completions
+        # 4. Call Bedrock Mantle Chat Completions
         llm_response = bedrock_client.invoke(system, messages, tool_config)
         
-        # 4. Extract and aggregate scores
+        # 5. Extract and aggregate scores
         per_question_scores = scorer.extract_and_clamp(llm_response)
         overall_scores = scorer.aggregate(per_question_scores)
         readiness_label = scorer.classify(overall_scores["total"])
         
-        # 5. Assemble response (pass through interview_metadata)
+        # 6. Assemble response (pass through interview_metadata)
         response_body = response_assembler.build(
             per_question_scores=per_question_scores,
             overall_scores=overall_scores,
@@ -362,6 +366,7 @@ class EvaluationError(Exception):
 
 ```json
 {
+  "session_token": "<opaque interview session token>",
   "conversation": [
     {
       "point_id": "point_1",
@@ -506,6 +511,6 @@ class EvaluationError(Exception):
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
 - Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)
-- No persistent storage; the Evaluator is fully stateless
+- No interview-content storage; hosted authorization updates only the expiring per-session attempt counter
 - Maximum submitted conversation size: 6 captured question-answer pairs. Nova is prompted for 3 mains plus 3 follow-ups, but the frontend does not enforce that semantic sequence.
 - interview_metadata is passed through to the response unchanged; it is not used in scoring logic

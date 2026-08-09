@@ -6,6 +6,7 @@ import { EndConfirmModal } from '@/components/EndConfirmModal';
 import { PracticeBubbles } from '@/components/PracticeBubbles';
 import { GuidePanel } from '@/components/GuidePanel';
 import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
+import { InterviewAdmissionError } from '@/services/interviewSessionClient';
 import type { WebSocketClient } from '@/services/webSocketClient';
 
 // --- Sub-components ---
@@ -292,7 +293,9 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
-      const retryable = !message.includes('without Analyst output');
+      const retryable = err instanceof InterviewAdmissionError
+        ? err.retryable
+        : !message.includes('without Analyst output');
       dispatch({ type: 'AGENT3_FAILED', payload: { message, retryable } });
     }
   }, [dispatch, state]);

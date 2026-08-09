@@ -11,6 +11,7 @@ describe('local runtime configuration', () => {
   it('uses the combined local backend during Vite development', () => {
     expect(RUNTIME_MODE).toBe('local');
     expect(API_ENDPOINTS).toEqual({
+      session: 'http://localhost:8080/api/session',
       pdfParser: 'http://localhost:8080/api/pdf-parser',
       analyst: 'http://localhost:8080/api/analyst',
       interviewer: 'http://localhost:8080/api/interviewer',
@@ -19,7 +20,7 @@ describe('local runtime configuration', () => {
   });
 
   it('uses the local voice relay during Vite development', async () => {
-    await expect(getVoiceWebSocketUrl()).resolves.toBe('ws://localhost:8080/');
+    await expect(getVoiceWebSocketUrl('local-development')).resolves.toBe('ws://localhost:8080/');
   });
 
   it('keeps local JSON requests unsigned and independent of hosted configuration', async () => {
@@ -43,6 +44,7 @@ describe('local runtime configuration', () => {
 
     expect(hostedConfig.RUNTIME_MODE).toBe('hosted');
     expect(hostedConfig.API_ENDPOINTS).toEqual({
+      session: 'https://example.test/session',
       pdfParser: 'https://example.test/pdf-parser',
       analyst: 'https://example.test/analyst',
       interviewer: 'https://example.test/interviewer',
@@ -61,19 +63,37 @@ describe('local runtime configuration', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(hostedConfig.getVoiceWebSocketUrl()).resolves.toBe(
+    await expect(hostedConfig.getVoiceWebSocketUrl('test-session-token')).resolves.toBe(
       'wss://voice.example.test/session'
     );
     expect(fetchMock).toHaveBeenCalledWith(
       'https://example.test/voice-session',
       expect.objectContaining({
         method: 'POST',
-        body: '{}',
+        body: '{"session_token":"test-session-token"}',
         headers: expect.objectContaining({
-          'x-amz-content-sha256':
-            '44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',
+          'x-amz-content-sha256': expect.stringMatching(/^[a-f0-9]{64}$/),
         }),
       })
     );
+  });
+
+  it('preserves non-retryable hosted voice-session errors', async () => {
+    vi.stubEnv('VITE_RUNTIME_MODE', 'hosted');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://example.test');
+    vi.resetModules();
+    const hostedConfig = await import('../apiConfig');
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: 'This interview session has reached its voice-session limit.' }),
+    }));
+
+    await expect(hostedConfig.getVoiceWebSocketUrl('exhausted-token')).rejects.toMatchObject({
+      name: 'VoiceSessionError',
+      message: 'This interview session has reached its voice-session limit.',
+      retryable: false,
+    });
   });
 });

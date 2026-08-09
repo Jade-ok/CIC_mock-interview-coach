@@ -43,7 +43,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       dispatch(action);
 
       // Coordination: check if we should send session_start
-      if (action.type === 'AGENT1_SUCCESS' || action.type === 'WS_CONNECTED') {
+      if (
+        action.type === 'AGENT1_SUCCESS'
+        || action.type === 'WS_CONNECTED'
+        || action.type === 'WS_RECONNECT_SUCCESS'
+      ) {
         if (wsRef.current) {
           maybeStartSession(nextState, wsRef.current, dispatch);
         }

@@ -21,6 +21,11 @@ from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
+
+# Load optional local credentials without replacing values already provided by
+# the active shell or AWS profile.
+load_dotenv(Path(__file__).resolve().parent / ".env.local", override=False)
 
 # This module is the pure local entry point. Prevent a stale shell variable from
 # accidentally enabling hosted cost guardrails in the local process.
@@ -28,6 +33,7 @@ os.environ["HOSTED_GUARDRAILS_ENABLED"] = "false"
 
 from backend.functions.interviewer.context_builder import build_runtime_context
 from backend.functions.interviewer.validation import validate_input
+from backend.functions.shared.python.session_guard import start_interview_session
 from backend.voice_agent.server import app as voice_app
 
 CONFIG_DIR = Path(__file__).resolve().parent / "config"
@@ -125,6 +131,13 @@ async def pdf_parser(request: Request) -> JSONResponse:
     return await _invoke(
         "backend.functions.pdf_parser.handler", "lambda_handler", await request.json()
     )
+
+
+@app.post("/api/session")
+async def session(request: Request) -> JSONResponse:
+    event = {"body": json.dumps(await request.json())}
+    response = await run_in_threadpool(start_interview_session, event)
+    return JSONResponse(status_code=200, content=response)
 
 
 @app.post("/api/analyst")

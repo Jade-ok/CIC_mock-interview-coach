@@ -6,6 +6,7 @@ import { InterviewScreen } from '@/components/InterviewScreen';
 import { FeedbackScreen } from '@/components/FeedbackScreen';
 import { FeedbackPreview } from '@/pages/FeedbackPreview';
 import { buildAgent3Request, callAgent3 } from '@/services/agent3Client';
+import { InterviewAdmissionError } from '@/services/interviewSessionClient';
 
 function AppContent() {
   const { state, dispatch, webSocketClient } = useSession();
@@ -29,7 +30,13 @@ function AppContent() {
       dispatch({ type: 'AGENT3_SUCCESS', payload: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Agent 3 request failed.';
-      dispatch({ type: 'AGENT3_FAILED', payload: { message } });
+      dispatch({
+        type: 'AGENT3_FAILED',
+        payload: {
+          message,
+          retryable: err instanceof InterviewAdmissionError ? err.retryable : true,
+        },
+      });
     }
   }, [dispatch, state]);
 

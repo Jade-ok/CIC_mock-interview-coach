@@ -4,7 +4,7 @@
 
 ## Overview
 
-The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that form the intake and analysis stage of the mock interview coaching app:
+The Resume Analysis Pipeline consists of two content-stateless AWS Lambda functions that form the intake and analysis stage of the mock interview coaching app:
 
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Mantle Chat Completions with a forced function call, validates the response against the analyst_output schema, and returns it to the frontend.
@@ -12,7 +12,7 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses one CloudFront API distribution with OAC in front of private Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
-- Stateless architecture — no database, no S3 for session state; the browser holds all state.
+- Content-stateless pipeline — the browser holds interview content and the pipeline does not persist resumes, job descriptions, transcripts, or feedback. Hosted admission uses an expiring DynamoDB table containing only hashed session/viewer identifiers and counters.
 - Forced function pattern — the analyst_output schema is supplied as a Chat Completions function and selected through `tool_choice`, producing structured JSON arguments without brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
 - Environment-aware recovery — hosted uses one 55-second Mantle call and does not make a schema-recovery call; local uses a 120-second transport timeout and makes one additional call only when the first response fails schema validation.
@@ -25,6 +25,8 @@ The React browser client orchestrates the pipeline: it calls pdf_parser first, t
 sequenceDiagram
     participant Browser
     participant CloudFront as CloudFront API distribution
+    participant DemoSession as demo_session Lambda
+    participant DynamoDB as admission table
     participant PdfParser as pdf_parser Lambda
     participant Analyst as analyst Lambda
     participant Bedrock as Bedrock Mantle (GPT OSS)
@@ -34,30 +36,38 @@ sequenceDiagram
     participant NovaSonic as Nova Sonic
     participant Evaluator as evaluator Lambda
 
-    Browser->>CloudFront: POST /pdf-parser
+    Browser->>CloudFront: POST /session
+    CloudFront->>DemoSession: OAC-signed admission request
+    DemoSession->>DynamoDB: atomic daily counters + hashed token
+    DemoSession-->>Browser: opaque session token via CloudFront
+    Browser->>CloudFront: POST /pdf-parser + session token
     CloudFront->>PdfParser: OAC-signed origin request
     PdfParser-->>Browser: extracted text (via CloudFront)
-    Browser->>CloudFront: POST /analyst
+    Browser->>CloudFront: POST /analyst + session token
     CloudFront->>Analyst: OAC-signed extracted text
     Analyst->>Bedrock: Chat Completions (forced function)
     Bedrock-->>Analyst: forced function response (structured JSON)
     Analyst-->>Browser: analyst_output via CloudFront (schema v1.0)
-    Browser->>CloudFront: POST /interviewer
+    Browser->>CloudFront: POST /interviewer + session token
     CloudFront->>Interviewer: OAC-signed analyst_output
     Interviewer-->>Browser: runtime context via CloudFront
-    Browser->>CloudFront: POST /voice-session
+    Browser->>CloudFront: POST /voice-session + session token
     CloudFront->>VoiceSession: OAC-signed request
     VoiceSession-->>Browser: signed WSS URL via CloudFront
     Browser->>AgentCore: signed WSS (voice interview)
     AgentCore->>NovaSonic: Bedrock bidirectional stream
     NovaSonic-->>AgentCore: real-time audio/text
     AgentCore-->>Browser: real-time audio/text
-    Browser->>CloudFront: POST /evaluator
+    Browser->>CloudFront: POST /evaluator + session token
     CloudFront->>Evaluator: OAC-signed analyst_output + transcript
     Evaluator-->>Browser: scored report via CloudFront
 ```
 
-The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines four pipeline Lambdas, the Voice Session Lambda, and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
+The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines four pipeline Lambdas, the Voice Session Lambda, the Demo Session admission Lambda, the expiring DynamoDB admission table, and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
+
+### Security and Cost Controls
+
+Hosted admission defaults to 100 interviews globally and 5 per trusted viewer IP per UTC day. Its opaque session token authorizes bounded attempts for each downstream stage. Pure local execution bypasses this hosted admission layer.
 
 ### Internal Lambda Architecture
 
@@ -302,7 +312,7 @@ Both Lambdas share the same response envelope and invocation-mode detection:
 {"status": "error", "error": "descriptive message"}
 ```
 
-The `detect_invocation_mode` function is identical in both Lambdas. It could be extracted to a shared util, but given the "no shared packages across Lambdas" deployment model (each Lambda is zipped independently), it is duplicated.
+The pipeline handlers retain their own invocation-envelope logic. Hosted authorization is shared through the Lambda layer in `backend/functions/shared/python/session_guard.py`, which validates the expiring session token, viewer binding, and per-stage claim before paid work begins.
 
 ## Data Models
 
@@ -310,6 +320,7 @@ The `detect_invocation_mode` function is identical in both Lambdas. It could be 
 
 ```json
 {
+  "session_token": "<opaque interview session token>",
   "resume": {
     "content": "<base64-encoded PDF>",
     "format": "pdf"
@@ -364,6 +375,7 @@ When one document succeeds and another fails in a combined request:
 
 ```json
 {
+  "session_token": "<opaque interview session token>",
   "resume_text": "full extracted resume text",
   "job_posting_text": "full extracted job posting text"
 }

@@ -10,6 +10,7 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -39,6 +40,28 @@ export class InfraStack extends cdk.Stack {
       minValue: 1,
       description: 'Monthly AWS account budget in USD',
     });
+    const hostedDailyInterviewLimit = new cdk.CfnParameter(
+      this,
+      'HostedDailyInterviewLimit',
+      {
+        type: 'Number',
+        default: 100,
+        minValue: 1,
+        maxValue: 100,
+        description: 'Maximum hosted interview sessions admitted per UTC day',
+      }
+    );
+    const hostedDailyViewerLimit = new cdk.CfnParameter(
+      this,
+      'HostedDailyViewerLimit',
+      {
+        type: 'Number',
+        default: 5,
+        minValue: 1,
+        maxValue: 5,
+        description: 'Maximum hosted interview sessions admitted per viewer IP per UTC day',
+      }
+    );
     const publicEndpointsEnabled = new cdk.CfnParameter(this, 'PublicEndpointsEnabled', {
       type: 'String',
       default: 'true',
@@ -100,6 +123,26 @@ export class InfraStack extends cdk.Stack {
       'test_event.json',
     ];
 
+    const sessionTable = new dynamodb.Table(this, 'HostedInterviewSessions', {
+      partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'expires_at',
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const sessionGuardLayer = new lambda.LayerVersion(this, 'SessionGuardLayer', {
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../backend/functions/shared')),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
+      description: 'Hosted interview admission and per-stage attempt guard',
+    });
+    const hostedSessionEnvironment = {
+      HOSTED_GUARDRAILS_ENABLED: 'true',
+      HOSTED_SESSION_TABLE: sessionTable.tableName,
+      HOSTED_DAILY_INTERVIEW_LIMIT: hostedDailyInterviewLimit.valueAsString,
+      HOSTED_DAILY_VIEWER_LIMIT: hostedDailyViewerLimit.valueAsString,
+    };
+
     // ------------------------------------------------------------------
     // 1. Analyst Lambda — Bedrock Mantle (GPT OSS 120B)
     // ------------------------------------------------------------------
@@ -112,7 +155,8 @@ export class InfraStack extends cdk.Stack {
       handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
-      environment: { HOSTED_GUARDRAILS_ENABLED: 'true' },
+      environment: hostedSessionEnvironment,
+      layers: [sessionGuardLayer],
     });
 
     const grantMantleInference = (fn: lambda.Function) => {
@@ -163,7 +207,8 @@ export class InfraStack extends cdk.Stack {
       handler: 'lambda_handler.handler',
       timeout: cdk.Duration.seconds(60),
       memorySize: 512,
-      environment: { HOSTED_GUARDRAILS_ENABLED: 'true' },
+      environment: hostedSessionEnvironment,
+      layers: [sessionGuardLayer],
     });
 
     grantMantleInference(evaluatorFn);
@@ -186,10 +231,12 @@ export class InfraStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
       environment: {
+        ...hostedSessionEnvironment,
         S3_BUCKET: configBucket.bucketName,
         INTERVIEW_STRUCTURE_KEY: 'interview_structure.json',
         INTERVIEW_PROFILE_KEY: 'student_interview_profile.json',
       },
+      layers: [sessionGuardLayer],
     });
 
     configBucket.grantRead(interviewerFn);
@@ -217,6 +264,8 @@ export class InfraStack extends cdk.Stack {
       handler: 'handler.lambda_handler',
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      environment: hostedSessionEnvironment,
+      layers: [sessionGuardLayer],
     });
 
     const pdfParserUrl = pdfParserFn.addFunctionUrl({
@@ -237,8 +286,10 @@ export class InfraStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
       memorySize: 128,
       environment: {
+        ...hostedSessionEnvironment,
         AGENTCORE_RUNTIME_ARN: agentCoreRuntimeArn.valueAsString,
       },
+      layers: [sessionGuardLayer],
     });
 
     voiceSessionFn.addToRolePolicy(
@@ -257,6 +308,42 @@ export class InfraStack extends cdk.Stack {
     });
 
     // ------------------------------------------------------------------
+    // 6. Demo session Lambda — daily admission + opaque session tokens
+    // ------------------------------------------------------------------
+    const demoSessionFn = new lambda.Function(this, 'DemoSessionFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, '../../backend/functions/demo_session'),
+        { exclude: functionAssetExcludes }
+      ),
+      handler: 'handler.lambda_handler',
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: hostedSessionEnvironment,
+      layers: [sessionGuardLayer],
+    });
+
+    sessionTable.grant(
+      demoSessionFn,
+      'dynamodb:TransactWriteItems',
+      'dynamodb:GetItem'
+    );
+    for (const fn of [
+      analystFn,
+      evaluatorFn,
+      interviewerFn,
+      pdfParserFn,
+      voiceSessionFn,
+    ]) {
+      sessionTable.grant(fn, 'dynamodb:UpdateItem', 'dynamodb:GetItem');
+    }
+
+    const demoSessionUrl = demoSessionFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.AWS_IAM,
+      cors: corsOptions,
+    });
+
+    // ------------------------------------------------------------------
     // Public API gateway — CloudFront signs private Function URL requests
     // ------------------------------------------------------------------
     const apiOriginAccessControl = new cloudfront.FunctionUrlOriginAccessControl(
@@ -270,17 +357,45 @@ export class InfraStack extends cdk.Stack {
         // Lambda response handling without requiring a CloudFront quota raise.
         readTimeout: cdk.Duration.seconds(60),
       });
+    const apiRequestGuard = new cloudfront.Function(this, 'HostedApiRequestGuard', {
+      code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var allowedPaths = {
+    '/session': true,
+    '/pdf-parser': true,
+    '/analyst': true,
+    '/interviewer': true,
+    '/evaluator': true,
+    '/voice-session': true
+  };
+  if (!allowedPaths[request.uri]) {
+    return { statusCode: 404, statusDescription: 'Not Found' };
+  }
+  if (request.method !== 'POST' && request.method !== 'OPTIONS') {
+    return { statusCode: 405, statusDescription: 'Method Not Allowed' };
+  }
+  return request;
+}
+      `),
+      comment: 'Reject unknown hosted API paths and non-POST requests at the edge',
+    });
     const apiBehavior = (origin: cloudfront.IOrigin): cloudfront.BehaviorOptions => ({
       origin,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
       cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
       originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      functionAssociations: [{
+        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+        function: apiRequestGuard,
+      }],
     });
 
     const apiDistribution = new cloudfront.Distribution(this, 'HostedApiDistribution', {
       defaultBehavior: apiBehavior(functionUrlOrigin(pdfParserUrl)),
       additionalBehaviors: {
+        session: apiBehavior(functionUrlOrigin(demoSessionUrl)),
         analyst: apiBehavior(functionUrlOrigin(analystUrl)),
         interviewer: apiBehavior(functionUrlOrigin(interviewerUrl)),
         evaluator: apiBehavior(functionUrlOrigin(evaluatorUrl)),
@@ -299,6 +414,7 @@ export class InfraStack extends cdk.Stack {
       ['Interviewer', interviewerFn],
       ['PdfParser', pdfParserFn],
       ['VoiceSession', voiceSessionFn],
+      ['DemoSession', demoSessionFn],
     ] as const) {
       new lambda.CfnPermission(this, `${id}CloudFrontInvokeFunctionPermission`, {
         action: 'lambda:InvokeFunction',
@@ -332,6 +448,7 @@ export class InfraStack extends cdk.Stack {
     applyEmergencySwitch(interviewerFn, 4);
     applyEmergencySwitch(pdfParserFn, 4);
     applyEmergencySwitch(voiceSessionFn, 2);
+    applyEmergencySwitch(demoSessionFn, 2);
 
     const alertTopic = new sns.Topic(this, 'CostAndUsageAlerts', {
       displayName: 'Mock Interview Coach cost and usage alerts',
@@ -388,6 +505,7 @@ export class InfraStack extends cdk.Stack {
     addFunctionAlarms('Interviewer', interviewerFn, 25);
     addFunctionAlarms('PdfParser', pdfParserFn, 25);
     addFunctionAlarms('VoiceSession', voiceSessionFn, 10);
+    addFunctionAlarms('DemoSession', demoSessionFn, 25);
 
     new budgets.CfnBudget(this, 'MonthlyCostBudget', {
       budget: {

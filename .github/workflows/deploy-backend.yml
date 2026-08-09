@@ -103,12 +103,35 @@ jobs:
 
       - name: Deploy Lambda and S3 stack
         working-directory: infrastructure
-        run: >-
-          npx cdk deploy MockInterviewStack
-          --parameters "MockInterviewStack:AgentCoreRuntimeArn=$AGENTCORE_RUNTIME_ARN"
-          --parameters "MockInterviewStack:HostedFrontendOrigin=https://main.${{ vars.AMPLIFY_APP_ID }}.amplifyapp.com"
-          --parameters "MockInterviewStack:CostAlertEmail=${{ vars.COST_ALERT_EMAIL }}"
-          --require-approval never
+        shell: bash
+        env:
+          HOSTED_DAILY_INTERVIEW_LIMIT: ${{ vars.HOSTED_DAILY_INTERVIEW_LIMIT || '100' }}
+          HOSTED_DAILY_VIEWER_LIMIT: ${{ vars.HOSTED_DAILY_VIEWER_LIMIT || '5' }}
+        run: |
+          set -euo pipefail
+          [[ "$HOSTED_DAILY_INTERVIEW_LIMIT" =~ ^[1-9][0-9]*$ ]] || {
+            echo 'HOSTED_DAILY_INTERVIEW_LIMIT must be a positive integer.'
+            exit 1
+          }
+          (( HOSTED_DAILY_INTERVIEW_LIMIT <= 100 )) || {
+            echo 'HOSTED_DAILY_INTERVIEW_LIMIT cannot exceed the source-enforced maximum of 100.'
+            exit 1
+          }
+          [[ "$HOSTED_DAILY_VIEWER_LIMIT" =~ ^[1-9][0-9]*$ ]] || {
+            echo 'HOSTED_DAILY_VIEWER_LIMIT must be a positive integer.'
+            exit 1
+          }
+          (( HOSTED_DAILY_VIEWER_LIMIT <= 5 )) || {
+            echo 'HOSTED_DAILY_VIEWER_LIMIT cannot exceed the source-enforced maximum of 5.'
+            exit 1
+          }
+          npx cdk deploy MockInterviewStack \
+            --parameters "MockInterviewStack:AgentCoreRuntimeArn=$AGENTCORE_RUNTIME_ARN" \
+            --parameters "MockInterviewStack:HostedFrontendOrigin=https://main.${{ vars.AMPLIFY_APP_ID }}.amplifyapp.com" \
+            --parameters "MockInterviewStack:CostAlertEmail=${{ vars.COST_ALERT_EMAIL }}" \
+            --parameters "MockInterviewStack:HostedDailyInterviewLimit=$HOSTED_DAILY_INTERVIEW_LIMIT" \
+            --parameters "MockInterviewStack:HostedDailyViewerLimit=$HOSTED_DAILY_VIEWER_LIMIT" \
+            --require-approval never
 
       - name: Load hosted API base URL
         shell: bash

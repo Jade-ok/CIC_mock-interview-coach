@@ -9,12 +9,16 @@ The interview capability has two backend components:
 1. The Interviewer Lambda builds a Nova runtime-context string from Analyst output and two S3 configuration objects.
 2. The AgentCore-hosted voice relay owns the transient bidirectional connection to Amazon Nova 2 Sonic. AgentCore is an AWS-managed serverless container runtime; it is not an application server or EC2 instance that the project operates.
 
-The browser retains UI state and transcript data. No persistent interview session database is used.
+The browser retains UI state and transcript data. DynamoDB stores only expiring hashed admission metadata and counters; it is not an interview-content or history database.
 
 ## Target Architecture and Current Status
 
 ```text
 React browser client on Amplify Hosting
+  ├─ POST /session ──────> CloudFront API distribution (OAC)
+  │                           └─ Demo Session Lambda + DynamoDB admission table
+  │<─ two-hour opaque session token via CloudFront
+  │
   ├─ POST /interviewer ──> CloudFront API distribution (OAC)
   │                           └─ private Interviewer Function URL
   │                                └─ reads interview configs from S3
@@ -31,7 +35,7 @@ React browser client on Amplify Hosting
                               └─ private Evaluator Function URL
 ```
 
-There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the public browser to connect without storing AWS credentials or requiring an end-user login. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify-hosted path are deployed; account-specific identifiers remain environment configuration.
+There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the browser to connect without storing AWS credentials or requiring an end-user login. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify-hosted path are deployed; account-specific identifiers remain environment configuration.
 
 ## Interviewer Lambda
 
@@ -46,7 +50,7 @@ context_builder.py  assembles the Nova system context
 
 ### Input and Output
 
-Input payload: `{"analyst_output": {}}`
+Hosted input payload: `{"session_token": "<opaque-token>", "analyst_output": {}}`
 
 Success body: `{"success": true, "runtime_context": "..."}`
 
@@ -75,9 +79,11 @@ Source: `backend/voice_agent/`
 
 The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests and the hosted browser/Nova path has been exercised. Real reconnection and session-restoration edge cases remain targeted verification work.
 
-The hosted boundary is browser → Voice Session Lambda → signed `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
+The hosted boundary is browser → Demo Session admission → Voice Session Lambda with the IP-bound token → signed `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
-AgentCore sets `HOSTED_GUARDRAILS_ENABLED=true`, which applies an eight-minute application limit to hosted voice sessions. The combined local server explicitly sets that flag to `false`, so a stale shell value cannot enable the hosted duration limit locally. The Voice Session Lambda itself is covered by hosted alarm/budget controls and the emergency shutdown switch; its optional normal concurrency cap defaults off until the target account quota supports it.
+## Security and Cost Controls
+
+AgentCore sets `HOSTED_GUARDRAILS_ENABLED=true`, which applies an eight-minute application limit to hosted voice sessions. The combined local server explicitly sets that flag to `false`, so a stale shell value cannot enable the hosted duration limit locally. The Voice Session Lambda accepts at most three signed-URL attempts per admitted interview to support the initial connection and two reconnections. It is also covered by hosted alarm/budget controls and the emergency shutdown switch; its optional normal concurrency cap defaults off until the target account quota supports it.
 
 ## Nova Configuration
 
@@ -93,10 +99,10 @@ The context builder instructs Nova to conduct three main questions with one adap
 ## Hosted Architecture
 
 - Amplify Hosting serves the React/Vite static frontend.
-- CDK defines four pipeline Lambdas, the Voice Session Lambda, and S3 configuration.
+- CDK defines four pipeline Lambdas, the Voice Session Lambda, the Demo Session admission Lambda, the expiring DynamoDB quota table, and S3 configuration.
 - AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
-- Hosted environment configuration supplies one `VITE_API_BASE_URL`; the frontend appends the five CloudFront route paths, and no account-specific endpoint is hard-coded.
+- Hosted environment configuration supplies one `VITE_API_BASE_URL`; the frontend appends the six CloudFront route paths, and no account-specific endpoint is hard-coded.
 
 ## Remaining Verification Gaps
 
-The frontend requests `VITE_API_BASE_URL/voice-session`, receives a fresh five-minute signed URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock. Continue targeted verification of reconnect exhaustion, expired sessions, and transcript preservation across reconnects.
+After successful `/session` admission, the frontend includes the opaque token in each `VITE_API_BASE_URL/voice-session` request, receives a fresh five-minute signed URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock. Continue targeted verification of reconnect exhaustion, expired sessions, and transcript preservation across reconnects.

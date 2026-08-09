@@ -24,11 +24,22 @@ function endpoint(path: string): string {
 }
 
 export const API_ENDPOINTS = {
+  session: endpoint('session'),
   pdfParser: endpoint('pdf-parser'),
   analyst: endpoint('analyst'),
   interviewer: endpoint('interviewer'),
   evaluator: endpoint('evaluator'),
 } as const;
+
+export class VoiceSessionError extends Error {
+  retryable: boolean;
+
+  constructor(message: string, retryable: boolean) {
+    super(message);
+    this.name = 'VoiceSessionError';
+    this.retryable = retryable;
+  }
+}
 
 /** Build a JSON POST request. Hosted CloudFront OAC POSTs require a SHA-256
  * payload hash so CloudFront can sign the private Function URL request. */
@@ -49,20 +60,27 @@ export async function jsonPostInit(
   return { method: 'POST', headers, body, signal };
 }
 
-export async function getVoiceWebSocketUrl(): Promise<string> {
+export async function getVoiceWebSocketUrl(sessionToken: string): Promise<string> {
   if (RUNTIME_MODE === 'local') return LOCAL_VOICE_WS_URL;
 
-  const response = await fetch(hostedEndpoint('voice-session'), await jsonPostInit({}));
+  const response = await fetch(
+    hostedEndpoint('voice-session'),
+    await jsonPostInit({ session_token: sessionToken })
+  );
   const payload: unknown = await response.json().catch(() => null);
+  const record = payload && typeof payload === 'object'
+    ? payload as Record<string, unknown>
+    : null;
   const url = (
-    payload
-    && typeof payload === 'object'
-    && 'url' in payload
-    && typeof payload.url === 'string'
-  ) ? payload.url : undefined;
+    record
+    && typeof record.url === 'string'
+  ) ? record.url : undefined;
 
   if (!response.ok || !url?.startsWith('wss://')) {
-    throw new Error('Unable to create a secure voice session');
+    const message = typeof record?.error === 'string'
+      ? record.error
+      : 'Unable to create a secure voice session';
+    throw new VoiceSessionError(message, response.status >= 500);
   }
   return url;
 }

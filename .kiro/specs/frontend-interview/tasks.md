@@ -7,7 +7,7 @@
   - Configure Vitest, Testing Library, and fast-check.
 
 - [x] 2. Implement session state management.
-  - Add phases, turn state, input mode, transcript, upload data, Analyst output, socket readiness, and feedback state.
+  - Add phases, turn state, input mode, transcript, upload data, hosted admission token, Analyst output, socket readiness, and feedback state.
   - Coordinate `session_start` after both Agent 1 and WebSocket readiness.
   - Preserve eager state consistency for asynchronous acknowledgments.
 
@@ -29,11 +29,16 @@
   - Store the submitted inputs for Waiting Room.
 
 - [x] 6. Implement Waiting Room.
-  - Start Agent 1 and WebSocket work in parallel.
+  - Obtain an admission token, run Agent 1 with it, then authorize the WebSocket URL request.
   - Use a 30-second relay timeout and a 330-second Agent 1 timeout.
-  - Abort stale Agent 1 work on timeout/back and retry only the failed dependency.
+  - Abort stale Agent 1 work on timeout/back. Rerun the full Agent 1 pipeline after an Agent 1 failure, while retaining its completed response during a WebSocket-only retry.
   - Parse the Interviewer-specific success envelope.
   - Carry the connected WebSocket into Interview Screen.
+
+- [x] 6.1 Add hosted demo admission controls.
+  - Default to 100 admitted interviews globally and 5 per trusted viewer IP per UTC day.
+  - Keep the opaque two-hour token only in frontend memory and include it in every hosted stage request.
+  - Enforce atomic per-stage attempts while bypassing these controls in pure local mode.
 
 - [x] 7. Implement the interview shell.
   - Add the interview captions, microphone control, timer, Practice Mode toggle, Guide Panel, and End button.

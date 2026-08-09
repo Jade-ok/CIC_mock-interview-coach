@@ -3,6 +3,18 @@ import logging
 import os
 
 try:
+    from session_guard import SessionGuardError, authorize_stage, error_response
+except ImportError:
+    try:
+        from backend.functions.shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+    except ImportError:
+        from shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+
+try:
     from .validation import validate_input
     from .config_loader import (
         ConfigLoadError,
@@ -29,6 +41,11 @@ def lambda_handler(event: dict, context) -> dict:
     Returns:
         {"statusCode": int, "body": "<JSON string>"}
     """
+    try:
+        authorize_stage(event, "interviewer")
+    except SessionGuardError as exc:
+        return error_response(exc)
+
     try:
         # Mode detection
         if "body" in event:

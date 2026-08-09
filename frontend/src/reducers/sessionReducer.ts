@@ -18,6 +18,7 @@ export const initialState: SessionState = {
   textInputState: 'idle',
   practiceMode: true,
   uploadData: null,
+  hostedSessionToken: null,
   analystOutput: null,
   transcript: [],
   livePartial: null,
@@ -45,6 +46,13 @@ export function sessionReducer(
         error: null,
       };
 
+    case 'SESSION_TOKEN_READY':
+      return {
+        ...state,
+        hostedSessionToken: action.payload.sessionToken,
+        error: null,
+      };
+
     case 'AGENT1_SUCCESS':
       return {
         ...state,
@@ -60,7 +68,7 @@ export function sessionReducer(
         error: {
           code: 'AGENT1_FAILED',
           message: action.payload.message,
-          retryable: true,
+          retryable: action.payload.retryable ?? true,
         },
       };
 
@@ -77,7 +85,7 @@ export function sessionReducer(
         error: {
           code: 'WS_CONNECT_FAILED',
           message: action.payload.message,
-          retryable: true,
+          retryable: action.payload.retryable ?? true,
         },
       };
 
@@ -312,6 +320,7 @@ export function sessionReducer(
         analystOutput: state.analystOutput,
         novaSonicContext: state.novaSonicContext,
         uploadData: state.uploadData,
+        hostedSessionToken: null,
         agent1Ready: true,
         // Start from waiting phase — WS needs to reconnect
         phase: 'waiting' as const,

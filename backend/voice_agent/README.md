@@ -26,12 +26,17 @@ The hosted path is:
 
 ```text
 React/Vite on Amplify Hosting
-  └─ CloudFront `/voice-session` route (OAC)
+  └─ CloudFront `/session` route ─> daily admission + opaque token
+       └─ CloudFront `/voice-session` route with token (OAC)
        └─ private Voice Session Function URL ─> short-lived signed WSS
                                               └─ AgentCore relay ─> Nova 2 Sonic
 ```
 
-The application has no end-user login. The browser calls the CloudFront `/voice-session` route; OAC invokes the private Voice Session Function URL, whose resource-scoped role creates a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly. Hosted sessions have an eight-minute application limit, and the Voice Session Lambda is covered by alarms and the stack's AWS cost budget. Its optional normal concurrency cap defaults off until the target account quota supports it; the zero-concurrency emergency switch remains available.
+The browser first obtains an opaque admission token, then calls the CloudFront `/voice-session` route with it; OAC invokes the private Voice Session Function URL, whose resource-scoped role creates a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly.
+
+## Security and Cost Controls
+
+The application has no end-user login. Hosted tokens last two hours, are bound to the trusted viewer-IP digest, and allow three Voice Session attempts for the initial connection plus two reconnects. Hosted sessions have an eight-minute application limit, and the Voice Session Lambda is covered by alarms and the stack's AWS cost budget. Its optional normal concurrency cap defaults off until the target account quota supports it; the zero-concurrency emergency switch remains available.
 
 ## Local Run
 
@@ -65,11 +70,11 @@ aws sts get-caller-identity
 
 The combined server exposes HTTP handlers under `/api`, WebSocket routes at `/` and `/ws`, and health checks at `/api/health`, `/ping`, and `/health`.
 
-Pure local voice sessions do not enable the hosted eight-minute application limit. AWS service quotas and credential lifetime still apply.
+Pure local voice sessions bypass hosted daily admission and do not enable the hosted eight-minute application limit. AWS service quotas and credential lifetime still apply.
 
 ## Hosted Runtime
 
-The hosted architecture runs this relay on AgentCore and serves the React frontend through Amplify. AgentCore, Amplify, and the Lambda/S3 backend are deployed as separate infrastructure boundaries. Environment-specific target files, generated runtime state, account IDs, endpoints, and credentials are not committed.
+The hosted architecture runs this relay on AgentCore and serves the React frontend through Amplify. AgentCore, Amplify, and the CDK backend are deployed as separate infrastructure boundaries. Environment-specific target files, generated runtime state, account IDs, endpoints, and credentials are not committed.
 
 Changes under the voice-relay paths on `main` are tested and published by the AgentCore GitHub Actions workflow. It updates the existing AgentCore target through the pinned CLI and uses temporary AWS credentials from the repository's branch-restricted OIDC role.
 

@@ -10,7 +10,7 @@ Nova is prompted to ask 3 main questions with 1 adaptive follow-up after each, b
 
 This entire system is calibrated for co-op seeking students, not experienced professionals. All scoring rubrics, feedback tone, and expectations are set at a level appropriate for students pursuing co-op placements. School projects, course work, hackathons, and team assignments are considered valid experience.
 
-The Evaluator is invoked exactly once per interview session and operates as a stateless AWS Lambda function using Bedrock Mantle Chat Completions with a forced function call.
+The frontend normally invokes the Evaluator once per interview session. Hosted admission permits at most two Evaluator attempts for failure recovery, while the Evaluator remains content-stateless and uses Bedrock Mantle Chat Completions with a forced function call.
 
 ## Glossary
 
@@ -42,6 +42,8 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 5. WHEN the Evaluator receives a valid request via Function URL, THE Evaluator SHALL parse the JSON payload from the event body field
 6. THE Evaluator SHALL accept conversations of any length between 1 and 6 question-answer pairs inclusive, supporting early termination by the student
 7. THE Evaluator SHALL validate that each item in the conversation array contains point_id, turn_type, question, and answer fields
+8. BEFORE hosted validation or model work, THE Evaluator SHALL require a non-expired opaque session token bound to the trusted viewer IP and atomically claim one of at most two Evaluator attempts
+9. PURE local execution SHALL bypass hosted session admission and stage-attempt accounting
 
 ### Requirement 2: Prompt Construction
 

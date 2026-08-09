@@ -9,6 +9,18 @@ import boto3
 from botocore.auth import SigV4QueryAuth
 from botocore.awsrequest import AWSRequest
 
+try:
+    from session_guard import SessionGuardError, authorize_stage, error_response
+except ImportError:
+    try:
+        from backend.functions.shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+    except ImportError:
+        from shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+
 
 URL_TTL_SECONDS = 300
 SESSION_ID_PARAMETER = "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id"
@@ -42,8 +54,13 @@ def generate_presigned_websocket_url() -> str:
     return request.url.replace("https://", "wss://", 1)
 
 
-def lambda_handler(_event, _context):
+def lambda_handler(event, _context):
     """Return a fresh signed URL without logging it or its query parameters."""
+    try:
+        authorize_stage(event, "voice_session")
+    except SessionGuardError as exc:
+        return error_response(exc)
+
     try:
         url = generate_presigned_websocket_url()
         return {

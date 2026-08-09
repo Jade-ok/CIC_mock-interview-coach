@@ -12,7 +12,7 @@ infrastructure/
 │   ├── infra.ts            # Application backend stack entry point
 │   └── deployment-automation.ts # GitHub OIDC automation entry point
 ├── lib/
-│   ├── infra-stack.ts      # Five Lambdas and S3 configuration
+│   ├── infra-stack.ts      # Six Lambdas, S3 configuration, and quota table
 │   └── deployment-automation-stack.ts # GitHub Actions IAM/OIDC resources
 ├── cdk.json                # CDK CLI configuration (app command, feature flags)
 ├── package.json            # Node dependencies (aws-cdk-lib, constructs, dev tools)
@@ -44,13 +44,15 @@ One stack defines the HTTP backend and interview configuration. The AgentCore vo
 | Resource | Construct | Purpose |
 |----------|-----------|---------|
 | S3 Bucket | `InterviewConfigBucket` | Stores interview structure and interview profile JSON configs |
+| DynamoDB Table | `HostedInterviewSessions` | Stores expiring hashed session/quota records only |
+| Demo Session Lambda | `DemoSessionFunction` | Atomically enforces daily global/viewer limits and issues opaque tokens |
 | Analyst Lambda | `AnalystFunction` | Calls Bedrock Mantle (GPT OSS 120B) to analyze the resume against the job description |
 | Evaluator Lambda | `EvaluatorFunction` | Calls Bedrock Mantle (GPT OSS 120B) to score the candidate's interview transcript |
 | Interviewer Lambda | `InterviewerFunction` | Reads config from S3, builds runtime context for Nova Sonic (no LLM call) |
 | PDF Parser Lambda | `PdfParserFunction` | Extracts text from uploaded resumes using pypdf |
 | Voice Session Lambda | `VoiceSessionFunction` | Creates five-minute signed AgentCore WebSocket URLs |
 
-Every Lambda gets a private **Function URL** with `AWS_IAM` authentication. A single CloudFront distribution uses Origin Access Control to sign requests to those origins. Local requests reach the same handler logic through `backend.local_server:app`. The application intentionally has no end-user login, so the stack applies exact hosted browser origins, alarms, a monthly cost budget, workload limits, an emergency switch, and scoped IAM roles to the public CloudFront surface. CloudFront currently accepts all HTTP methods, and its default behavior sends unmatched paths to PDF Parser; handler validation still rejects invalid requests, but this remains a request-surface hardening opportunity. CORS controls browser access and is not authentication or rate limiting.
+Every Lambda gets a private **Function URL** with `AWS_IAM` authentication. A single CloudFront distribution uses Origin Access Control to sign requests to those origins. Local requests reach the same handler logic through `backend.local_server:app`. A viewer-request function rejects unknown paths and methods other than `POST`/`OPTIONS` before origin invocation.
 
 The names above are CDK construct IDs. Because `functionName` is not set, CloudFormation generates the deployed physical Lambda names.
 
@@ -60,8 +62,14 @@ The names above are CDK construct IDs. Because `functionName` is not set, CloudF
 - **No VPC.** Lambdas run in the default VPC-less mode for simplicity.
 - **Docker bundling for pypdf.** The PDF Parser uses CDK's `bundling` option to `pip install pypdf` into the deployment package at synth time.
 - **IAM permissions are scoped by responsibility.** Analyst/Evaluator receive model-scoped Bedrock Mantle inference, Interviewer receives `s3:GetObject` through `grantRead`, and Voice Session can invoke only the configured AgentCore runtime and its endpoints.
-- **Hosted cost controls.** Invocation alarms trigger above 10 Analyst/Evaluator/Voice Session or 25 Interviewer/PDF Parser calls in five minutes; error alarms trigger at three errors in five minutes; throttle alarms trigger at the first throttle. They publish to an email-backed SNS topic. The default $25 account-wide AWS monthly budget alerts at 50%, 80%, and 100%; the recipient must confirm the SNS subscription. These notifications do not automatically stop usage and AWS Budgets reporting can lag.
-- **Emergency and optional concurrency controls.** The emergency stack switch sets all five functions to zero concurrency. Optional normal caps are 2 Analyst, 2 Evaluator, 4 Interviewer, 4 PDF Parser, and 2 Voice Session, but default off because AWS requires sufficient account concurrency quota before nonzero reserved concurrency can be assigned.
+
+### Security and Cost Controls
+
+The application intentionally has no end-user login. The hosted stack applies exact browser origins, daily admission, IP-bound session tokens, bounded stage attempts, monitoring, a monthly cost budget, workload limits, an emergency switch, and scoped IAM roles. CORS controls browser access and is not authentication or rate limiting.
+
+- **Hosted admission controls.** An atomic DynamoDB transaction admits at most 100 sessions globally and 5 per trusted CloudFront viewer IP per UTC day by default. Tokens expire after two hours, are stored only as SHA-256 digests, and are bound to the viewer-IP digest. Each token permits at most 2 PDF Parser, 2 Analyst, 2 Interviewer, 2 Evaluator, and 3 Voice Session attempts. Both daily values are deployment parameters; pure local mode bypasses them.
+- **Hosted cost controls.** Invocation alarms trigger above 10 Analyst/Evaluator/Voice Session or 25 Demo Session/Interviewer/PDF Parser calls in five minutes; error alarms trigger at three errors in five minutes; throttle alarms trigger at the first throttle. They publish to an email-backed SNS topic. The default $25 account-wide AWS monthly budget alerts at 50%, 80%, and 100%; the recipient must confirm the SNS subscription. These notifications do not automatically stop usage and AWS Budgets reporting can lag.
+- **Emergency and optional concurrency controls.** The emergency stack switch sets all six functions to zero concurrency. Optional normal caps are 2 Analyst, 2 Evaluator, 4 Interviewer, 4 PDF Parser, 2 Voice Session, and 2 Demo Session, but default off because AWS requires sufficient account concurrency quota before nonzero reserved concurrency can be assigned.
 - **Model/session caps.** Every mode accepts at most 5,000 job-description characters. Hosted Analyst and Evaluator calls use a 4,096-token output ceiling; hosted Analyst resume text is capped at 60,000 characters; hosted Evaluator input is capped at 60,000 conversation and 120,000 Analyst-output characters. AgentCore voice sessions have an eight-minute application limit. The local server disables these additional hosted-only caps.
 
 ---
@@ -76,6 +84,8 @@ backend/functions/evaluator/     → Evaluator Lambda asset
 backend/functions/interviewer/   → Interviewer Lambda asset
 backend/functions/pdf_parser/    → PDF Parser Lambda asset
 backend/functions/voice_session/ → Voice Session Lambda asset
+backend/functions/demo_session/  → Demo Session Lambda asset
+backend/functions/shared/        → Session guard Lambda layer asset
 ```
 
 CDK creates filtered assets rather than blindly zipping each folder. Analyst and Interviewer exclude tests, `.env*`, caches, bytecode, and test events; Evaluator also excludes its README and standalone SAM files. PDF Parser builds a fresh asset containing installed `pypdf` plus its top-level Python modules. The `handler` property tells Lambda which Python function to invoke:
@@ -87,6 +97,7 @@ CDK creates filtered assets rather than blindly zipping each folder. Analyst and
 | Interviewer | `handler.lambda_handler` | `backend/functions/interviewer/handler.py` |
 | PDF Parser | `handler.lambda_handler` | `backend/functions/pdf_parser/handler.py` |
 | Voice Session | `handler.lambda_handler` | `backend/functions/voice_session/handler.py` |
+| Demo Session | `handler.lambda_handler` | `backend/functions/demo_session/handler.py` |
 
 ### Environment Variables
 
@@ -96,13 +107,15 @@ that bucket during deployment.
 
 The Voice Session Lambda receives the AgentCore runtime ARN and returns a fresh five-minute signed WebSocket URL. The ARN is infrastructure configuration, not a browser credential.
 
+All six functions receive the hosted session-table name and daily-limit parameters. The shared Lambda layer verifies the hashed token, trusted viewer address, expiry, and stage-attempt count before each hosted handler performs work.
+
 ---
 
 ## How Infra Connects to the Frontend
 
 The stack exposes hosted endpoint and configuration-bucket outputs. Local mode sends the same `POST` payloads to the adapter under `http://localhost:8080/api`.
 
-Do not store secrets or permanent AWS credentials in `VITE_*` variables. Vite embeds those values into the public browser bundle.
+Do not store secrets or permanent AWS credentials in `VITE_*` variables. Vite embeds those values into the browser bundle.
 
 ## Infrastructure Boundaries
 
@@ -111,13 +124,14 @@ The complete target is intentionally split across managed services:
 | Concern | Deployment target | Repository status |
 |---------|-------------------|-------------------|
 | React/Vite frontend | AWS Amplify Hosting | Deployed after the same-revision application CDK update completes |
-| Browser identity | No end-user login | Public client by design |
+| Browser identity | No end-user login | Signed, short-lived service sessions |
 | PDF/Analyst/Interviewer/Evaluator HTTP backend | CloudFront OAC + private Lambda Function URLs + S3 | Deployed; direct Function URL access requires IAM |
 | Signed voice-session broker | Voice Session Lambda | Deployed; signs five-minute AgentCore URLs |
+| Demo admission | Demo Session Lambda + DynamoDB | Deployed; enforces configurable daily global/viewer limits |
 | Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Deployed; runtime-specific state remains outside version control |
 | Speech-to-speech model | Amazon Nova 2 Sonic through the relay | Active hosted and local integration |
 
-AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The public browser obtains a short-lived signed `wss://` URL from Voice Session rather than receiving permanent AWS credentials.
+AgentCore Runtime is a serverless managed container runtime, not a server that this project administers. It is used because the voice path needs a persistent WebSocket and bidirectional model stream. The browser obtains a short-lived signed `wss://` URL from Voice Session rather than receiving permanent AWS credentials.
 
 ## Automated Updates
 
@@ -130,7 +144,7 @@ Two automatic release paths respond to matching changes on `main`:
 
 The workflows obtain short-lived AWS credentials through GitHub OIDC. Application releases share one concurrency group, reject stale revisions, and deploy the backend before publishing the matching frontend. The deployment role trust is restricted to this repository's `main` branch, and permanent AWS access keys are not stored in repository configuration.
 
-The application workflow requires repository variables for the deployment-role ARN, Amplify app ID, and cost-alert email. Changes to the separate deployment-automation IAM/OIDC stack are intentionally excluded from the application workflow and require an explicit deployment of that bootstrap stack.
+The application workflow requires repository variables for the deployment-role ARN, Amplify app ID, and cost-alert email. Optional hosted-limit variables supply the values described under Security and Cost Controls, and workflow validation enforces the source-level ceilings. Changes to the separate deployment-automation IAM/OIDC stack are intentionally excluded from the application workflow and require an explicit deployment of that bootstrap stack.
 
 ---
 

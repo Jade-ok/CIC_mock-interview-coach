@@ -4,6 +4,18 @@ import json
 import logging
 
 try:
+    from session_guard import SessionGuardError, authorize_stage, error_response
+except ImportError:
+    try:
+        from backend.functions.shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+    except ImportError:
+        from shared.python.session_guard import (
+            SessionGuardError, authorize_stage, error_response,
+        )
+
+try:
     from .validation import detect_invocation_mode, validate_request
     from .orchestrator import process_documents
 except ImportError:  # Lambda loads handler.py as a top-level module.
@@ -28,6 +40,11 @@ def lambda_handler(event: dict, context) -> dict:
         dict with statusCode, headers, and JSON body for Function URL
         compatibility.
     """
+    try:
+        authorize_stage(event, "pdf_parser")
+    except SessionGuardError as exc:
+        return error_response(exc)
+
     # Step 1: Detect invocation mode and extract payload
     try:
         payload = detect_invocation_mode(event)
