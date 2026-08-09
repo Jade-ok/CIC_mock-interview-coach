@@ -25,6 +25,8 @@ function createMockAudioManager(options?: { granted?: boolean }): AudioManager {
     stopPlayback: vi.fn(),
     isPlaying: vi.fn().mockReturnValue(false),
     waitForPlaybackEnd: vi.fn().mockResolvedValue(undefined),
+    getPlayedDuration: vi.fn().mockReturnValue(0),
+    getTotalEnqueuedDuration: vi.fn().mockReturnValue(0),
     onAudioChunk: vi.fn(),
     onPlaybackEnd: vi.fn(),
   };

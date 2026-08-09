@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { useInterviewStreaming } from '@/hooks/useInterviewStreaming';
+import { useSubtitleSync } from '@/hooks/useSubtitleSync';
 import { EndConfirmModal } from '@/components/EndConfirmModal';
 import { PracticeBubbles } from '@/components/PracticeBubbles';
 import { GuidePanel } from '@/components/GuidePanel';
@@ -305,6 +306,13 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     isRecordingRef,
   });
 
+  // Subtitle sync: throttle livePartial display to match audio pace
+  const { syncedPartial } = useSubtitleSync({
+    livePartial: state.livePartial,
+    audioManagerRef,
+    turnState: state.turnState,
+  });
+
   // beforeunload effect — only active during interview phase
   useEffect(() => {
     if (state.phase === 'interview') {
@@ -394,7 +402,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           )}
           {/* Practice Mode ON → Chat log view */}
           {state.practiceMode && (
-            <PracticeBubbles transcript={state.transcript} livePartial={state.livePartial} turnState={state.turnState} />
+            <PracticeBubbles transcript={state.transcript} livePartial={syncedPartial} turnState={state.turnState} />
           )}
           <MicButton
             disabled={micDisabled}

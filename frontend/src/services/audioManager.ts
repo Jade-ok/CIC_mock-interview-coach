@@ -22,6 +22,10 @@ export interface AudioManager {
   stopPlayback(): void;
   isPlaying(): boolean;
   waitForPlaybackEnd(): Promise<void>;
+  /** Returns cumulative seconds of audio that have actually been played so far. */
+  getPlayedDuration(): number;
+  /** Returns total cumulative seconds of audio enqueued since last reset. */
+  getTotalEnqueuedDuration(): number;
   onAudioChunk: (chunk: ArrayBuffer) => void;
   onPlaybackEnd: () => void;
 }
@@ -51,6 +55,10 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
   let nextPlaybackTime = 0;
   let playbackEndResolvers: Array<() => void> = [];
   let destroyed = false;
+
+  // Playback duration tracking for subtitle sync
+  let totalEnqueuedDuration = 0;
+  let playbackStartedAt = 0; // audioContext.currentTime when first chunk was scheduled
 
   // Callbacks
   let onAudioChunk: (chunk: ArrayBuffer) => void = () => {};
@@ -166,6 +174,12 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
     source.start(startTime);
     nextPlaybackTime = startTime + duration;
 
+    // Track cumulative enqueued duration for subtitle sync
+    if (totalEnqueuedDuration === 0) {
+      playbackStartedAt = startTime;
+    }
+    totalEnqueuedDuration += duration;
+
     const scheduled: ScheduledSource = { node: source, startTime, duration };
     playbackQueue.push(scheduled);
 
@@ -175,6 +189,8 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
         playbackQueue.splice(idx, 1);
       }
       if (playbackQueue.length === 0) {
+        totalEnqueuedDuration = 0;
+        playbackStartedAt = 0;
         manager.onPlaybackEnd();
         // Resolve any waiters
         const resolvers = [...playbackEndResolvers];
@@ -195,6 +211,8 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
     }
     playbackQueue.length = 0;
     nextPlaybackTime = 0;
+    totalEnqueuedDuration = 0;
+    playbackStartedAt = 0;
 
     // Resolve any waiters immediately (playback was stopped)
     const resolvers = [...playbackEndResolvers];
@@ -240,6 +258,16 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
     }
   }
 
+  function getPlayedDuration(): number {
+    if (!audioContext || totalEnqueuedDuration === 0) return 0;
+    const elapsed = audioContext.currentTime - playbackStartedAt;
+    return Math.max(0, Math.min(elapsed, totalEnqueuedDuration));
+  }
+
+  function getTotalEnqueuedDuration(): number {
+    return totalEnqueuedDuration;
+  }
+
   const manager: AudioManager = {
     initialize,
     destroy,
@@ -250,6 +278,8 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
     stopPlayback,
     isPlaying: isPlayingFn,
     waitForPlaybackEnd,
+    getPlayedDuration,
+    getTotalEnqueuedDuration,
     onAudioChunk,
     onPlaybackEnd,
   };

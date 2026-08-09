@@ -11,13 +11,13 @@ interface PracticeBubblesProps {
  * PracticeBubbles — full chat-log view used as the main content area
  * when Practice Mode is ON.
  *
- * Shows both interviewer and user transcript entries as chat bubbles,
- * plus a live partial indicator for text currently being spoken/transcribed.
+ * Shows interviewer transcript entries as chat bubbles, plus a live partial
+ * indicator for text currently being spoken. The livePartial is expected to
+ * be pre-throttled by useSubtitleSync so it only contains text matching
+ * current audio playback progress.
  *
  * Filters out control/metadata entries (e.g. raw JSON like {"interrupted":true})
  * that Nova Sonic may emit as text_output events.
- *
- * This component should only be rendered when practiceMode is true.
  */
 
 /** Detects entries that are raw JSON control messages rather than spoken text */
@@ -26,7 +26,6 @@ function isControlMessage(text: string): boolean {
   if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return false;
   try {
     const parsed = JSON.parse(trimmed);
-    // If it parses as an object/array, it's a control message, not speech
     return typeof parsed === 'object' && parsed !== null;
   } catch {
     return false;
@@ -54,7 +53,7 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
       <div className="practice-chat__status" data-testid="practice-chat-status">
         <span className={`practice-chat__dot ${turnState === 'ai_speaking' ? 'practice-chat__dot--active' : ''}`} />
         <span className="practice-chat__status-label">
-          {turnState === 'ended' ? 'Interview complete' : turnState === 'ai_speaking' ? 'AI speaking…' : turnState === 'user_turn' ? 'Your turn' : 'Waiting…'}
+          {turnState === 'ended' ? 'Interview complete' : turnState === 'ai_speaking' ? 'AI speaking\u2026' : turnState === 'user_turn' ? 'Your turn' : 'Waiting\u2026'}
         </span>
       </div>
 
@@ -66,18 +65,18 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
             className="practice-chat__bubble practice-chat__bubble--interviewer"
             data-testid="practice-bubble-interviewer"
           >
-            <span className="practice-chat__role">🤖 AI</span>
+            <span className="practice-chat__role">{'\ud83e\udd16'} AI</span>
             <p className="practice-chat__text">{entry.text}</p>
           </div>
         ))}
 
-        {/* Live partial — shows AI text currently being spoken */}
+        {/* Live partial — shows AI text currently being spoken (throttled by subtitle sync) */}
         {livePartial && livePartial.role === 'interviewer' && !isControlMessage(livePartial.text) && (
           <div
             className="practice-chat__bubble practice-chat__bubble--interviewer practice-chat__bubble--live"
             data-testid="practice-bubble-live"
           >
-            <span className="practice-chat__role">🤖 AI</span>
+            <span className="practice-chat__role">{'\ud83e\udd16'} AI</span>
             <p className="practice-chat__text">{livePartial.text}</p>
           </div>
         )}
