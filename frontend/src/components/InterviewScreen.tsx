@@ -104,20 +104,57 @@ function PracticeModeToggle({
   onToggle: () => void;
 }) {
   const label = practiceMode ? 'Practice Mode' : 'Live Mode';
-  const subtitle = practiceMode ? 'with guide & captions' : 'clean, no assistance';
+  const subtitle = practiceMode ? 'with guide & captions' : 'no assistance';
   const ariaLabel = practiceMode ? 'Switch to Live Mode' : 'Switch to Practice Mode';
 
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipText, setTooltipText] = useState(subtitle);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasAutoShownRef = useRef(false);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // Auto-show once on mount (interview entry)
+  useEffect(() => {
+    if (hasAutoShownRef.current) return;
+    hasAutoShownRef.current = true;
+    setTooltipText(subtitle);
+    setTooltipVisible(true);
+    timerRef.current = setTimeout(() => setTooltipVisible(false), 2500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClick = useCallback(() => {
+    onToggle();
+    // Show tooltip for the NEW state (after toggle)
+    const nextSubtitle = practiceMode ? 'no assistance' : 'with guide & captions';
+    setTooltipText(nextSubtitle);
+    setTooltipVisible(true);
+    // Reset timer for consecutive clicks
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setTooltipVisible(false), 2000);
+  }, [onToggle, practiceMode]);
+
   return (
-    <button
-      className={`control-bar__practice-toggle ${practiceMode ? 'control-bar__practice-toggle--on' : ''}`}
-      onClick={onToggle}
-      type="button"
-      aria-label={ariaLabel}
-      data-testid="practice-mode-toggle"
-    >
-      <span className="control-bar__toggle-label">{label}</span>
-      <span className="control-bar__toggle-subtitle">{subtitle}</span>
-    </button>
+    <div className="control-bar__toggle-wrapper">
+      <button
+        className={`control-bar__practice-toggle ${practiceMode ? 'control-bar__practice-toggle--on' : ''}`}
+        onClick={handleClick}
+        type="button"
+        aria-label={ariaLabel}
+        data-testid="practice-mode-toggle"
+      >
+        {label}
+      </button>
+      <span className={`control-bar__toggle-tooltip ${tooltipVisible ? 'control-bar__toggle-tooltip--visible' : ''}`}>
+        {tooltipText}
+      </span>
+    </div>
   );
 }
 
@@ -671,42 +708,46 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           font-variant-numeric: tabular-nums;
         }
 
+        .control-bar__toggle-wrapper {
+          position: relative;
+        }
+
         .control-bar__practice-toggle {
           background-color: transparent;
           border: 1px solid var(--color-text-secondary, #A0A0A5);
           border-radius: 8px;
-          padding: 6px 14px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 2px;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--color-text-secondary, #A0A0A5);
           cursor: pointer;
-          transition: border-color 0.2s;
+          transition: border-color 0.2s, color 0.2s;
         }
 
         .control-bar__practice-toggle--on {
           border-color: var(--color-accent, #9AE05C);
-        }
-
-        .control-bar__toggle-label {
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--color-text-secondary, #A0A0A5);
-          transition: color 0.2s;
-        }
-
-        .control-bar__practice-toggle--on .control-bar__toggle-label {
           color: var(--color-accent, #9AE05C);
         }
 
-        .control-bar__toggle-subtitle {
+        .control-bar__toggle-tooltip {
+          position: absolute;
+          bottom: calc(100% + 8px);
+          left: 50%;
+          transform: translateX(-50%);
+          white-space: nowrap;
           font-size: 11px;
-          color: rgba(160, 160, 165, 0.7);
-          transition: color 0.2s;
+          color: var(--color-text-primary, #FFFFFF);
+          background-color: var(--color-tile-bg, #1C1C1E);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          padding: 5px 10px;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s ease;
         }
 
-        .control-bar__practice-toggle--on .control-bar__toggle-subtitle {
-          color: rgba(154, 224, 92, 0.6);
+        .control-bar__toggle-tooltip--visible {
+          opacity: 1;
         }
 
         .control-bar__end-btn {
