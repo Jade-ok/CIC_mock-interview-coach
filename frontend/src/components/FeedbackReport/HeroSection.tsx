@@ -32,7 +32,7 @@ function HighlightedText({ text }: { text: string }) {
   );
 }
 
-export function HeroSection({ totalScore, questionCount, targetRole, dimensions }: HeroSectionProps) {
+export function HeroSection({ totalScore, targetRole, dimensions }: HeroSectionProps) {
   // Find weakest dimension
   let weakestKey = DIMENSION_KEYS[0] as string;
   let weakestScore = Infinity;
@@ -44,6 +44,7 @@ export function HeroSection({ totalScore, questionCount, targetRole, dimensions 
     }
   }
   const weakestLabel = DIMENSION_LABELS[weakestKey]?.label || weakestKey;
+  void weakestLabel; // used only for chip (removed)
   const action = DIMENSION_ACTIONS[weakestKey] || 'add more detail to your answers';
 
   // Ring gauge SVG

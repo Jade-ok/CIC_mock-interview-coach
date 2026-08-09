@@ -43,7 +43,7 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
           dimensions={data.overall_scores.dimensions}
         />
 
-        <DimensionScoresGrid dimensions={data.overall_scores.dimensions} />
+        <DimensionScoresGrid dimensions={data.overall_scores.dimensions} perQuestionScores={data.per_question_scores} />
 
         <FeedbackColumns
           strengths={data.strengths}
