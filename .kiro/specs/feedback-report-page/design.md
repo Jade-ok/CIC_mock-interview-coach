@@ -68,7 +68,7 @@ interface PerQuestionScore {
   answer_summary: string;
   scores: {
     concrete_example: number;      // 1-5 integer
-    situation_action_result: number;
+    star_structure: number;
     link_to_job: number;
     quantifiable_outcome: number;
   };
@@ -77,7 +77,7 @@ interface PerQuestionScore {
 interface OverallScores {
   dimensions: {
     concrete_example: number;      // 1.0-5.0 float
-    situation_action_result: number;
+    star_structure: number;
     link_to_job: number;
     quantifiable_outcome: number;
   };
@@ -143,7 +143,7 @@ interface DimensionCardProps {
 | Key | Label | Description |
 |-----|-------|-------------|
 | concrete_example | Concrete example | Did you point to a real project or moment? |
-| situation_action_result | Situation → Action → Result | Was the story easy to follow? |
+| star_structure | STAR (Situation, Task, Action, Result) | Was the story easy to follow? |
 | link_to_job | Link to the job | Did you connect it to this role? |
 | quantifiable_outcome | Quantifiable outcome | Did you show measurable impact? |
 

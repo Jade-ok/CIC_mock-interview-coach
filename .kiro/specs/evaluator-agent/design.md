@@ -138,7 +138,7 @@ IMPORTANT CALIBRATION:
 
 Score each question-answer pair on these four dimensions (1-5 integer scale):
 1. concrete_example (1-5): Did the student provide a specific, real example?
-2. situation_action_result (1-5): Did the answer follow SAR structure?
+2. star_structure (1-5): Did the answer follow STAR structure?
 3. link_to_job (1-5): Did the student connect their experience to the target role?
 4. quantifiable_outcome (1-5): Did the student include measurable results or impact?
 
@@ -182,10 +182,10 @@ EVALUATION_TOOL_SCHEMA = {
                             "answer_summary": {"type": "string"},
                             "scores": {
                                 "type": "object",
-                                "required": ["concrete_example", "situation_action_result", "link_to_job", "quantifiable_outcome"],
+                                "required": ["concrete_example", "star_structure", "link_to_job", "quantifiable_outcome"],
                                 "properties": {
                                     "concrete_example": {"type": "integer", "minimum": 1, "maximum": 5},
-                                    "situation_action_result": {"type": "integer", "minimum": 1, "maximum": 5},
+                                    "star_structure": {"type": "integer", "minimum": 1, "maximum": 5},
                                     "link_to_job": {"type": "integer", "minimum": 1, "maximum": 5},
                                     "quantifiable_outcome": {"type": "integer", "minimum": 1, "maximum": 5}
                                 }
@@ -263,7 +263,7 @@ def _extract_tool_input(response: dict) -> dict:
 - Classification is deterministic Python code, not LLM output
 
 ```python
-DIMENSIONS = ["concrete_example", "situation_action_result", "link_to_job", "quantifiable_outcome"]
+DIMENSIONS = ["concrete_example", "star_structure", "link_to_job", "quantifiable_outcome"]
 
 READINESS_THRESHOLDS = [
     (4.3, "Interview ready"),
@@ -419,7 +419,7 @@ class EvaluationError(Exception):
       "answer_summary": "Built frontend of multilingual communication app",
       "scores": {
         "concrete_example": 4,
-        "situation_action_result": 3,
+        "star_structure": 3,
         "link_to_job": 4,
         "quantifiable_outcome": 2
       }
@@ -428,7 +428,7 @@ class EvaluationError(Exception):
   "overall_scores": {
     "dimensions": {
       "concrete_example": 3.8,
-      "situation_action_result": 3.2,
+      "star_structure": 3.2,
       "link_to_job": 3.5,
       "quantifiable_outcome": 2.5
     },

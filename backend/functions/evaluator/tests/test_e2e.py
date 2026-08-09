@@ -26,7 +26,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Led backend development for a library management REST API in a team of four, designing the database schema, implementing CRUD endpoints with Flask, and setting up CI/CD.",
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 4,
                 "quantifiable_outcome": 3,
             },
@@ -36,7 +36,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Chose PostgreSQL over MongoDB after analyzing data relationships, resulting in 3x query performance improvement.",
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 5,
+                "star_structure": 5,
                 "link_to_job": 4,
                 "quantifiable_outcome": 5,
             },
@@ -46,7 +46,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Learned WebSockets in 2 hours during a hackathon and implemented real-time messaging, winning second place.",
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 3,
                 "quantifiable_outcome": 4,
             },
@@ -56,7 +56,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Wrote integration tests with 20 concurrent clients using asyncio, later added Locust load testing showing 500 concurrent user capacity.",
             "scores": {
                 "concrete_example": 4,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 4,
                 "quantifiable_outcome": 5,
             },
@@ -66,7 +66,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Received feedback on lacking error handling and tests during internship, rewrote module with comprehensive error handling and 90% test coverage.",
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 5,
+                "star_structure": 5,
                 "link_to_job": 5,
                 "quantifiable_outcome": 4,
             },
@@ -76,7 +76,7 @@ MOCK_LLM_RESPONSE = {
             "answer_summary": "Adopted TDD for critical paths, AAA pattern for test readability, maintained 80%+ coverage, and set up pre-commit hooks.",
             "scores": {
                 "concrete_example": 4,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 5,
                 "quantifiable_outcome": 4,
             },
@@ -163,7 +163,7 @@ def test_e2e_all_scores_are_1_to_5(mock_invoke):
 
     dimensions = [
         "concrete_example",
-        "situation_action_result",
+        "star_structure",
         "link_to_job",
         "quantifiable_outcome",
     ]
@@ -193,7 +193,7 @@ def test_e2e_overall_scores_structure(mock_invoke):
 
     dimensions = [
         "concrete_example",
-        "situation_action_result",
+        "star_structure",
         "link_to_job",
         "quantifiable_outcome",
     ]

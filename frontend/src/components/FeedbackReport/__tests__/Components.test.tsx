@@ -19,7 +19,7 @@ describe('DimensionCard', () => {
 
 describe('DimensionScoresGrid', () => {
   it('renders all 4 dimension cards', () => {
-    const dimensions = { concrete_example: 4.0, situation_action_result: 3.0, link_to_job: 3.5, quantifiable_outcome: 2.0 };
+    const dimensions = { concrete_example: 4.0, star_structure: 3.0, link_to_job: 3.5, quantifiable_outcome: 2.0 };
     render(<DimensionScoresGrid dimensions={dimensions} />);
     expect(screen.getByText('Concrete example')).toBeTruthy();
     expect(screen.getByText(/Situation/)).toBeTruthy();
@@ -28,7 +28,7 @@ describe('DimensionScoresGrid', () => {
   });
 
   it('displays section title', () => {
-    const dimensions = { concrete_example: 3.0, situation_action_result: 3.0, link_to_job: 3.0, quantifiable_outcome: 3.0 };
+    const dimensions = { concrete_example: 3.0, star_structure: 3.0, link_to_job: 3.0, quantifiable_outcome: 3.0 };
     render(<DimensionScoresGrid dimensions={dimensions} />);
     expect(screen.getByText('How your answers scored')).toBeTruthy();
   });
@@ -61,7 +61,7 @@ describe('ContextualAdvice', () => {
 
 describe('QuestionCard', () => {
   it('displays question and feedback', () => {
-    const scores = { concrete_example: 4, situation_action_result: 3, link_to_job: 4, quantifiable_outcome: 2 };
+    const scores = { concrete_example: 4, star_structure: 3, link_to_job: 4, quantifiable_outcome: 2 };
     const feedback = { strength: 'Great specific example.', improvement: 'Add a measurable outcome.' };
     render(
       <QuestionCard index={1} questionText="Tell me about a project." feedback={feedback} scores={scores} />
@@ -73,7 +73,7 @@ describe('QuestionCard', () => {
   });
 
   it('shows weakest dimension chip', () => {
-    const scores = { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 2 };
+    const scores = { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 2 };
     const feedback = { strength: 'Good.', improvement: 'More detail.' };
     render(
       <QuestionCard index={2} questionText="What was hard?" feedback={feedback} scores={scores} />
@@ -84,7 +84,7 @@ describe('QuestionCard', () => {
 
 describe('QuestionBreakdown', () => {
   it('renders intro line with question count', () => {
-    const questions = [{ question_text: 'Q1?', feedback: { strength: 'Good.', improvement: 'More detail.' }, scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 } }];
+    const questions = [{ question_text: 'Q1?', feedback: { strength: 'Good.', improvement: 'More detail.' }, scores: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 3 } }];
     render(<QuestionBreakdown questions={questions} questionCount={1} />);
     expect(screen.getByText(/1 question/)).toBeTruthy();
   });
@@ -93,7 +93,7 @@ describe('QuestionBreakdown', () => {
     const questions = Array.from({ length: 4 }, (_, i) => ({
       question_text: `Question ${i + 1}?`,
       feedback: { strength: `Good ${i + 1}.`, improvement: `Improve ${i + 1}.` },
-      scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 3 },
+      scores: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 3 },
     }));
     render(<QuestionBreakdown questions={questions} questionCount={4} />);
     expect(screen.getByText('Question 1?')).toBeTruthy();

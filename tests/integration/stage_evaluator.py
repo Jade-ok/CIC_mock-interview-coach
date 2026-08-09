@@ -36,17 +36,17 @@ CONVERSATION = [
 MOCK_TOOL_INPUT = {
         "per_question_scores": [
             {"question_text": "Walk me through a project?", "answer_summary": "TechCorp REST API, 85% coverage, 20 users.",
-             "scores": {"concrete_example": 5, "situation_action_result": 4, "link_to_job": 4, "quantifiable_outcome": 5}},
+             "scores": {"concrete_example": 5, "star_structure": 4, "link_to_job": 4, "quantifiable_outcome": 5}},
             {"question_text": "Features and endpoint structure?", "answer_summary": "CRUD endpoints, iterated with feedback.",
-             "scores": {"concrete_example": 4, "situation_action_result": 4, "link_to_job": 3, "quantifiable_outcome": 2}},
+             "scores": {"concrete_example": 4, "star_structure": 4, "link_to_job": 3, "quantifiable_outcome": 2}},
             {"question_text": "Technical challenge?", "answer_summary": "Hackathon matching, pivoted to OpenAI.",
-             "scores": {"concrete_example": 5, "situation_action_result": 5, "link_to_job": 3, "quantifiable_outcome": 4}},
+             "scores": {"concrete_example": 5, "star_structure": 5, "link_to_job": 3, "quantifiable_outcome": 4}},
             {"question_text": "Alternatives considered?", "answer_summary": "Weighted scoring, clustering, chose API.",
-             "scores": {"concrete_example": 4, "situation_action_result": 5, "link_to_job": 3, "quantifiable_outcome": 2}},
+             "scores": {"concrete_example": 4, "star_structure": 5, "link_to_job": 3, "quantifiable_outcome": 2}},
             {"question_text": "Learning from collaboration?", "answer_summary": "Code reviews, asking questions early.",
-             "scores": {"concrete_example": 4, "situation_action_result": 4, "link_to_job": 5, "quantifiable_outcome": 2}},
+             "scores": {"concrete_example": 4, "star_structure": 4, "link_to_job": 5, "quantifiable_outcome": 2}},
             {"question_text": "Resolving disagreement?", "answer_summary": "Monolith vs modules, compromised.",
-             "scores": {"concrete_example": 5, "situation_action_result": 5, "link_to_job": 4, "quantifiable_outcome": 3}}
+             "scores": {"concrete_example": 5, "star_structure": 5, "link_to_job": 4, "quantifiable_outcome": 3}}
         ],
         "strengths": [
             "Provides specific examples with measurable outcomes (85% coverage, 20 users).",
