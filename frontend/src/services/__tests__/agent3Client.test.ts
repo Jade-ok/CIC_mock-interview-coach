@@ -97,7 +97,7 @@ describe('callAgent3', () => {
         feedback: { strength: 'Good example.', improvement: 'Add metrics.' },
         scores: {
           concrete_example: 3,
-          situation_action_result: 3,
+          star_structure: 3,
           link_to_job: 3,
           quantifiable_outcome: 3,
         },
@@ -105,7 +105,7 @@ describe('callAgent3', () => {
       overall_scores: {
         dimensions: {
           concrete_example: 3,
-          situation_action_result: 3,
+          star_structure: 3,
           link_to_job: 3,
           quantifiable_outcome: 3,
         },

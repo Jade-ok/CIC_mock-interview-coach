@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL_ID = "amazon.nova-2-sonic-v1:0"
 DEFAULT_REGION = "us-east-1"
-MAX_AUDIO_QUEUE_SIZE = 100
+MAX_AUDIO_QUEUE_SIZE = 500
 
 
 class Boto3CredentialsResolver(IdentityResolver):

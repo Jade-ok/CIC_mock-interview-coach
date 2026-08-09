@@ -10,7 +10,7 @@ describe('HeroSection', () => {
     targetRole: 'Software Engineering Intern',
     dimensions: {
       concrete_example: 3.5,
-      situation_action_result: 2.5,
+      star_structure: 2.5,
       link_to_job: 3.0,
       quantifiable_outcome: 3.0,
     },
@@ -38,9 +38,8 @@ describe('HeroSection', () => {
 
   it('shows the action for the weakest dimension', () => {
     render(<HeroSection {...defaultProps} />);
-    // situation_action_result at 2.5 is weakest
-    expect(screen.getByText('SAR structure')).toBeTruthy();
-    expect(screen.getByText(/Situation, Action, Result/)).toBeTruthy();
+    // star_structure at 2.5 is weakest — callout shows STAR action text
+    expect(screen.getByText(/STAR/)).toBeTruthy();
   });
 
   it('shows ring gauge with accessible label', () => {

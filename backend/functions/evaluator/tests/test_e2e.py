@@ -26,7 +26,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Clearly described backend ownership.", "improvement": "Quantify the project scope."},
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 4,
                 "quantifiable_outcome": 3,
             },
@@ -36,7 +36,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Explained a concrete technical decision.", "improvement": "Connect the decision to the target role."},
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 5,
+                "star_structure": 5,
                 "link_to_job": 4,
                 "quantifiable_outcome": 5,
             },
@@ -46,7 +46,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Showed rapid learning with a specific example.", "improvement": "Clarify the personal implementation details."},
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 3,
                 "quantifiable_outcome": 4,
             },
@@ -56,7 +56,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Used concrete testing metrics.", "improvement": "Explain how the results changed the design."},
             "scores": {
                 "concrete_example": 4,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 4,
                 "quantifiable_outcome": 5,
             },
@@ -66,7 +66,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Demonstrated growth from feedback.", "improvement": "State the resulting user or team impact."},
             "scores": {
                 "concrete_example": 5,
-                "situation_action_result": 5,
+                "star_structure": 5,
                 "link_to_job": 5,
                 "quantifiable_outcome": 4,
             },
@@ -76,7 +76,7 @@ MOCK_LLM_RESPONSE = {
             "feedback": {"strength": "Named specific testing practices.", "improvement": "Tie those practices to role requirements."},
             "scores": {
                 "concrete_example": 4,
-                "situation_action_result": 4,
+                "star_structure": 4,
                 "link_to_job": 5,
                 "quantifiable_outcome": 4,
             },
@@ -165,7 +165,7 @@ def test_e2e_all_scores_are_1_to_5(mock_invoke):
 
     dimensions = [
         "concrete_example",
-        "situation_action_result",
+        "star_structure",
         "link_to_job",
         "quantifiable_outcome",
     ]
@@ -195,7 +195,7 @@ def test_e2e_overall_scores_structure(mock_invoke):
 
     dimensions = [
         "concrete_example",
-        "situation_action_result",
+        "star_structure",
         "link_to_job",
         "quantifiable_outcome",
     ]
