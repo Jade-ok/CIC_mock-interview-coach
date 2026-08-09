@@ -9,7 +9,7 @@ interface TldrCardProps {
 /** Short action phrase for each dimension. */
 const DIMENSION_ACTIONS: Record<string, string> = {
   concrete_example: 'pick one specific project and name it',
-  situation_action_result: 'complete your SAR structure (Situation → Action → Result)',
+  star_structure: 'structure your answer using STAR (Situation, Task, Action, Result)',
   link_to_job: 'connect your example to this role',
   quantifiable_outcome: 'add a number or measurable outcome',
 };

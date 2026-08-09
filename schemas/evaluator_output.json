@@ -8,7 +8,7 @@
       },
       "scores": {
         "concrete_example": "integer 1-5 — did the student provide a specific, real example?",
-        "situation_action_result": "integer 1-5 — did the answer follow SAR structure?",
+        "star_structure": "integer 1-5 — did the answer follow STAR structure (Situation, Task, Action, Result)?",
         "link_to_job": "integer 1-5 — did the student connect their experience to the target role?",
         "quantifiable_outcome": "integer 1-5 — did the student include measurable results or impact?"
       }
@@ -18,7 +18,7 @@
   "overall_scores": {
     "dimensions": {
       "concrete_example": "float — average across all answered questions, rounded to 1 decimal",
-      "situation_action_result": "float — average across all answered questions, rounded to 1 decimal",
+      "star_structure": "float — average across all answered questions, rounded to 1 decimal",
       "link_to_job": "float — average across all answered questions, rounded to 1 decimal",
       "quantifiable_outcome": "float — average across all answered questions, rounded to 1 decimal"
     },

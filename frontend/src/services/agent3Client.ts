@@ -161,7 +161,7 @@ export function isEvaluatorOutput(value: unknown): value is EvaluatorOutput {
   const dimensions = overall.dimensions;
   const dimensionKeys = [
     'concrete_example',
-    'situation_action_result',
+    'star_structure',
     'link_to_job',
     'quantifiable_outcome',
   ];
