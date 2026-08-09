@@ -11,8 +11,8 @@ interface PracticeBubblesProps {
  * PracticeBubbles — full chat-log view used as the main content area
  * when Practice Mode is ON.
  *
- * Shows both interviewer and user transcript entries as chat bubbles,
- * plus a live partial indicator for text currently being spoken/transcribed.
+ * Shows interviewer transcript entries as caption bubbles, plus a live
+ * partial indicator for text currently being spoken/transcribed.
  *
  * Filters out control/metadata entries (e.g. raw JSON like {"interrupted":true})
  * that Nova Sonic may emit as text_output events.

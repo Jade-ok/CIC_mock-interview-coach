@@ -22,7 +22,7 @@
 
 1. Combine Analyst output, interview structure, interview profile, and behavioral instructions into one deterministic string.
 2. Instruct Nova to speak first, ask one concise question at a time, use the configured tone, accept student experiences, avoid inventing details, avoid feedback/scoring, transition clearly, and stop gracefully.
-3. Define three main questions with one adaptive follow-up per main question.
+3. Prompt Nova to ask three main questions with one adaptive follow-up per main question; application state does not currently guarantee model compliance with this sequence.
 
 ### R4. Lambda Interface
 
@@ -49,13 +49,13 @@
 3. Forward Nova audio, text, tool, content-end, and completion events to the browser.
 4. Use 16 kHz mono LPCM input and 24 kHz mono LPCM output.
 
-Current gap: the queue primitives exist, but `server.py` forwards audio through `send_event()` instead of `send_audio_chunk()`, so requirement 2 is not yet satisfied.
+Current implementation: `server.py` forwards browser audio through `send_audio_chunk()`, and the session manager drains the bounded queue into the Nova stream.
 
 ### R7. Integration Contract
 
 1. The frontend and relay share the canonical application-level `{type, payload}` protocol.
 2. The relay must own Nova-specific prompt/content identifiers and event ordering rather than exposing them to the browser.
-3. The adapter must translate session, audio, text, transcript, tool-use, interruption, and completion events; live Nova behavior remains an end-to-end verification requirement.
+3. The adapter must translate session, audio, text, transcript, tool-use, interruption, and completion events; the hosted path is deployed, while reconnection and session-restoration edge cases remain explicit verification requirements.
 
 ### R8. Hosted Access Boundary
 
@@ -63,7 +63,7 @@ Current gap: the queue primitives exist, but `server.py` forwards audio through 
 2. Create five-minute SigV4-signed `wss://` URLs through a Lambda role scoped to the configured AgentCore runtime.
 3. Do not expose long-lived AWS credentials or direct Bedrock Nova invocation permissions to browser code.
 4. Supply the five public Lambda endpoints through hosted environment configuration.
-5. Require live browser connection verification, budgets, and usage monitoring before sharing the no-login hosted application.
+5. The application intentionally has no end-user login; require budgets, usage monitoring, and targeted browser verification for public hosted operation.
 
 ## Evaluator Handoff
 

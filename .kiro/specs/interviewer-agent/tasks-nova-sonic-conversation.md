@@ -1,6 +1,6 @@
 # Tracker: Nova Sonic Conversation Runtime
 
-> Active tracker. Last verified: 2026-08-07. Checkmarks describe repository implementation; runtime deployment state and endpoints are environment-specific.
+> Active tracker. Last verified: 2026-08-08. The relay and hosted browser path are deployed; account-specific runtime identifiers remain environment configuration.
 
 ## Implemented Backend
 
@@ -20,13 +20,13 @@
 
 - [x] Add a WebSocket client abstraction with reconnection support.
 - [x] Add microphone capture and audio playback services.
-- [x] Add interview UI, text input, manual end flow, and transcript state.
+- [x] Add the microphone-required interview UI, manual end flow, and transcript state.
 
-## Remaining Integration Work
+## Hosted Verification
 
-- [ ] Verify one complete browser session: start, context injection, user audio, Nova audio/text, transcript capture, and session end.
+- [x] Exercise the hosted browser path through context injection, user audio, Nova audio/text, and transcript capture.
 - [ ] Verify interruption/barge-in behavior through the actual relay.
-- [ ] Verify text fallback through the selected protocol.
+- [ ] Verify reconnect exhaustion, expired-session handling, and transcript preservation across reconnects.
 - [x] Exercise the WebSocket endpoint with a fake Nova session manager without paid AWS calls.
 
 ## Evaluator Handoff

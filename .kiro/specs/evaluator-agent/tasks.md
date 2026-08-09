@@ -1,6 +1,6 @@
 # Tasks
 
-> Historical implementation record. Paths and field names were refreshed on 2026-08-08; check current code and tests for implementation status. Amplify hosting, signed AgentCore WSS, and frontend handoff verification are tracked separately and are not implied complete below.
+> Historical implementation record. Paths and field names were refreshed on 2026-08-08; check current code and tests for implementation status. Amplify Hosting, the Lambda backend, and the signed AgentCore WSS path are deployed; this checklist remains scoped to Evaluator implementation work.
 
 ## Task 1: Project Setup and Module Scaffolding
 
@@ -30,7 +30,7 @@
 - [x] Implement `_format_user_message(conversation, analyst_output)` to format the user message, extracting target_role and resume_job_alignment from the structured analyst_output object
 - [x] Implement `_build_tool_config()` returning the OpenAI-compatible submit_evaluation function and forced tool choice
 - [x] Implement `build(conversation, analyst_output)` returning (system, messages, tool_config) tuple
-- [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per_question_scores, strengths, improvements, contextual_advice
+- [x] Define `EVALUATION_TOOL_SCHEMA` in schemas.py with per-question feedback and scores, overall summaries, keyword coverage, and contextual advice
 - [x] Write unit tests verifying prompt structure, system prompt content, and tool schema completeness
 
 ## Task 4: Implement Bedrock Client
@@ -52,7 +52,7 @@
 ## Task 6: Implement Response Assembler
 
 - [x] Implement `build(per_question_scores, overall_scores, readiness_label, llm_response, interview_metadata)`
-- [x] Ensure output matches the defined response schema (per_question_scores, overall_scores, question_count, readiness_label, strengths, improvements, contextual_advice, interview_metadata)
+- [x] Ensure output matches the defined response schema (per_question_scores, overall_scores, question_count, readiness_label, strengths, improvements, keywords_covered, keywords_not_covered, contextual_advice, interview_metadata)
 - [x] Write unit tests verifying correct field mapping and interview_metadata pass-through
 
 ## Task 7: Implement Lambda Handler (Orchestrator)

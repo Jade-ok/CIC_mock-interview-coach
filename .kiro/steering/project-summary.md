@@ -1,6 +1,6 @@
 # Project Summary
 
-> Active product and implementation summary. Last verified: 2026-08-07.
+> Active product and implementation summary. Last verified: 2026-08-08.
 
 Build a voice-based résumé deep-dive mock interview app for students and internship candidates.
 
@@ -10,13 +10,13 @@ The Analyst currently accepts internships, coursework, academic projects, person
 
 ## Interview Format
 
-The interview includes:
+Nova is instructed to aim for:
 
 - 3 main questions
 - 1 adaptive follow-up after each main question
 - up to 6 spoken answers
 - an option to end the interview early
-- a Practice Mode UI with interviewer bubbles, competency guides, and keyword highlighting
+- a Practice Mode UI with interviewer-only captions plus Key Competencies and Experiences to Prepare
 
 The three interview areas are:
 
@@ -136,9 +136,9 @@ The sequence is:
 - follow-up answer
 - move to the next interview point
 
-The intended flow ends after the third follow-up answer and sends the mapped conversation to the Evaluator. The frontend now maps final transcript entries to `schemas/interviewer_output.json`; live end-to-end verification remains pending.
+Nova is instructed to end after the third follow-up answer and send the mapped conversation to the Evaluator. The frontend maps final transcript entries to `schemas/interviewer_output.json`.
 
-The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. Live deployed verification remains pending.
+The implemented handoff marks an early-ended interview accordingly and scores only completed question-answer pairs, without penalizing omitted areas. The three-main-question/three-follow-up sequence is still directed by Nova's context rather than guaranteed by application-side state tracking.
 
 ## AWS Services
 
@@ -153,4 +153,6 @@ The agreed deployment architecture uses one AWS account:
 
 The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads five Lambda endpoints from environment configuration. The no-login hosted design is public, so budgets, concurrency limits, and usage monitoring are operational requirements.
 
-No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.
+The Amplify frontend, Lambda/S3 backend, and AgentCore relay are deployed. Path-filtered GitHub Actions workflows publish matching changes from `main`: frontend assets through the Amplify manual deployment API, the backend through CDK, and the voice relay through the AgentCore CLI. The workflows use short-lived AWS credentials from a GitHub OIDC role restricted to the immutable repository identity and the `main` branch.
+
+No database or permanent interview history is currently implemented. Practice Mode presentation is available in both local and hosted builds; cross-session history is not.

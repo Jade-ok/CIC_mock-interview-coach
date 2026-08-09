@@ -24,7 +24,7 @@ def _make_question(scores_dict):
     """Helper to wrap scores into a question object."""
     return {
         "question_text": "Test question?",
-        "answer_summary": "Test answer.",
+        "feedback": {"strength": "Clear answer.", "improvement": "Add detail."},
         "scores": scores_dict,
     }
 

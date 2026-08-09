@@ -1,6 +1,6 @@
 # Design: Interviewer and Voice Runtime
 
-> Maintained design. Last verified: 2026-08-08. This replaces direct browser-to-Bedrock access. Amplify hosting and short-lived signed browser-to-AgentCore WSS define the hosted architecture; their configuration and verification are environment-specific.
+> Maintained design. Last verified: 2026-08-08. This replaces direct browser-to-Bedrock access. Amplify hosting and short-lived signed browser-to-AgentCore WSS are deployed parts of the hosted architecture.
 
 ## Overview
 
@@ -14,7 +14,7 @@ The browser retains UI state and transcript data. No persistent interview sessio
 ## Target Architecture and Current Status
 
 ```text
-React browser client (target: Amplify Hosting)
+React browser client on Amplify Hosting
   ├─ POST analyst_output ──> Interviewer Function URL
   │                           └─ reads interview configs from S3
   │<─ {success, runtime_context}
@@ -28,7 +28,7 @@ React browser client (target: Amplify Hosting)
   └─ POST evaluator input ──> Evaluator Function URL
 ```
 
-There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the public browser to connect without storing AWS credentials. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify build configuration exist; environment values and a verified hosted browser session remain environment-specific.
+There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the public browser to connect without storing AWS credentials or requiring an end-user login. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify-hosted path are deployed; account-specific identifiers remain environment configuration.
 
 ## Interviewer Lambda
 
@@ -70,7 +70,7 @@ Source: `backend/voice_agent/`
 - `agentcore/agentcore.json` defines the current CLI/CDK project. `agentcore/aws-targets.example.json` documents the shape of ignored environment-specific target data. `.bedrock_agentcore.yaml` is ignored legacy Starter Toolkit configuration and is not canonical.
 - `Dockerfile` packages the relay.
 
-The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
+The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests and the hosted browser/Nova path has been exercised. Real reconnection and session-restoration edge cases remain targeted verification work.
 
 The hosted boundary is browser → Voice Session Lambda → signed `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
@@ -83,7 +83,7 @@ The hosted boundary is browser → Voice Session Lambda → signed `wss://` → 
 | Input audio | 16 kHz, 16-bit, mono LPCM |
 | Output audio | 24 kHz, 16-bit, mono LPCM |
 
-The context builder instructs Nova to conduct three main questions with one adaptive follow-up per main question, stay concise and supportive, accept student-level experience, avoid scoring during the interview, and stop gracefully.
+The context builder instructs Nova to conduct three main questions with one adaptive follow-up per main question, stay concise and supportive, accept student-level experience, avoid scoring during the interview, and stop gracefully. This is prompt-driven behavior; application state does not enforce every follow-up.
 
 ## Hosted Architecture
 
@@ -92,6 +92,6 @@ The context builder instructs Nova to conduct three main questions with one adap
 - AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
 - Hosted environment values supply the five HTTPS Lambda endpoints; no account-specific endpoint is hard-coded.
 
-## Remaining Integration Gaps
+## Remaining Verification Gaps
 
-Each hosted environment must verify the signed AgentCore handshake with a live browser/Nova session. The frontend reads `VITE_VOICE_SESSION_URL`, requests a fresh URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.
+The frontend reads `VITE_VOICE_SESSION_URL`, requests a fresh five-minute signed URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock. Continue targeted verification of reconnect exhaustion, expired sessions, and transcript preservation across reconnects.

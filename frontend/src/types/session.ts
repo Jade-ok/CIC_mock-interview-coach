@@ -33,14 +33,6 @@ export interface UploadData {
 
 export type AnalystOutput = Record<string, unknown>;
 
-export interface CompetencyGuide {
-  id: string;
-  title: string;
-  keywords: string[];
-  description: string;
-  highlighted: boolean;
-}
-
 export interface TranscriptEntry {
   role: 'interviewer' | 'user';
   text: string;

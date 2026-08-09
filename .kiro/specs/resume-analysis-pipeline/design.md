@@ -556,7 +556,7 @@ Validation failures use the error envelope/status indicators below. Extraction f
 | Missing/empty job_posting_text | `{"status": "error", "error": "Missing or empty fields: job_posting_text"}` | 400 |
 | Both fields missing/empty | `{"status": "error", "error": "Missing or empty fields: resume_text, job_posting_text"}` | 400 |
 | Malformed JSON in event['body'] | `{"status": "error", "error": "Failed to parse request body as JSON"}` | 400 |
-| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock API call failed after 1 attempt: <reason>"}` | 502 |
+| Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock Mantle call failed after 1 attempt: <reason>"}` | 502 |
 | Bedrock response not parseable on the recovery call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
 | Schema validation failure on the recovery call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
 | Unexpected exception | `{"status": "error", "error": "Internal error: <brief description>"}` | 500 |

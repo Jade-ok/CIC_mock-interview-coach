@@ -1,10 +1,10 @@
 # Design Document
 
-> Maintained design. Last verified: 2026-08-07.
+> Maintained design. Last verified: 2026-08-08.
 
 ## Overview
 
-The Evaluator Agent is a stateless AWS Lambda function in the CDK-managed backend. It receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report for the React client (target host: AWS Amplify). It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly. This Lambda does not host the live WebSocket; that persistent stream is handled by the AgentCore serverless voice relay.
+The Evaluator Agent is a stateless AWS Lambda function in the deployed CDK-managed backend. It receives a completed interview conversation, interview metadata, and the Analyst's structured assessment (which combines analyst output and job-role alignment), then produces a scored feedback report for the Amplify-hosted React client. It follows an orchestrator pattern where a single handler coordinates sequential steps: validation → prompt construction → Bedrock API call → score aggregation → response assembly. This Lambda does not host the live WebSocket; that persistent stream is handled by the AgentCore serverless voice relay.
 
 All scoring is on a 1-5 integer scale calibrated for co-op seeking students. The system handles variable-length conversations (1-6 question-answer pairs) without penalizing incomplete interviews. Each turn in the conversation (whether main_question or follow_up) is scored independently.
 
@@ -170,16 +170,23 @@ EVALUATION_TOOL_SCHEMA = {
     "inputSchema": {
         "json": {
             "type": "object",
-            "required": ["per_question_scores", "strengths", "improvements", "contextual_advice"],
+            "required": ["per_question_scores", "strengths", "improvements", "keywords_covered", "keywords_not_covered", "contextual_advice"],
             "properties": {
                 "per_question_scores": {
                     "type": "array",
                     "items": {
                         "type": "object",
-                        "required": ["question_text", "answer_summary", "scores"],
+                        "required": ["question_text", "feedback", "scores"],
                         "properties": {
                             "question_text": {"type": "string"},
-                            "answer_summary": {"type": "string"},
+                            "feedback": {
+                                "type": "object",
+                                "required": ["strength", "improvement"],
+                                "properties": {
+                                    "strength": {"type": "string"},
+                                    "improvement": {"type": "string"}
+                                }
+                            },
                             "scores": {
                                 "type": "object",
                                 "required": ["concrete_example", "situation_action_result", "link_to_job", "quantifiable_outcome"],
@@ -202,6 +209,14 @@ EVALUATION_TOOL_SCHEMA = {
                     "type": "array",
                     "items": {"type": "string"},
                     "description": "Specific, actionable improvement advice tied to scoring dimensions"
+                },
+                "keywords_covered": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                },
+                "keywords_not_covered": {
+                    "type": "array",
+                    "items": {"type": "string"}
                 },
                 "contextual_advice": {
                     "type": "array",
@@ -243,7 +258,7 @@ def invoke(system: str, messages: list, tool_config: dict) -> dict:
             raise
         except Exception as e:
             if attempt == MAX_ATTEMPTS - 1:
-                raise EvaluationError(f"Bedrock API call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
+                raise EvaluationError(f"Bedrock Mantle call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
     
 def _extract_tool_input(response: dict) -> dict:
     function = response["choices"][0]["message"]["tool_calls"][0]["function"]
@@ -416,7 +431,10 @@ class EvaluationError(Exception):
   "per_question_scores": [
     {
       "question_text": "Could you describe the project and what you personally contributed?",
-      "answer_summary": "Built frontend of multilingual communication app",
+      "feedback": {
+        "strength": "You grounded the answer in a specific multilingual app project.",
+        "improvement": "Add a measurable result from the project."
+      },
       "scores": {
         "concrete_example": 4,
         "situation_action_result": 3,
@@ -442,6 +460,8 @@ class EvaluationError(Exception):
   "improvements": [
     "Try to include measurable outcomes — for example, how many endpoints did the API have? How much did test coverage improve?"
   ],
+  "keywords_covered": ["REST API", "testing"],
+  "keywords_not_covered": ["AWS", "Docker"],
   "contextual_advice": [
     "Your resume mentions a hackathon project with real-time data processing. This experience directly maps to the 'stream processing' requirement in the job description — consider using it for questions about technical challenges."
   ],
@@ -486,5 +506,5 @@ class EvaluationError(Exception):
 - Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)
 - No persistent storage; the Evaluator is fully stateless
-- Maximum expected conversation size: 6 turns (3 main questions + 3 follow-ups, each with point_id linking main to its follow-up)
+- Maximum submitted conversation size: 6 captured question-answer pairs. Nova is prompted for 3 mains plus 3 follow-ups, but the frontend does not enforce that semantic sequence.
 - interview_metadata is passed through to the response unchanged; it is not used in scoring logic

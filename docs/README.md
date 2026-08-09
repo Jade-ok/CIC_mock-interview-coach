@@ -1,10 +1,10 @@
 # Documentation Index
 
-Last verified: 2026-08-07.
+Last verified: 2026-08-08.
 
 ## Current Guides
 
-- `guides/frontend-backend-wiring.md` — implemented integration state, target Amplify/AgentCore topology, exact HTTP contracts, and known gaps
+- `guides/frontend-backend-wiring.md` — implemented integration state, deployed Amplify/AgentCore topology, exact HTTP contracts, and local workflow
 - `guides/infra-breakdown.md` — CDK resources, hosted architecture boundaries, outputs, and local troubleshooting
 - `../backend/voice_agent/README.md` — local Nova relay and hosted AgentCore runtime architecture
 - `../backend/functions/evaluator/README.md` — Evaluator input, output, implementation details, and local tests
@@ -16,7 +16,7 @@ Last verified: 2026-08-07.
 ## Kiro Documentation Lifecycle
 
 - `.kiro/steering/*.md` is active cross-project guidance.
-- `.kiro/specs/**/requirements.md` and `design.md` are maintained requirements/design documents.
+- `.kiro/specs/**/requirements.md` and `design.md` are maintained requirements/design documents unless their header explicitly marks them as superseded historical reference.
 - Task files identify themselves as either active trackers or historical implementation records.
 - Generated `*.meta.json` files preserve Kiro execution history and may contain historical wording.
 
@@ -24,8 +24,8 @@ The JSON files in `schemas/` are descriptive cross-component payload shapes, not
 
 ## Architecture Status
 
-The hosted architecture is a React/Vite frontend on AWS Amplify Hosting. A public Voice Session Lambda creates five-minute signed browser WebSocket URLs for an Amazon Bedrock AgentCore Runtime voice relay. AgentCore is a serverless managed container runtime; AWS operates and scales the underlying compute while this project owns the Python relay. The relay invokes Nova 2 Sonic. Four pipeline Lambdas provide PDF parsing, resume analysis, interview context construction, and evaluation, while S3 stores interview configuration and CDK defines the Lambda/S3 backend.
+The hosted architecture is a React/Vite frontend on AWS Amplify Hosting. A public Voice Session Lambda creates five-minute signed browser WebSocket URLs for an Amazon Bedrock AgentCore Runtime voice relay. AgentCore is a serverless managed container runtime; AWS operates and scales the underlying compute while this project owns the Python relay. The relay invokes Nova 2 Sonic. Four additional Lambdas provide PDF parsing, resume analysis, interview context construction, and evaluation, while S3 stores interview configuration and CDK defines the five-Lambda/S3 backend.
 
-The browser/relay protocol adapter, Voice Session Lambda, environment-driven hosted endpoints, Amplify build configuration, local URL, and opt-in mock are implemented and unit-tested. The no-login hosted design uses public Function URLs, so live end-to-end verification, budgets, and usage monitoring remain environment concerns rather than browser authentication requirements.
+The browser/relay protocol adapter, Voice Session Lambda, environment-driven hosted endpoints, Amplify site, local URL, and opt-in mock are implemented. The no-login hosted design uses public Function URLs, so budgets, usage monitoring, and restricted IAM roles remain important safeguards. Path-filtered GitHub Actions workflows publish frontend, Lambda/CDK, and AgentCore changes from `main`; GitHub OIDC supplies short-lived AWS credentials without repository access keys.
 
-For local development, one Python process runs the four HTTP handlers and Nova voice relay using the developer's AWS credential chain. The credentials must allow GPT OSS 120B and Nova 2 Sonic, and startup prints the active AWS identity. See `guides/frontend-backend-wiring.md` for the complete workflow. Hosted operation uses the Amplify + AgentCore architecture.
+For local development, one Python process runs the four HTTP handlers and Nova voice relay using the developer's AWS credential chain. The credentials must allow GPT OSS 120B and Nova 2 Sonic, and startup prints the active AWS identity that owns local model usage and charges. See `guides/frontend-backend-wiring.md` for the complete two-terminal workflow. Hosted operation uses the Amplify + AgentCore architecture.

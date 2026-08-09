@@ -278,7 +278,7 @@ export function sessionReducer(
         inputMode: 'text_only',
         error: {
           code: 'MIC_DENIED',
-          message: 'Microphone permission denied. Switching to text-only mode.',
+          message: 'Microphone access is required. Please allow microphone permission in your browser settings and refresh the page.',
           retryable: false,
         },
       };

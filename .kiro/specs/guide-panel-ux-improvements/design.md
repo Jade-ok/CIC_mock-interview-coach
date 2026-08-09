@@ -1,5 +1,7 @@
 # Design Document: Guide Panel UX Improvements
 
+> Superseded historical design. See `../guide-panel-v2/design.md` for current Guide Panel behavior and `../frontend-interview/design.md` for current microphone behavior.
+
 ## Overview
 
 This feature applies five related UX improvements to the interview screen and Guide Panel components. The changes span three categories: **content localization** (Korean → English), **visual consistency** (accent color unification, section labels), and **interaction correctness** (mic-denied flow fix, layout spacing).
@@ -56,21 +58,21 @@ No new components are introduced. No new dependencies are added.
 
 ### 1. `starCategoryMatcher.ts` — Content Changes
 
-**Current state:** `STAR_CATEGORIES[].reasoning` and `DEFAULT_CLASSIFICATION.reasoning` contain Korean text.
+**Former state:** `STAR_CATEGORIES[].reasoning` and `DEFAULT_CLASSIFICATION.reasoning` contained localized text.
 
 **Target state:** All reasoning strings translated to English equivalents that preserve the same coaching intent.
 
-| Category | Current (Korean) | New (English) |
-|----------|-----------------|---------------|
-| Above & Beyond | 왜 그게 필요했는지… | Why you set a higher bar than expected + how you solved it |
-| Team Experience | 팀 내에서 실제로 어떻게… | What you actually did within the team and how it affected outcomes |
-| Initiative | 시키지 않았는데 스스로… | Show that you set your own goal without being told to |
-| Leadership | 어떻게 팀을 움직였고… | How you moved the team and what changed as a result |
-| Failure / Mistake | 무엇을 했는지보다… | Focus on acknowledging the failure and what you learned — Learning matters more than Result here |
-| Pressure / Time | 우선순위 판단 과정… | Your prioritization process — what you chose to do first and why |
-| Problem Solving | 접근 방식, 시도와 조정… | Your approach, iterations, and adjustments |
-| Communication | 상대가 누구였는지를… | Briefly establish who the audience was, then explain how you adapted your communication |
-| DEFAULT | 일반적인 행동 질문입니다… | General behavioral question. Keep Situation and Task brief; focus on your Actions and Results. |
+| Category | English coaching text |
+|----------|-----------------------|
+| Above & Beyond | Why you set a higher bar than expected + how you solved it |
+| Team Experience | What you actually did within the team and how it affected outcomes |
+| Initiative | Show that you set your own goal without being told to |
+| Leadership | How you moved the team and what changed as a result |
+| Failure / Mistake | Focus on acknowledging the failure and what you learned — Learning matters more than Result here |
+| Pressure / Time | Your prioritization process — what you chose to do first and why |
+| Problem Solving | Your approach, iterations, and adjustments |
+| Communication | Briefly establish who the audience was, then explain how you adapted your communication |
+| DEFAULT | General behavioral question. Keep Situation and Task brief; focus on your Actions and Results. |
 
 **Interface** — unchanged. `StarCategory`, `StarClassification`, `classifyStarCategory()`, and `deriveKeywordChips()` retain the same TypeScript signatures.
 
@@ -80,7 +82,7 @@ No new components are introduced. No new dependencies are added.
 
 ```
 ┌─────────────────────────────────────┐
-│ EXPECTED QUESTION 1  (accent green) │  ← renamed from "예상 질문 N"
+│ EXPECTED QUESTION 1  (accent green) │  ← English label
 │                                     │
 │ Question focus:        (11px, gray) │  ← new label
 │ [topic text]                        │

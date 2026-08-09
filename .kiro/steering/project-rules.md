@@ -1,6 +1,6 @@
 # Project Rules
 
-> Active guidance. Last verified against the repository: 2026-08-07.
+> Active guidance. Last verified against the repository: 2026-08-08.
 
 Shared conventions for the mock interview application. When this file and an older task record disagree, current code, `schemas/`, and `infrastructure/lib/infra-stack.ts` are the source of truth.
 
@@ -34,10 +34,10 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - `backend/voice_agent/` contains the FastAPI/Python WebSocket relay, container assets, and current `@aws/agentcore` CLI/CDK configuration. Account- and runtime-specific deployment state stays in ignored local files.
 - The frontend defaults to strict local mode: four HTTP routes under `http://localhost:8080/api` and voice at `ws://localhost:8080/`. `VITE_USE_MOCK_WEBSOCKET=true` opts into the development mock.
 - Local development runs `backend.local_server:app`. PDF parsing and interview configuration use repository files; Analyst, Evaluator, and Nova use the developer's active AWS credentials. Hosted mode selects its environment-configured endpoints with `VITE_RUNTIME_MODE=hosted`. AWS credentials must never enter `VITE_*` variables.
-- `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter is unit-tested, but a live browser/Nova session remains unverified.
+- `backend/voice_agent/protocol.py` translates the shared browser `{type, payload}` contract to and from Nova events. The adapter has focused unit coverage and is deployed behind the hosted signed-session path.
 - The current architecture does not use a Cognito identity pool or direct browser-to-Bedrock access.
 - AgentCore uses AWS IAM/SigV4. In hosted mode, the voice-session Lambda signs five-minute WebSocket URLs with a role scoped to the configured runtime. `.bedrock_agentcore.yaml` remains ignored legacy configuration and is not the canonical deployment path.
-- `amplify.yml` defines the frontend build. The application intentionally has no end-user login, and its five Function URLs currently use public `NONE` authentication and permissive CORS.
+- The application intentionally has no end-user login, and its five Function URLs currently use public `NONE` authentication and permissive CORS. Hosted frontend releases are built and published to the existing Amplify app by GitHub Actions; `amplify.yml` remains the repository's Amplify monorepo build definition rather than the active release mechanism.
 
 ## Hosted Architecture
 
@@ -46,10 +46,16 @@ All AWS runtime components use `us-east-1` unless an explicit deployment configu
 - The browser requests a short-lived signed `wss://` URL from the voice-session Lambda before opening Amazon Bedrock AgentCore Runtime. It does not receive permanent AWS credentials or call Bedrock directly.
 - The Python voice relay runs in AgentCore Runtime. AgentCore is a serverless, AWS-managed container runtime, not an EC2 server maintained by this project.
 - The relay translates the agreed browser protocol, maintains connection-scoped state, and invokes `amazon.nova-2-sonic-v1:0` through Bedrock's bidirectional streaming API.
-- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in four pipeline Lambda functions. A fifth Lambda signs voice-session URLs. S3 stores versioned interview configuration, and CDK is the source of truth for backend infrastructure.
-- Lambda endpoints require access control before a public launch; Amplify hosting alone does not secure their current public Function URLs.
+- PDF parsing, Analyst, Interviewer context building, and Evaluator work remain in four pipeline Lambda functions. A fifth Lambda signs voice-session URLs. S3 stores the deployed interview configuration; object versioning is not enabled. CDK is the source of truth for backend infrastructure.
+- The deployed no-login design deliberately leaves all five Function URLs public. Amplify Hosting does not protect them, so budgets, monitoring, and concurrency controls are required while this design is in use.
 
-Hosted environments require Amplify hosting, a signed AgentCore connection flow, explicit public-endpoint cost controls, and end-to-end verification.
+The hosted Amplify, Lambda/S3, and AgentCore boundaries are deployed. Remaining operational work is to maintain explicit public-endpoint cost controls and verify reconnection, interruption, and shutdown edge cases whenever the voice path changes.
+
+## Automated Delivery
+
+- Pushes to `main` use path-filtered GitHub Actions workflows. Frontend changes build the React/Vite application and publish a ZIP through the manual Amplify deployment API; Lambda/config/schema/infrastructure changes test and deploy `MockInterviewStack` with CDK; voice-relay changes test and deploy the existing AgentCore target with the AgentCore CLI.
+- GitHub Actions obtains temporary AWS credentials through OIDC. The AWS trust is restricted to the immutable repository owner/repository identity and `refs/heads/main`; long-lived AWS access keys are not stored in GitHub.
+- Repository variables provide the deployment-role ARN and Amplify app identifier. These are identifiers, not application secrets, and their account-specific values must not be committed to documentation or source.
 
 ## Contracts and Configuration
 
@@ -65,10 +71,10 @@ Runtime interview configuration lives in `backend/config/` and is uploaded to S3
 
 The frontend and PDF Parser both enforce a 4 MB PDF limit so oversized files are rejected before upload.
 
-Known integration gaps must not be documented as working behavior:
+Known operational gaps must not be documented as completed behavior:
 
-- The hosted AgentCore handshake and paid Nova 2 Sonic conversation require end-to-end browser verification in the chosen environment.
-- Hosted frontend configuration includes the voice-session Function URL rather than a permanent AgentCore URL.
+- The three-main-question/three-follow-up sequence is model-directed and is not yet enforced by an application-side state machine.
+- Reconnection and full interruption/shutdown edge cases still require live regression checks when the voice protocol changes.
 - The no-login hosted design intentionally exposes five Function URLs with public access and `*` CORS; budgets and concurrency limits remain required cost controls.
 
 ## Function Layouts

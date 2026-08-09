@@ -1,5 +1,7 @@
 # Implementation Plan: Interview Guide STAR Cards
 
+> Historical implementation record for a superseded predictive-question design. See `../guide-panel-v2/tasks.md` for current implementation status.
+
 ## Overview
 
 Replace the dynamic keyword-matching competency guide system with static, analyst-driven STAR-method preparation cards. The implementation proceeds bottom-up: types → utility → services/reducer cleanup → component rewrite → tests. The STAR category table uses the user-confirmed exact trigger keywords and Korean reasoning strings.
@@ -20,15 +22,15 @@ Replace the dynamic keyword-matching competency guide system with static, analys
     - Define `StarCategory` interface (label, triggerKeywords, starElements, reasoning)
     - Define `StarClassification` interface (label, starElements, reasoning)
     - Implement the hardcoded 8-category table with EXACT trigger keywords and Korean reasoning:
-      1. "Above & Beyond / Problem Solving" — keywords: `['beyond', 'extra', 'above']` — elements: `['Task', 'Action']` — reasoning: `'왜 그게 필요했는지(기대 이상의 기준을 스스로 설정) + 어떻게 풀었는지'`
-      2. "Team Experience" — keywords: `['team', 'conflict', 'collaborat', 'disagreement']` — elements: `['Action', 'Result']` — reasoning: `'팀 내에서 실제로 어떻게 행동했는지, 그 결과 관계/성과가 어떻게 됐는지'`
-      3. "Initiative" — keywords: `['initiative', 'self-motivat', 'own idea', 'ownership', 'autonom']` — elements: `['Task']` — reasoning: `'"시키지 않았는데 스스로 목표를 설정했다"는 판단 지점이 핵심'`
-      4. "Leadership" — keywords: `['lead', 'leadership', 'mentor', 'delegate']` — elements: `['Action', 'Result']` — reasoning: `'어떻게 팀을 움직였고, 결과적으로 무엇이 바뀌었는지'`
-      5. "Failure / Mistake" — keywords: `['failure', 'mistake', 'fail', 'wrong']` — elements: `['Learning', 'Action']` — reasoning: `'무엇을 했는지보다 "실패를 인정하고 무엇을 배워 바꿨는지"가 핵심. 이 카테고리는 유일하게 L이 R보다 중요'`
-      6. "Pressure and Time Management" — keywords: `['deadline', 'pressure', 'time management', 'prioritiz']` — elements: `['Action']` — reasoning: `'우선순위 판단 과정, 즉 무엇을 먼저 처리하기로 판단했는지, 그 판단 기준이 핵심'`
-      7. "Problem Solving" — keywords: `['problem', 'solve', 'debug', 'issue', 'implement', 'technical', 'develop', 'design']` — elements: `['Action']` — reasoning: `'접근 방식, 시도와 조정 과정이 핵심'`
-      8. "Communication" — keywords: `['communicat', 'explain', 'non-technical']` — elements: `['Situation', 'Action']` — reasoning: `'상대가 누구였는지를 짧게라도 짚어야 번역의 의미가 살고, 실제로 어떻게 설명/조정했는지가 핵심'`
-    - Default classification: label `'General'`, elements `['Situation', 'Task', 'Action', 'Result']`, reasoning `'일반적인 행동 질문입니다. 상황과 과제를 짧게, 본인의 행동과 결과를 구체적으로 답하세요.'`
+      1. "Above & Beyond / Problem Solving" — keywords: `['beyond', 'extra', 'above']` — elements: `['Task', 'Action']` — reasoning: `'Why you set a higher bar than expected and how you solved it'`
+      2. "Team Experience" — keywords: `['team', 'conflict', 'collaborat', 'disagreement']` — elements: `['Action', 'Result']` — reasoning: `'What you did within the team and how it affected relationships or outcomes'`
+      3. "Initiative" — keywords: `['initiative', 'self-motivat', 'own idea', 'ownership', 'autonom']` — elements: `['Task']` — reasoning: `'Show that you set your own goal without being told'`
+      4. "Leadership" — keywords: `['lead', 'leadership', 'mentor', 'delegate']` — elements: `['Action', 'Result']` — reasoning: `'How you moved the team and what changed as a result'`
+      5. "Failure / Mistake" — keywords: `['failure', 'mistake', 'fail', 'wrong']` — elements: `['Learning', 'Action']` — reasoning: `'Focus on acknowledging the failure, what you learned, and what you changed'`
+      6. "Pressure and Time Management" — keywords: `['deadline', 'pressure', 'time management', 'prioritiz']` — elements: `['Action']` — reasoning: `'Explain what you prioritized first and why'`
+      7. "Problem Solving" — keywords: `['problem', 'solve', 'debug', 'issue', 'implement', 'technical', 'develop', 'design']` — elements: `['Action']` — reasoning: `'Explain your approach, iterations, and adjustments'`
+      8. "Communication" — keywords: `['communicat', 'explain', 'non-technical']` — elements: `['Situation', 'Action']` — reasoning: `'Identify the audience and explain how you adapted your communication'`
+    - Default classification: label `'General'`, elements `['Situation', 'Task', 'Action', 'Result']`, reasoning `'Keep Situation and Task brief; make your Actions and Results specific.'`
     - _Requirements: 1.1, 1.5_
 
   - [x] 2.2 Implement `classifyStarCategory(topic, targetSkill)` function
@@ -75,7 +77,7 @@ Replace the dynamic keyword-matching competency guide system with static, analys
     - Use `useMemo` to derive up to 3 `StarCardData` objects from analystOutput:
       - Extract `interview_plan` (first 3 items), `target_role`, `selected_experiences`
       - For each item: classify STAR category, derive keyword chips, resolve related experience using `experience_id` field (not `id`)
-    - Render each card with: "예상 질문 N" label, topic, keyword chips, STAR category label + element badges + reasoning, optional related experience
+    - Render each card with: "Expected Question N" label, topic, keyword chips, STAR category label + element badges + reasoning, optional related experience
     - Render empty (no cards, no error) when analystOutput is null or plan is empty
     - Include all CSS styles using `<style>` tag (CSS-in-JS pattern matching existing codebase)
     - Use design theme variables: `--color-tile-bg`, `--color-text-primary`, `--color-text-secondary`, `--color-guide-highlight` (#4A9EFF)
@@ -134,7 +136,7 @@ Replace the dynamic keyword-matching competency guide system with static, analys
     - Test renders fewer cards when plan has < 3 items
     - Test empty state when analystOutput is null
     - Test empty state when interview_plan is empty array
-    - Test card labels show "예상 질문 1", "예상 질문 2", "예상 질문 3"
+    - Test card labels show "Expected Question 1", "Expected Question 2", "Expected Question 3"
     - Test topic text is displayed
     - Test keyword chips rendered
     - Test STAR section rendered (category label, element badges, reasoning text)

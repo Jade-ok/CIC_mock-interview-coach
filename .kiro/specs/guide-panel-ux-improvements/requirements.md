@@ -1,5 +1,7 @@
 # Requirements Document
 
+> Superseded historical specification. The English translations and microphone-remediation work were incorporated, but the predictive-card requirements were replaced by `../guide-panel-v2/requirements.md`.
+
 ## Introduction
 
 This feature covers five related UX improvements to the interview screen: translating Korean text to English in the Guide Panel, adding descriptive section labels to STAR cards, unifying accent colors to neon green, fixing the microphone-denied error flow, and improving vertical layout spacing for participant tiles and the mic button.
