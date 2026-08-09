@@ -13,11 +13,12 @@ import './FeedbackReport.css';
 interface FeedbackReportProps {
   data: EvaluatorOutput;
   onPracticeAgain: () => void;
+  onNewSession: () => void;
   onViewTranscript?: () => void;
   transcript?: TranscriptEntry[];
 }
 
-export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transcript }: FeedbackReportProps) {
+export function FeedbackReport({ data, onPracticeAgain, onNewSession, onViewTranscript, transcript }: FeedbackReportProps) {
   return (
     <div className="feedback-report">
       <header className="feedback-report__header">
@@ -28,8 +29,11 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
               View full transcript
             </button>
           )}
-          <button type="button" className="feedback-report__nav-link feedback-report__nav-link--primary" onClick={onPracticeAgain}>
-            Practice again
+          <button type="button" className="feedback-report__nav-btn feedback-report__nav-btn--primary" onClick={onPracticeAgain}>
+            Retry with This Resume
+          </button>
+          <button type="button" className="feedback-report__nav-btn feedback-report__nav-btn--secondary" onClick={onNewSession}>
+            Retry with New Resume
           </button>
         </nav>
       </header>
@@ -66,6 +70,7 @@ export function FeedbackReport({ data, onPracticeAgain, onViewTranscript, transc
 
       <FooterCTA
         onPracticeAgain={onPracticeAgain}
+        onNewSession={onNewSession}
         onViewTranscript={onViewTranscript}
       />
     </div>

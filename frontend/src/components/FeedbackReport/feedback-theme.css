@@ -7,14 +7,14 @@
   --text-secondary: #B6B6BF;
   --text-tertiary: #85858E;
 
-  /* Unified green accent — v3 sage-lime */
-  --accent: #C4DE83;
-  --accent-dim: rgba(196, 222, 131, 0.14);
+  /* Unified green accent — main app #9AE05C */
+  --accent: #9AE05C;
+  --accent-dim: rgba(154, 224, 92, 0.14);
   --accent-ink: #1E2611;
-  --accent-green: #C4DE83;
+  --accent-green: #9AE05C;
   --accent-red: #FF5C5C;
   --accent-blue: #4A9EFF;
-  --accent-amber: #C4DE83;
+  --accent-amber: #9AE05C;
 
   /* Score elements — all green */
   --score-bar-filled: var(--accent);

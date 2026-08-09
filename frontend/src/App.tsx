@@ -37,6 +37,10 @@ function AppContent() {
     dispatch({ type: 'RESET' });
   }, [dispatch]);
 
+  const handlePracticeAgain = useCallback(() => {
+    dispatch({ type: 'RETRY_INTERVIEW' });
+  }, [dispatch]);
+
   switch (state.phase) {
     case 'upload':
       return <UploadScreen onSubmit={handleUploadSubmit} />;
@@ -53,6 +57,7 @@ function AppContent() {
           transcript={state.transcript}
           onRetry={handleFeedbackRetry}
           onNewSession={handleNewSession}
+          onPracticeAgain={handlePracticeAgain}
         />
       );
     default:

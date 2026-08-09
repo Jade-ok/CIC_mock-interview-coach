@@ -32,7 +32,7 @@ const mockData: EvaluatorOutput = {
 
 describe('FeedbackReport (full page)', () => {
   it('renders all major sections', () => {
-    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onViewTranscript={() => {}} />);
+    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
 
     // Header
     expect(screen.getByText('CIC Mock Interview Coach')).toBeTruthy();
@@ -61,12 +61,12 @@ describe('FeedbackReport (full page)', () => {
   });
 
   it('passes correct question count', () => {
-    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onViewTranscript={() => {}} />);
+    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
     expect(screen.getByText(/2 questions answered/)).toBeTruthy();
   });
 
   it('hides transcript controls until transcript viewing is implemented', () => {
-    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} />);
+    render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} />);
     expect(screen.queryByText('View full transcript')).not.toBeInTheDocument();
   });
 });

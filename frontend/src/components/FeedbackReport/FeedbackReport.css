@@ -45,6 +45,31 @@
   padding: 8px 18px;
 }
 
+.feedback-report__nav-btn {
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.feedback-report__nav-btn:hover {
+  opacity: 0.85;
+}
+
+.feedback-report__nav-btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+}
+
+.feedback-report__nav-btn--secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--text-secondary);
+}
+
 .feedback-report__content {
   max-width: 800px;
   margin: 0 auto;

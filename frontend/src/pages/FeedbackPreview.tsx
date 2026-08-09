@@ -89,6 +89,7 @@ export function FeedbackPreview() {
     <FeedbackReport
       data={MOCK_DATA}
       onPracticeAgain={() => alert('Practice Again clicked')}
+      onNewSession={() => alert('New Session clicked')}
       onViewTranscript={() => alert('View Transcript clicked')}
     />
   );

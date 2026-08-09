@@ -16,6 +16,7 @@ export interface FeedbackScreenProps {
   transcript?: TranscriptEntry[];
   onRetry: () => void;
   onNewSession: () => void;
+  onPracticeAgain: () => void;
 }
 
 export function FeedbackScreen({
@@ -25,6 +26,7 @@ export function FeedbackScreen({
   transcript,
   onRetry,
   onNewSession,
+  onPracticeAgain,
 }: FeedbackScreenProps) {
   return (
     <div className="feedback-screen" data-testid="feedback-screen">
@@ -67,7 +69,8 @@ export function FeedbackScreen({
         <div className="feedback-screen__result" data-testid="feedback-result">
           <FeedbackReport
             data={feedbackResult}
-            onPracticeAgain={onNewSession}
+            onPracticeAgain={onPracticeAgain}
+            onNewSession={onNewSession}
             transcript={transcript}
           />
         </div>
@@ -131,6 +134,14 @@ export function FeedbackScreen({
           width: 100%;
         }
 
+        .feedback-screen__actions {
+          display: flex;
+          gap: 12px;
+          justify-content: center;
+          margin-top: 32px;
+          padding-bottom: 48px;
+        }
+
         .feedback-screen__btn {
           padding: 10px 24px;
           border-radius: 8px;
@@ -143,6 +154,13 @@ export function FeedbackScreen({
 
         .feedback-screen__btn:hover {
           opacity: 0.85;
+        }
+
+        .feedback-screen__btn--practice {
+          background-color: var(--color-accent, #9AE05C);
+          color: var(--color-canvas, #0A0A0A);
+          padding: 12px 28px;
+          font-size: 15px;
         }
 
         .feedback-screen__btn--retry {
