@@ -139,10 +139,14 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
               id="jd-textarea"
               className="upload-screen__textarea"
               value={jdText}
-              onChange={(e) => setJdText(e.target.value)}
+              onChange={(e) => setJdText(e.target.value.slice(0, 5000))}
               placeholder="Paste the job description here"
               rows={8}
+              maxLength={5000}
             />
+            <span className={`upload-screen__char-count ${jdText.length >= 4500 ? 'upload-screen__char-count--warn' : ''}`}>
+              {jdText.length} / 5000
+            </span>
           </div>
 
           {/* SubmitButton */}
@@ -288,6 +292,18 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
         .upload-screen__textarea:focus {
           outline: none;
           border-color: var(--color-accent, #9AE05C);
+        }
+
+        .upload-screen__char-count {
+          display: block;
+          text-align: right;
+          font-size: 12px;
+          color: var(--color-text-secondary, #A0A0A5);
+          margin-top: 4px;
+        }
+
+        .upload-screen__char-count--warn {
+          color: var(--color-error, #FF5C5C);
         }
 
         .upload-screen__textarea::placeholder {

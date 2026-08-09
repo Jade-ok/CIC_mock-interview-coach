@@ -103,16 +103,48 @@ function PracticeModeToggle({
   practiceMode: boolean;
   onToggle: () => void;
 }) {
+  const label = practiceMode ? 'Practice Mode' : 'Live Mode';
+  const subtitle = practiceMode ? 'with guide & captions' : 'no assistance';
+  const ariaLabel = practiceMode ? 'Switch to Live Mode' : 'Switch to Practice Mode';
+
+  const [tooltipVisible, setTooltipVisible] = useState(true); // start visible
+  const [tooltipText, setTooltipText] = useState(subtitle);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-hide after initial mount (handles StrictMode correctly)
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setTooltipVisible(false), 2500);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleClick = useCallback(() => {
+    onToggle();
+    // Show tooltip for the NEW state (after toggle)
+    const nextSubtitle = practiceMode ? 'no assistance' : 'with guide & captions';
+    setTooltipText(nextSubtitle);
+    setTooltipVisible(true);
+    // Reset timer for consecutive clicks
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setTooltipVisible(false), 2000);
+  }, [onToggle, practiceMode]);
+
   return (
-    <button
-      className={`control-bar__practice-toggle ${practiceMode ? 'control-bar__practice-toggle--on' : ''}`}
-      onClick={onToggle}
-      type="button"
-      aria-label="Practice Mode toggle"
-      data-testid="practice-mode-toggle"
-    >
-      Practice Mode {practiceMode ? '●' : '○'}
-    </button>
+    <div className="control-bar__toggle-wrapper">
+      <button
+        className={`control-bar__practice-toggle ${practiceMode ? 'control-bar__practice-toggle--on' : ''}`}
+        onClick={handleClick}
+        type="button"
+        aria-label={ariaLabel}
+        data-testid="practice-mode-toggle"
+      >
+        {label}
+      </button>
+      <span className={`control-bar__toggle-tooltip ${tooltipVisible ? 'control-bar__toggle-tooltip--visible' : ''}`}>
+        {tooltipText}
+      </span>
+    </div>
   );
 }
 
@@ -126,7 +158,7 @@ function EndButton({ onEnd }: { onEnd: () => void }) {
       aria-label="End"
       data-testid="end-button"
     >
-      End
+      Finish Interview
     </button>
   );
 }
@@ -343,7 +375,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
     setRecording((prev) => !prev);
   }, [state.turnState]);
 
-  const micDisabled = state.turnState === 'ai_speaking';
+  const micDisabled = state.turnState === 'ai_speaking' || state.turnState === 'ended';
 
   return (
     <div className="interview-screen" data-testid="interview-screen">
@@ -666,12 +698,17 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
           font-variant-numeric: tabular-nums;
         }
 
+        .control-bar__toggle-wrapper {
+          position: relative;
+        }
+
         .control-bar__practice-toggle {
           background-color: transparent;
           border: 1px solid var(--color-text-secondary, #A0A0A5);
           border-radius: 8px;
           padding: 8px 14px;
           font-size: 13px;
+          font-weight: 600;
           color: var(--color-text-secondary, #A0A0A5);
           cursor: pointer;
           transition: border-color 0.2s, color 0.2s;
@@ -680,6 +717,27 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
         .control-bar__practice-toggle--on {
           border-color: var(--color-accent, #9AE05C);
           color: var(--color-accent, #9AE05C);
+        }
+
+        .control-bar__toggle-tooltip {
+          position: absolute;
+          bottom: calc(100% + 8px);
+          left: 50%;
+          transform: translateX(-50%);
+          white-space: nowrap;
+          font-size: 11px;
+          color: var(--color-text-primary, #FFFFFF);
+          background-color: var(--color-tile-bg, #1C1C1E);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          padding: 5px 10px;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.2s ease;
+        }
+
+        .control-bar__toggle-tooltip--visible {
+          opacity: 1;
         }
 
         .control-bar__end-btn {

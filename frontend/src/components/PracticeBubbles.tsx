@@ -43,8 +43,10 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
     }
   }, [transcript.length, livePartial]);
 
-  // Filter out control/JSON messages from display
-  const displayEntries = transcript.filter((entry) => !isControlMessage(entry.text));
+  // Filter out control/JSON messages and user entries from display (AI only)
+  const displayEntries = transcript.filter(
+    (entry) => entry.role === 'interviewer' && !isControlMessage(entry.text)
+  );
 
   return (
     <div className="practice-chat" data-testid="practice-bubbles">
@@ -52,7 +54,7 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
       <div className="practice-chat__status" data-testid="practice-chat-status">
         <span className={`practice-chat__dot ${turnState === 'ai_speaking' ? 'practice-chat__dot--active' : ''}`} />
         <span className="practice-chat__status-label">
-          {turnState === 'ai_speaking' ? 'AI speaking…' : turnState === 'user_turn' ? 'Your turn' : 'Waiting…'}
+          {turnState === 'ended' ? 'Interview complete' : turnState === 'ai_speaking' ? 'AI speaking…' : turnState === 'user_turn' ? 'Your turn' : 'Waiting…'}
         </span>
       </div>
 
@@ -61,25 +63,21 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
         {displayEntries.map((entry, index) => (
           <div
             key={`${entry.timestamp}-${index}`}
-            className={`practice-chat__bubble practice-chat__bubble--${entry.role}`}
-            data-testid={`practice-bubble-${entry.role}`}
+            className="practice-chat__bubble practice-chat__bubble--interviewer"
+            data-testid="practice-bubble-interviewer"
           >
-            <span className="practice-chat__role">
-              {entry.role === 'interviewer' ? '🤖 AI' : '👤 You'}
-            </span>
+            <span className="practice-chat__role">🤖 AI</span>
             <p className="practice-chat__text">{entry.text}</p>
           </div>
         ))}
 
-        {/* Live partial — shows text currently being spoken/transcribed */}
-        {livePartial && !isControlMessage(livePartial.text) && (
+        {/* Live partial — shows AI text currently being spoken */}
+        {livePartial && livePartial.role === 'interviewer' && !isControlMessage(livePartial.text) && (
           <div
-            className={`practice-chat__bubble practice-chat__bubble--${livePartial.role} practice-chat__bubble--live`}
+            className="practice-chat__bubble practice-chat__bubble--interviewer practice-chat__bubble--live"
             data-testid="practice-bubble-live"
           >
-            <span className="practice-chat__role">
-              {livePartial.role === 'interviewer' ? '🤖 AI' : '👤 You'}
-            </span>
+            <span className="practice-chat__role">🤖 AI</span>
             <p className="practice-chat__text">{livePartial.text}</p>
           </div>
         )}
@@ -142,10 +140,10 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
           display: flex;
           flex-direction: column;
           gap: 4px;
-          max-width: 85%;
-          padding: 10px 14px;
+          width: 100%;
+          padding: 12px 16px;
           border-radius: 12px;
-          font-size: 13px;
+          font-size: 15px;
           line-height: 1.5;
           word-wrap: break-word;
         }
@@ -153,11 +151,6 @@ export function PracticeBubbles({ transcript, livePartial, turnState }: Practice
         .practice-chat__bubble--interviewer {
           align-self: flex-start;
           background-color: var(--color-control-bar, #2C2C2E);
-        }
-
-        .practice-chat__bubble--user {
-          align-self: flex-end;
-          background-color: rgba(154, 224, 92, 0.12);
         }
 
         .practice-chat__bubble--live {
