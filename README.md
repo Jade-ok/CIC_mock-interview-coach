@@ -89,13 +89,26 @@ Inter-agent payload schemas are defined in `schemas/`:
 
 Local mode runs PDF parsing, Analyst, Interviewer context building, Evaluator, and the Nova voice relay on the development machine.
 
-The active AWS credentials must be able to invoke both `openai.gpt-oss-120b` through Bedrock Mantle and `amazon.nova-2-sonic-v1:0` through Bedrock Runtime in `us-east-1`. All model usage belongs to the AWS account shown by `aws sts get-caller-identity`.
+### Prerequisites
+
+- Python 3.12
+- Node.js 20 or another current Node.js release with npm
+- AWS CLI v2
+- AWS credentials with access to `openai.gpt-oss-120b` through Bedrock Mantle and `amazon.nova-2-sonic-v1:0` through Bedrock Runtime in `us-east-1`
+
+Model availability and quotas are account-specific. All local model usage and charges belong to the AWS account shown by `aws sts get-caller-identity`.
 
 Use any credential method supported by the AWS SDK. For a configured AWS profile:
 
 ```bash
 export AWS_PROFILE="<profile-name>"
 export AWS_REGION="us-east-1"
+```
+
+If the profile uses IAM Identity Center, sign in before starting the application:
+
+```bash
+aws sso login --profile "<profile-name>"
 ```
 
 For environment-based temporary credentials:
@@ -107,7 +120,7 @@ export AWS_SESSION_TOKEN="..."
 export AWS_REGION="us-east-1"
 ```
 
-Then start the complete local backend from the repository root:
+Then start the complete local backend from the repository root in terminal 1:
 
 ```bash
 python3 -m venv .venv
@@ -116,24 +129,34 @@ aws sts get-caller-identity
 .venv/bin/uvicorn backend.local_server:app --host 127.0.0.1 --port 8080
 ```
 
-The local server prints the active AWS account and ARN at startup. In a second terminal, run:
+The local server prints the active AWS account and ARN at startup. Confirm that this is the identity you intend to use. In terminal 2, run:
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-Local mode uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+Open the local URL printed by Vite. The Vite development server always uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice. It does not require hosted endpoint variables and ignores hosted `VITE_*_URL` values in development mode. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+
+If port `8080` is already in use, identify and stop the previous local backend before retrying:
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
+```
+
+The frontend is configured for port `8080`, so changing only the Uvicorn port will not reconnect it.
 
 ## Hosted Architecture
 
-The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend and short-lived voice-session URLs, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The public client does not require a user login; its voice-session endpoint signs five-minute AgentCore connection URLs with a Lambda role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
+The hosted architecture uses Amplify Hosting for React, AgentCore Runtime for the Python voice relay, five Lambda Function URLs for the four HTTP pipeline stages and short-lived voice sessions, S3 for interview configuration, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The public client does not require a user login; its Voice Session Lambda signs five-minute AgentCore connection URLs with a role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
+
+Three path-filtered GitHub Actions workflows keep the hosted application current when matching changes reach `main`: frontend changes build and publish the Amplify site, Lambda/config/infrastructure changes test and deploy the CDK stack, and voice-relay changes test and deploy AgentCore. The workflows use GitHub OIDC to assume a short-lived AWS role instead of storing permanent AWS access keys in GitHub.
 
 ## Important Notes
 
 - Function URL calls: parse JSON from `event['body']`
 - CORS is configured on the Function URL settings, not in Python code
 - Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
-- The frontend and PDF Parser both enforce a 4 MB PDF limit; Lambda Function URL request payloads are capped at 6 MiB
+- The frontend and PDF Parser both enforce a 4 MiB (4,194,304-byte) PDF limit; Lambda Function URL request payloads are capped at 6 MiB
 - Hosted endpoint values are used only when `VITE_RUNTIME_MODE=hosted`

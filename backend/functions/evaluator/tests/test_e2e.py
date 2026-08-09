@@ -23,7 +23,7 @@ MOCK_LLM_RESPONSE = {
     "per_question_scores": [
         {
             "question_text": "Can you tell me about a time you worked on a team project and what your specific role was?",
-            "answer_summary": "Led backend development for a library management REST API in a team of four, designing the database schema, implementing CRUD endpoints with Flask, and setting up CI/CD.",
+            "feedback": {"strength": "Clearly described backend ownership.", "improvement": "Quantify the project scope."},
             "scores": {
                 "concrete_example": 5,
                 "situation_action_result": 4,
@@ -33,7 +33,7 @@ MOCK_LLM_RESPONSE = {
         },
         {
             "question_text": "What was the most challenging technical decision you had to make during that project?",
-            "answer_summary": "Chose PostgreSQL over MongoDB after analyzing data relationships, resulting in 3x query performance improvement.",
+            "feedback": {"strength": "Explained a concrete technical decision.", "improvement": "Connect the decision to the target role."},
             "scores": {
                 "concrete_example": 5,
                 "situation_action_result": 5,
@@ -43,7 +43,7 @@ MOCK_LLM_RESPONSE = {
         },
         {
             "question_text": "Describe a situation where you had to learn a new technology quickly to complete a task.",
-            "answer_summary": "Learned WebSockets in 2 hours during a hackathon and implemented real-time messaging, winning second place.",
+            "feedback": {"strength": "Showed rapid learning with a specific example.", "improvement": "Clarify the personal implementation details."},
             "scores": {
                 "concrete_example": 5,
                 "situation_action_result": 4,
@@ -53,7 +53,7 @@ MOCK_LLM_RESPONSE = {
         },
         {
             "question_text": "How did you validate that your WebSocket implementation was working correctly under load?",
-            "answer_summary": "Wrote integration tests with 20 concurrent clients using asyncio, later added Locust load testing showing 500 concurrent user capacity.",
+            "feedback": {"strength": "Used concrete testing metrics.", "improvement": "Explain how the results changed the design."},
             "scores": {
                 "concrete_example": 4,
                 "situation_action_result": 4,
@@ -63,7 +63,7 @@ MOCK_LLM_RESPONSE = {
         },
         {
             "question_text": "Tell me about a time you received critical feedback and how you responded to it.",
-            "answer_summary": "Received feedback on lacking error handling and tests during internship, rewrote module with comprehensive error handling and 90% test coverage.",
+            "feedback": {"strength": "Demonstrated growth from feedback.", "improvement": "State the resulting user or team impact."},
             "scores": {
                 "concrete_example": 5,
                 "situation_action_result": 5,
@@ -73,7 +73,7 @@ MOCK_LLM_RESPONSE = {
         },
         {
             "question_text": "What specific testing practices did you adopt after that experience?",
-            "answer_summary": "Adopted TDD for critical paths, AAA pattern for test readability, maintained 80%+ coverage, and set up pre-commit hooks.",
+            "feedback": {"strength": "Named specific testing practices.", "improvement": "Tie those practices to role requirements."},
             "scores": {
                 "concrete_example": 4,
                 "situation_action_result": 4,
@@ -92,6 +92,8 @@ MOCK_LLM_RESPONSE = {
         "When discussing the hackathon, connect the WebSocket skills more explicitly to the target role's microservices requirements — this would boost your link_to_job score.",
         "Consider structuring your answers more tightly around Situation-Action-Result to avoid tangential details.",
     ],
+    "keywords_covered": ["REST API", "testing", "CI/CD"],
+    "keywords_not_covered": ["AWS", "Docker"],
     "contextual_advice": [
         "The job description lists Docker as a preferred skill, but none of your answers mentioned containerization. Your CI/CD experience with GitHub Actions is a natural bridge — consider mentioning how you might containerize your Flask API for consistent deployments.",
         "Your resume shows strong testing skills from the internship, but the role also requires AWS experience. Consider framing your post-hackathon Locust testing as cloud-adjacent experience if you deployed it on any cloud infrastructure.",
@@ -265,7 +267,7 @@ def test_e2e_strengths_and_improvements_are_nonempty_lists(mock_invoke):
 
 @patch("evaluator.bedrock_client.invoke")
 def test_e2e_per_question_entry_structure(mock_invoke):
-    """Each per_question_scores entry has question_text, answer_summary, and scores."""
+    """Each per_question_scores entry has question_text, feedback, and scores."""
     mock_invoke.return_value = MOCK_LLM_RESPONSE
     event = _load_sample_input()
 
@@ -274,8 +276,10 @@ def test_e2e_per_question_entry_structure(mock_invoke):
 
     for i, entry in enumerate(body["per_question_scores"]):
         assert "question_text" in entry, f"Entry {i} missing question_text"
-        assert "answer_summary" in entry, f"Entry {i} missing answer_summary"
+        assert "feedback" in entry, f"Entry {i} missing feedback"
         assert "scores" in entry, f"Entry {i} missing scores"
         assert isinstance(entry["question_text"], str)
-        assert isinstance(entry["answer_summary"], str)
+        assert isinstance(entry["feedback"], dict)
+        assert isinstance(entry["feedback"]["strength"], str)
+        assert isinstance(entry["feedback"]["improvement"], str)
         assert isinstance(entry["scores"], dict)

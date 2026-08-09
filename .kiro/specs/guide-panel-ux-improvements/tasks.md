@@ -1,5 +1,7 @@
 # Implementation Plan: Guide Panel UX Improvements
 
+> Historical implementation record. Current maintained behavior is documented in `../guide-panel-v2/tasks.md` and `../frontend-interview/tasks.md`.
+
 ## Overview
 
 This plan implements five related UX improvements to the interview screen: English-only reasoning text, descriptive section labels on STAR cards, green accent color unification, mic-denied flow fix with text-mode removal, and vertical layout spacing adjustments. All changes are frontend-only (TypeScript/React). Tasks are ordered so that utility changes come first, then component changes build on top, and finally integration/layout touches complete the wiring.
@@ -34,7 +36,7 @@ This plan implements five related UX improvements to the interview screen: Engli
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
 
   - [x] 2.2 Rename card label from Korean to English and change accent color to green
-    - Change `"예상 질문 {card.index}"` to `"Expected Question {card.index}"`
+    - Use the English label `"Expected Question {card.index}"`
     - Change `.star-card__label` color from `var(--color-guide-highlight, #4A9EFF)` to `var(--color-accent, #9AE05C)`
     - Change `.star-card__element-badge` color from `var(--color-guide-highlight, #4A9EFF)` to `var(--color-accent, #9AE05C)`
     - Change `.star-card__element-badge` background from `rgba(74, 158, 255, 0.12)` to `rgba(154, 224, 92, 0.12)`

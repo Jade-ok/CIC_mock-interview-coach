@@ -1,6 +1,6 @@
 # Frontend Interview Tasks
 
-> Maintained implementation checklist. Last verified: 2026-08-07.
+> Maintained implementation checklist. Last verified: 2026-08-08.
 
 - [x] 1. Create the Vite, React, and TypeScript frontend structure.
   - Add component, hook, service, reducer, type, utility, worklet, and test directories.
@@ -36,27 +36,25 @@
   - Carry the connected WebSocket into Interview Screen.
 
 - [x] 7. Implement the interview shell.
-  - Add participant tiles, timer, text input, Practice Mode toggle, Guide Panel, and End button.
+  - Add the interview captions, microphone control, timer, Practice Mode toggle, Guide Panel, and End button.
   - Add active-turn presentation and unload protection.
 
 - [x] 8. Integrate frontend voice streaming.
   - Send microphone frames over WebSocket.
   - Play Nova audio and collect final transcripts.
-  - Handle barge-in and microphone denial.
+  - Handle barge-in and show microphone-permission remediation.
   - Connect the interview screen to the socket created in Waiting Room.
-  - Status: unit-tested; live Nova verification pending.
+  - Status: unit-tested and exercised through the hosted Nova path.
 
-- [x] 9. Integrate typed answers.
-  - Pause microphone transmission while composing.
-  - Send cross-modal text and resume capture afterward.
-  - Status: unit-tested; live Nova verification pending.
+- [x] 9. Remove typed-answer fallback from the maintained UI.
+  - Require microphone access for an interview.
+  - Retain relay protocol compatibility without exposing a text-only browser control.
 
 - [x] 10. Complete Practice Mode presentation.
-  - Replace placeholders with transcript bubbles.
-  - Render competency guides.
-  - Add case-insensitive keyword highlighting.
+  - Render interviewer-only caption bubbles and live partial text.
+  - Render Key Competencies and Experiences to Prepare from Analyst output.
   - Keep Practice Mode ON by default and ensure toggling it changes presentation only.
-  - When OFF, immediately hide or clear practice bubbles and guide highlighting without hiding the Guide Panel.
+  - When OFF, hide the practice captions and Guide Panel and show the Live Mode participant tiles.
   - Do not repeat candidate answers as practice bubbles.
 
 - [x] 11. Implement interview ending and Evaluator handoff.
@@ -64,7 +62,7 @@
   - Handle the Nova `end_interview` tool after playback.
   - Retain Analyst output and map transcript pairs to `schemas/interviewer_output.json`.
   - Parse the direct Evaluator response body.
-  - Status: locally tested; live end-to-end verification pending.
+  - Status: unit-tested and deployed; continue targeted verification of edge cases.
 
 - [ ] 12. Complete reconnection behavior.
   - Verify real AgentCore reconnection and session history restoration.
@@ -74,7 +72,8 @@
 - [ ] 13. Complete FeedbackReport features.
   - [x] Use the existing typed Evaluator output model in `frontend/src/types/evaluator.ts`.
   - [x] Render the existing FeedbackReport components instead of raw JSON.
-  - [x] Wire Practice Again to reset the session.
+  - [x] Add `Retry with This Resume` while preserving upload/analysis/context.
+  - [x] Add `Retry with New Resume` to reset to Upload.
   - [ ] Add transcript viewing; its controls are hidden until a callback is implemented.
 
 ## Verification

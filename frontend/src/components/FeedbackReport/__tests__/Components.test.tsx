@@ -35,17 +35,18 @@ describe('DimensionScoresGrid', () => {
 });
 
 describe('FeedbackColumns', () => {
-  it('renders strengths and improvements', () => {
+  it('renders a concise overall summary', () => {
     render(
       <FeedbackColumns
         strengths={['Great specific example.', 'Clear SAR structure.']}
         improvements={['Add numbers.', 'Connect to role.']}
       />
     );
-    expect(screen.getByText('What you did well')).toBeTruthy();
-    expect(screen.getByText('What to work on next')).toBeTruthy();
+    expect(screen.getByText('Overall Summary')).toBeTruthy();
     expect(screen.getByText('Great specific example.')).toBeTruthy();
     expect(screen.getByText('Add numbers.')).toBeTruthy();
+    expect(screen.queryByText('Clear SAR structure.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Connect to role.')).not.toBeInTheDocument();
   });
 });
 

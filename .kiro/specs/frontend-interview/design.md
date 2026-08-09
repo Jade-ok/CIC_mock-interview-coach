@@ -1,6 +1,6 @@
 # Frontend Interview Design
 
-> Maintained design. Last verified: 2026-08-07.
+> Maintained design. Last verified: 2026-08-08.
 
 ## Overview
 
@@ -23,9 +23,9 @@ Amplify-hosted React/Vite browser
 Hosted integration requirements:
 
 - Production builds select their configured HTTPS and WSS endpoints with `VITE_RUNTIME_MODE=hosted`.
-- AgentCore authentication and Amplify hosting/authentication are not configured.
+- Amplify Hosting, the Voice Session Lambda, and the signed AgentCore WebSocket flow are deployed; the application intentionally has no end-user login.
 - Lambda Function URLs are public and use wildcard CORS.
-- The protocol is unit-tested but has not been verified in a live browser/Nova session.
+- The protocol is unit-tested and has been exercised through the hosted browser/Nova path; real reconnection and session-restoration edge cases remain targeted verification work.
 
 ## Screen Flow
 
@@ -63,7 +63,7 @@ Upload → Waiting Room → Interview → Feedback
 - Capture 16 kHz, 16-bit mono PCM audio.
 - Play 24 kHz, 16-bit mono PCM audio.
 - Show active-speaker state.
-- Allow text fallback while pausing microphone transmission during composition.
+- Require microphone access and show an accessible remediation message when permission is denied.
 - Accumulate only `FINAL` transcript events.
 - Allow barge-in by stopping queued playback on `interrupted`.
 - Keep the manual End button available at all times.
@@ -74,7 +74,9 @@ Upload → Waiting Room → Interview → Feedback
 - Show Evaluator loading and retry states.
 - Store the direct Evaluator response object.
 - Render successful results through the typed `FeedbackReport` components.
-- Keep transcript viewing explicitly pending; Practice Again resets the session.
+- Keep transcript viewing explicitly pending.
+- Offer `Retry with This Resume` to preserve upload/analysis/context and start a fresh voice session.
+- Offer `Retry with New Resume` to reset the application to Upload.
 
 ## State Model
 
@@ -86,11 +88,11 @@ interface SessionState {
   uploadData: { pdf: File; jdText: string } | null;
   analystOutput: Record<string, unknown> | null;
   novaSonicContext: string;
-  competencyGuides: CompetencyGuide[];
   transcript: TranscriptEntry[];
-  turnState: 'ai_speaking' | 'user_turn' | 'idle';
-  inputMode: 'voice' | 'text_only';
-  textInputState: 'idle' | 'composing';
+  livePartial: { role: 'interviewer' | 'user'; text: string } | null;
+  turnState: 'ai_speaking' | 'user_turn' | 'idle' | 'ended';
+  inputMode: 'voice' | 'text_only'; // retained legacy reducer state; no text-only UI
+  textInputState: 'idle' | 'composing'; // retained protocol/reducer state; no typed-answer UI
   practiceMode: boolean;
   elapsedSeconds: number;
   wsConnectionState: 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
@@ -120,8 +122,7 @@ It returns:
 ```typescript
 interface Agent1Response {
   nova_sonic_context: string;
-  competency_guides: CompetencyGuide[];
-  analyst_output: Record<string, unknown>;
+  analyst_output?: Record<string, unknown>;
 }
 ```
 
@@ -148,7 +149,7 @@ interface Agent3Request {
 }
 ```
 
-The six scripted answers map in order to three points, each containing a main question and one follow-up. An unanswered final closing is not included. Six complete pairs produce `completed`; fewer pairs produce `ended_early`.
+Nova is prompted to ask three main questions and one adaptive follow-up after each, but application state does not guarantee that sequence. The mapper accepts the first six completed question-answer pairs, labels them by expected position, marks six pairs `completed`, and marks fewer pairs `ended_early`. An unanswered final closing is not included.
 
 ## WebSocket Protocol
 
@@ -158,7 +159,7 @@ Browser input events:
 |---|---|
 | `session_start` | Send runtime context and inference settings |
 | `audio_chunk` | Send base64 PCM microphone data |
-| `text_input` | Send a typed candidate response |
+| `text_input` | Supported by the relay protocol, but not exposed by the maintained browser UI |
 | `session_end` | Close the interview session |
 
 Relay output events:
@@ -181,7 +182,6 @@ Relay output events:
 - Microphone frames are captured through an AudioWorklet without blocking the main thread.
 - Echo cancellation and noise suppression are requested from the browser.
 - Playback uses chained `AudioBufferSourceNode` instances.
-- Text composition pauses outgoing audio frames without suspending the AudioContext.
 - Only final transcript stages are persisted.
 - Practice Mode affects presentation only and must never alter backend messages.
 

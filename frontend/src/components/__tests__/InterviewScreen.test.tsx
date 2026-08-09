@@ -25,7 +25,7 @@ describe('InterviewScreen', () => {
       ...initialState,
       phase: 'interview',
       turnState: 'idle',
-      practiceMode: true,
+      practiceMode: false,
       elapsedSeconds: 0,
     };
     mockDispatch.mockClear();
@@ -61,7 +61,8 @@ describe('InterviewScreen', () => {
       expect(screen.getByTestId('mic-button-wrapper')).toBeInTheDocument();
     });
 
-    it('renders guide panel placeholder', () => {
+    it('renders the Guide Panel in Practice Mode', () => {
+      mockState = { ...mockState, practiceMode: true };
       render(<InterviewScreen />);
       expect(screen.getByTestId('guide-panel')).toBeInTheDocument();
     });
@@ -250,22 +251,20 @@ describe('InterviewScreen', () => {
       expect(micBtn).not.toBeDisabled();
     });
 
-    it('clicking mic button toggles recording state on', () => {
+    it('starts with recording enabled during the user turn', () => {
       mockState = { ...mockState, turnState: 'user_turn' };
       render(<InterviewScreen />);
       const micBtn = screen.getByTestId('mic-button');
-      fireEvent.click(micBtn);
       expect(micBtn.className).toContain('mic-button--recording');
       expect(micBtn).toHaveAttribute('aria-pressed', 'true');
       expect(micBtn).toHaveAttribute('aria-label', 'Stop recording');
     });
 
-    it('clicking mic button again toggles recording state off', () => {
+    it('clicking the active mic button pauses recording', () => {
       mockState = { ...mockState, turnState: 'user_turn' };
       render(<InterviewScreen />);
       const micBtn = screen.getByTestId('mic-button');
-      fireEvent.click(micBtn); // on
-      fireEvent.click(micBtn); // off
+      fireEvent.click(micBtn);
       expect(micBtn.className).not.toContain('mic-button--recording');
       expect(micBtn).toHaveAttribute('aria-pressed', 'false');
       expect(micBtn).toHaveAttribute('aria-label', 'Start recording your answer');
@@ -276,8 +275,8 @@ describe('InterviewScreen', () => {
       render(<InterviewScreen />);
       const micBtn = screen.getByTestId('mic-button');
       fireEvent.click(micBtn);
-      expect(micBtn.className).not.toContain('mic-button--recording');
-      expect(micBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(micBtn).toBeDisabled();
+      expect(micBtn).toHaveAttribute('aria-label', 'Waiting for AI');
     });
 
     it('shows "Waiting for AI" aria-label when disabled', () => {
@@ -287,17 +286,16 @@ describe('InterviewScreen', () => {
       expect(micBtn).toHaveAttribute('aria-label', 'Waiting for AI');
     });
 
-    it('shows status text "Click to speak" when idle', () => {
+    it('shows status text "Click to speak" when recording is paused', () => {
       mockState = { ...mockState, turnState: 'user_turn' };
       render(<InterviewScreen />);
+      fireEvent.click(screen.getByTestId('mic-button'));
       expect(screen.getByTestId('mic-status').textContent).toBe('Click to speak');
     });
 
     it('shows status text "Recording..." when recording', () => {
       mockState = { ...mockState, turnState: 'user_turn' };
       render(<InterviewScreen />);
-      const micBtn = screen.getByTestId('mic-button');
-      fireEvent.click(micBtn);
       expect(screen.getByTestId('mic-status').textContent).toBe('Recording...');
     });
   });

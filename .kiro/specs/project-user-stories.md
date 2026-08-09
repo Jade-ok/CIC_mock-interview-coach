@@ -1,6 +1,6 @@
 # User Stories — Mock Interview Coach (Project-Wide)
 
-> Maintained product stories. Last verified against current contracts and the hosted AWS architecture: 2026-08-07. Amplify hosting and authenticated voice access require environment-specific configuration and verification.
+> Maintained product stories. Last verified against current contracts and the deployed AWS architecture: 2026-08-08. The Amplify-hosted application intentionally has no end-user login; AgentCore access uses five-minute URLs signed by the Voice Session Lambda.
 
 Covers the full candidate journey across every component in the architecture: an Amplify-hosted React client → `pdf_parser` → `analyst` → `interviewer` → Voice Session Lambda → signed WSS to the AgentCore voice relay → Nova 2 Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior. CDK defines the Lambda/S3 backend infrastructure; AgentCore is a separate hosted-runtime boundary.
 
@@ -22,13 +22,13 @@ Module-level requirements (acceptance criteria, error handling, etc.) for the In
 ## Epic 3: Interview Setup (`interviewer`)
 
 - **US-3.1** As a candidate, I want the system to prepare a personalized interview plan from my analysis, so that questions feel relevant to me rather than generic.
-- **US-3.2** As a candidate, I want the interview structure (3 areas, 1 follow-up each) to be consistent, so that I know what to expect before I start.
+- **US-3.2** As a candidate, I want the interviewer to aim for 3 areas with an adaptive follow-up after each, while understanding that the current model-driven conversation does not guarantee every follow-up.
 
 ## Epic 4: Live Spoken Interview (`frontend` + AgentCore + Nova 2 Sonic)
 
 - **US-4.1** As a candidate, I want to answer questions by speaking naturally, so that the practice feels like a real interview.
 - **US-4.2** As a candidate, I want to be asked about project ownership, technical problem-solving, and collaboration/role fit, so that I practice the three areas that actually get evaluated.
-- **US-4.3** As a candidate, I want one adaptive follow-up per question based on what I actually said, so that the conversation feels responsive, not scripted.
+- **US-4.3** As a candidate, I want Nova to use my answer when it generates an adaptive follow-up, so that the conversation feels responsive rather than scripted.
 - **US-4.4** As a candidate, I want only one clear question asked at a time, so that I'm never confused about what to answer.
 - **US-4.5** As a candidate, I want the interviewer to stay supportive, professional, and never invent facts about my background, so that I feel safe practicing.
 - **US-4.6** As a candidate, I want no scoring or feedback during the interview itself, so that I can focus on answering instead of second-guessing live.
@@ -45,6 +45,6 @@ Module-level requirements (acceptance criteria, error handling, etc.) for the In
 
 - **US-6.1** As a candidate, I want the app to treat me as a student/intern-level candidate rather than expect senior scope, so that the bar matches where I actually am.
 - **US-6.2** As a candidate, I want a friendly error message and retry option if any step fails (upload, analysis, interview setup, evaluation), so that a transient backend hiccup doesn't end my session.
-- **US-6.3** As a candidate, I want no permanent interview record, so that I can practice without creating stored history (v1 has no database; AgentCore holds only transient voice-stream state). The planned authentication layer protects backend access and does not imply stored interview history.
+- **US-6.3** As a candidate, I want no permanent interview record, so that I can practice without creating stored history (v1 has no database; AgentCore holds only transient voice-stream state).
 - **US-6.4** As a candidate, I want to repeat the same interview flow across multiple attempts, so that I can practice again without needing an account.
 - **US-6.5** As an operator, I want the public Amplify client to use five-minute signed WSS URLs when opening AgentCore sessions, so that permanent AWS credentials are not exposed in browser code.

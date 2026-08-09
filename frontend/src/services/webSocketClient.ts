@@ -171,7 +171,9 @@ export class WebSocketClient {
       throw error;
     }
     if (generation !== this.connectionGeneration) {
-      throw new Error('Connection replaced');
+      throw new Error(
+        this.getState() === 'disconnected' ? 'Connection closed' : 'Connection replaced'
+      );
     }
 
     return new Promise<void>((resolve, reject) => {
