@@ -4,6 +4,8 @@
  * Output: 24kHz, 16-bit PCM, mono (AudioBufferSourceNode chain)
  */
 
+import captureProcessorUrl from '../worklets/captureProcessor.ts?worker&url';
+
 export interface AudioManagerConfig {
   inputSampleRate: 16000;
   outputSampleRate: 24000;
@@ -77,9 +79,7 @@ export function createAudioManager(config: AudioManagerConfig = DEFAULT_CONFIG):
       audioContext = new AudioContext({ sampleRate: config.inputSampleRate });
 
       // Load worklet module
-      await audioContext.audioWorklet.addModule(
-        new URL('../worklets/captureProcessor.ts', import.meta.url).href
-      );
+      await audioContext.audioWorklet.addModule(captureProcessorUrl);
 
       return { granted: true };
     } catch (err: unknown) {
