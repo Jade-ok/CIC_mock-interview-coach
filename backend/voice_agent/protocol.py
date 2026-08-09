@@ -111,8 +111,9 @@ class BrowserSessionProtocol:
             "toolSpec": {
                 "name": "end_interview",
                 "description": (
-                    "Signal that the scripted interview is complete. Use this only after "
-                    "the candidate answers the third follow-up and you deliver the final closing."
+                    "Signal that the scripted interview is complete. Only call this after "
+                    "all 6 question-answer exchanges (3 main questions + 3 follow-ups) are "
+                    "finished AND you have spoken the closing farewell aloud."
                 ),
                 "inputSchema": {
                     "json": {

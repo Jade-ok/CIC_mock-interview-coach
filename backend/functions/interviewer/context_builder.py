@@ -50,6 +50,7 @@ def build_runtime_context(
     sections.append("")
     sections.append("CRITICAL: Never skip a turn. Never combine turns. Never ask more than what is listed for each turn.")
     sections.append("CRITICAL: When asking about a new point, ALWAYS name the specific experience from selected_experiences by title and organization. NEVER say 'that project or another experience'.")
+    sections.append("CRITICAL: NEVER call end_interview until you have completed all 6 question-answer pairs (3 main questions + 3 follow-ups). You must deliver the closing statement in TURN 7 aloud before calling end_interview.")
     sections.append("")
     sections.append("[BEHAVIORAL INSTRUCTIONS]")
     sections.append("- You MUST speak first when the session starts — greet the candidate briefly and ask the first main question immediately")
