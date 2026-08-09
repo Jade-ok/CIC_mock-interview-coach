@@ -13,10 +13,10 @@ Local development connects to `backend.local_server:app` for the HTTP pipeline a
 ```text
 Amplify-hosted React/Vite browser
   ├─ HTTPS → PDF Parser Lambda
-  │           → Analyst Lambda (Claude Sonnet 4.6)
+  │           → Analyst Lambda (OpenAI GPT OSS 120B)
   │           → Interviewer Lambda + S3 configuration
   ├─ authenticated WSS → AgentCore voice relay → Nova 2 Sonic
-  └─ HTTPS → Evaluator Lambda (Claude Sonnet 4.6)
+  └─ HTTPS → Evaluator Lambda (OpenAI GPT OSS 120B)
 ```
 
 Hosted integration requirements:

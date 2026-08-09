@@ -1,4 +1,6 @@
-"""Response parsing, schema validation, and warning generation for the Analyst Lambda."""
+"""Response parsing, schema validation, and warning generation for the Analyst."""
+
+import json
 
 # Module-level constants
 SCHEMA_VERSION = "1.0"
@@ -31,14 +33,14 @@ class SchemaValidationError(Exception):
     pass
 
 
-def parse_converse_response(response: dict) -> dict:
-    """Extract and validate the tool_use result from a Bedrock Converse API response.
+def parse_chat_response(response: dict) -> dict:
+    """Extract and validate an analyst_output function call.
 
-    Navigates the response structure to find the tool_use block, then validates
-    the extracted dict against the analyst_output schema constraints.
+    Navigates the response structure to find the forced function call, then
+    validates its arguments against the analyst_output schema constraints.
 
     Args:
-        response: Raw Converse API response dict.
+        response: Raw Bedrock Mantle Chat Completions response.
 
     Returns:
         Validated analyst_output dict.
@@ -47,20 +49,24 @@ def parse_converse_response(response: dict) -> dict:
         SchemaValidationError: If the response structure is unexpected or the
             extracted output does not conform to the schema.
     """
-    # Extract tool_use result from response
+    # Extract the first structured function call.
     try:
-        content = response["output"]["message"]["content"]
-        if not content:
-            raise SchemaValidationError("Response contains no content blocks")
-        block = content[0]
-        if "toolUse" not in block:
-            raise SchemaValidationError(
-                "First content block is not a toolUse block"
-            )
-        result = block["toolUse"]["input"]
-    except (KeyError, IndexError, TypeError) as e:
+        tool_calls = response["choices"][0]["message"]["tool_calls"]
+        if not tool_calls:
+            raise SchemaValidationError("Response contains no function calls")
+        function = tool_calls[0]["function"]
+        if function["name"] != "analyst_output":
+            raise SchemaValidationError("First function call is not analyst_output")
+        arguments = function["arguments"]
+        result = json.loads(arguments) if isinstance(arguments, str) else arguments
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
         raise SchemaValidationError(
-            f"Failed to extract tool_use result from response: {e}"
+            f"Failed to extract analyst_output function call: {e}"
+        )
+
+    if not isinstance(result, dict):
+        raise SchemaValidationError(
+            "analyst_output function arguments must decode to a JSON object"
         )
 
     # Validate all required top-level keys are present

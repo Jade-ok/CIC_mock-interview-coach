@@ -33,7 +33,7 @@ Amplify Hosting does not proxy or authenticate this WebSocket automatically. Bro
 
 ## Local Run
 
-The relay resolves credentials through boto3's standard chain. For local testing, use a configured AWS profile with access to Sonnet 4.6 and Nova 2 Sonic:
+The combined local backend resolves credentials through boto3's standard chain. Use a configured AWS profile with access to GPT OSS 120B and Nova 2 Sonic:
 
 ```bash
 export AWS_PROFILE="<profile-name>"

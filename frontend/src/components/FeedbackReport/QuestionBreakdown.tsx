@@ -54,6 +54,7 @@ export function QuestionBreakdown({ questions, questionCount, transcript }: Ques
         <p className="question-breakdown__intro">
           You answered {questionCount} question{questionCount !== 1 ? 's' : ''} — you're scored only on what you answered, so ending early never counts against you.
         </p>
+        <p className="question-breakdown__hint">Tap the score chip to see all dimensions</p>
       </div>
 
       {questions.map((q, i) => (

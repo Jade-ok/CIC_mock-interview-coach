@@ -9,14 +9,14 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 ## Glossary
 
 - **PDF_Parser**: The Lambda function responsible for extracting text from uploaded PDF documents and accepting plain-text job postings. Uses the pypdf library.
-- **Analyst**: The Lambda function that receives extracted text (resume and job posting) and produces a structured JSON analysis via the Bedrock Converse API with tool_use.
+- **Analyst**: The Lambda function that receives extracted text (resume and job posting) and produces a structured JSON analysis through Bedrock Mantle Chat Completions with a forced function call.
 - **Analyst_Output**: The structured JSON object produced by the Analyst Lambda, conforming to a versioned schema. This is the interface contract with downstream consumers.
 - **Resume**: A candidate's resume document, always provided as a base64-encoded PDF.
 - **Job_Posting**: A job description provided either as a base64-encoded PDF or as plain text, distinguished by a format flag from the frontend.
 - **Format_Flag**: A field in the request payload indicating whether the job posting is provided as `"pdf"` or `"text"`.
 - **Function_URL_Mode**: An invocation mode where the Lambda event wraps the payload inside `event['body']` as a JSON string.
 - **Direct_Mode**: An invocation mode where the Lambda event is the payload itself.
-- **Converse_API**: Amazon Bedrock's Converse API used with tool_use to force structured JSON output from Claude.
+- **Mantle_Chat_API**: Amazon Bedrock Mantle's OpenAI-compatible Chat Completions API, used with a forced function call for structured JSON output.
 - **Candidate_Profile**: A section of the Analyst_Output summarizing the candidate's education, experience, and skills.
 - **Resume_Job_Alignment**: A section of the Analyst_Output mapping resume evidence to job requirements.
 - **Selected_Experiences**: A section of the Analyst_Output containing prioritized experiences relevant to the target role.
@@ -92,8 +92,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 1. THE Analyst SHALL include the field `schema_version` set to `"1.0"` in every Analyst_Output response.
 2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, analysis_warnings) in every Analyst_Output response.
 3. THE Analyst SHALL set `experience_type` to one of the allowed values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, or `"student_club"`.
-4. THE Analyst SHALL use the Converse_API with tool_use to force Claude to produce JSON conforming to the defined schema.
-5. WHEN the Converse_API response does not conform to the expected schema, THE Analyst SHALL retry the Bedrock call once (maximum 2 total attempts).
+4. THE Analyst SHALL use the Mantle_Chat_API with a forced function call to produce JSON conforming to the defined schema.
+5. WHEN the Mantle_Chat_API response does not conform to the expected schema, THE Analyst SHALL retry the Bedrock call once (maximum 2 total attempts).
 6. IF the Analyst_Output still does not conform after the retry, THEN THE Analyst SHALL return an error response indicating schema validation failure.
 7. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
 
@@ -103,8 +103,8 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 #### Acceptance Criteria
 
-1. THE Analyst SHALL target the `us-east-1` region for all Bedrock Converse API calls.
-2. THE Analyst SHALL use the model ID `global.anthropic.claude-sonnet-4-6` as the default model for Bedrock calls.
+1. THE Analyst SHALL target the `us-east-1` region for all Bedrock Mantle calls.
+2. THE Analyst SHALL use the model ID `openai.gpt-oss-120b` as the default model for Bedrock Mantle calls.
 3. THE Analyst SHALL allow the model ID to be swapped by changing only the model ID string, with no other code changes required.
 
 ### Requirement 8: Analyst Input Validation
@@ -113,7 +113,7 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 #### Acceptance Criteria
 
-1. THE Analyst SHALL validate that both resume_text and job_posting_text are present and non-empty strings before calling the Converse_API.
+1. THE Analyst SHALL validate that both resume_text and job_posting_text are present and non-empty strings before calling the Mantle_Chat_API.
 2. IF resume_text or job_posting_text is missing or empty, THEN THE Analyst SHALL return a JSON error response listing the missing or empty fields.
 3. WHEN a request is received in Function_URL_Mode, THE Analyst SHALL parse the JSON string from `event['body']` before validation.
 4. WHEN a request is received in Direct_Mode, THE Analyst SHALL use the event payload directly for validation.
@@ -124,9 +124,9 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 #### Acceptance Criteria
 
-1. IF the Converse_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator after the single transport attempt.
-2. IF the Converse_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh Bedrock call (maximum 2 total calls).
-3. The Bedrock client SHALL use a 120-second read timeout, a 10-second connect timeout, and no SDK retries so the 300-second Lambda budget remains predictable.
+1. IF the Mantle_Chat_API call fails due to a transient error (timeout, throttling, 5xx), THEN THE Analyst SHALL return a JSON error response with the failure reason and a 502 status indicator after the single transport attempt.
+2. IF the Mantle_Chat_API response is structurally or schema invalid, THEN THE orchestrator SHALL make one fresh Bedrock call (maximum 2 total calls).
+3. The Bedrock client SHALL use a 120-second request timeout and one transport attempt so the 300-second Lambda budget remains predictable.
 
 **Current behavior:** transport errors are not retried. A schema-invalid model response receives one recovery call, for a maximum of two Bedrock calls.
 

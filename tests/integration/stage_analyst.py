@@ -1,4 +1,4 @@
-"""Stage 1: Analyst — runs in isolation with mocked Bedrock."""
+"""Stage 1: Analyst — runs in isolation with mocked Bedrock Mantle."""
 import json
 import sys
 from pathlib import Path
@@ -7,9 +7,8 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "backend" / "functions"))
 
-# Mock Bedrock response
-MOCK_RESPONSE = {
-    "output": {"message": {"content": [{"toolUse": {"toolUseId": "m1", "name": "analyst_output", "input": {
+# Mock structured output returned through the analyst_output function.
+MOCK_TOOL_INPUT = {
         "schema_version": "1.0",
         "candidate_profile": {
             "candidate_level": "student_intern",
@@ -66,7 +65,6 @@ MOCK_RESPONSE = {
             }
         ],
         "analysis_warnings": []
-    }}}]}}
 }
 
 EVENT = {
@@ -74,8 +72,20 @@ EVENT = {
     "job_posting_text": "SWE Intern at Acme Corp\n\nRequirements:\n- CS degree\n- Python or JavaScript\n- Web frameworks\n- Problem-solving\n\nPreferred:\n- AWS\n- REST APIs\n- Testing\n\nResponsibilities:\n- Backend services\n- Automated tests\n- Code reviews\n- Cross-functional collaboration"
 }
 
-with patch("analyst.bedrock_client._client") as mock_client:
-    mock_client.converse.return_value = MOCK_RESPONSE
+chat_response = {
+    "choices": [{
+        "message": {
+            "tool_calls": [{
+                "function": {
+                    "name": "analyst_output",
+                    "arguments": json.dumps(MOCK_TOOL_INPUT),
+                }
+            }]
+        }
+    }]
+}
+
+with patch("analyst.orchestrator.call_chat_completion", return_value=chat_response):
     from analyst.handler import lambda_handler
     response = lambda_handler(EVENT, None)
 

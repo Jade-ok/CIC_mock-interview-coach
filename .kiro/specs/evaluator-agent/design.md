@@ -31,7 +31,7 @@ backend/functions/evaluator/
 ├── lambda_handler.py          # Entry point, orchestrator
 ├── validator.py               # Input validation logic
 ├── prompt_builder.py          # LLM prompt construction
-├── bedrock_client.py          # Bedrock Converse API wrapper
+├── bedrock_client.py          # Signed Bedrock Mantle API wrapper
 ├── scorer.py                  # Score clamping, aggregation, readiness label
 ├── response_assembler.py      # Final JSON response construction
 ├── schemas.py                 # Tool-use schema + response schema definitions
@@ -56,7 +56,7 @@ def handler(event, context):
             analyst_output=payload["analyst_output"]
         )
         
-        # 3. Call Bedrock Converse API
+        # 3. Call Bedrock Mantle Chat Completions
         llm_response = bedrock_client.invoke(system, messages, tool_config)
         
         # 4. Extract and aggregate scores
@@ -118,7 +118,7 @@ def parse_and_validate(event: dict) -> dict:
 
 ### 3. prompt_builder.py
 
-**Responsibility:** Constructs the messages array and tool configuration for the Bedrock Converse API call.
+**Responsibility:** Constructs messages and a forced function definition for the Bedrock Mantle Chat Completions call.
 
 **Key design decisions:**
 - Includes interview_plan to show which topics/skills were planned for assessment
@@ -155,15 +155,13 @@ Use supportive, constructive, student-friendly language in all feedback."""
 def build(conversation: list, analyst_output: dict) -> tuple:
     # analyst_output is a structured JSON object containing candidate_profile, target_role,
     # resume_job_alignment, interview_plan, and selected_experiences
-    messages = [
-        {"role": "user", "content": [{"text": _format_user_message(conversation, analyst_output)}]}
-    ]
+    messages = [{"role": "user", "content": _format_user_message(conversation, analyst_output)}]
     tool_config = _build_tool_config()
-    system = [{"text": SYSTEM_PROMPT}]
+    system = SYSTEM_PROMPT
     return system, messages, tool_config
 ```
 
-**Tool schema (forces structured output):**
+**Function schema (forces structured output):**
 
 ```python
 EVALUATION_TOOL_SCHEMA = {
@@ -218,34 +216,28 @@ EVALUATION_TOOL_SCHEMA = {
 
 ### 4. bedrock_client.py
 
-**Responsibility:** Wraps the Bedrock Converse API call with retry logic.
+**Responsibility:** Signs and sends Bedrock Mantle Chat Completions requests with retry logic.
 
 **Key design decisions:**
-- Uses model ID `global.anthropic.claude-sonnet-4-6` in `us-east-1`
-- Enforces tool_use via `toolChoice: {"tool": {"name": "submit_evaluation"}}`
+- Uses model ID `openai.gpt-oss-120b` in `us-east-1`
+- Forces the `submit_evaluation` function through `tool_choice`
 - Retries transport/API exceptions once (max 2 total attempts)
 - Does not retry malformed responses or missing tool output (`EvaluationError`)
-- Extracts tool_use input from the response
+- Extracts JSON function arguments from the response
 
 ```python
-import boto3
-from botocore.config import Config
-
-MODEL_ID = "global.anthropic.claude-sonnet-4-6"
+MODEL_ID = "openai.gpt-oss-120b"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
 
-client = boto3.client("bedrock-runtime", region_name=REGION, config=Config(retries={"max_attempts": 0}))
-
-def invoke(system: list, messages: list, tool_config: dict) -> dict:
+def invoke(system: str, messages: list, tool_config: dict) -> dict:
     for attempt in range(MAX_ATTEMPTS):
         try:
-            response = client.converse(
-                modelId=MODEL_ID,
-                system=system,
-                messages=messages,
-                toolConfig=tool_config
-            )
+            response = _post_chat_completion({
+                "model": MODEL_ID,
+                "messages": [{"role": "system", "content": system}, *messages],
+                **tool_config,
+            })
             return _extract_tool_input(response)
         except EvaluationError:
             raise
@@ -254,10 +246,10 @@ def invoke(system: list, messages: list, tool_config: dict) -> dict:
                 raise EvaluationError(f"Bedrock API call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
     
 def _extract_tool_input(response: dict) -> dict:
-    for block in response["output"]["message"]["content"]:
-        if "toolUse" in block:
-            return block["toolUse"]["input"]
-    raise EvaluationError("No tool_use block found in Bedrock response")
+    function = response["choices"][0]["message"]["tool_calls"][0]["function"]
+    if function["name"] != "submit_evaluation":
+        raise EvaluationError("Expected submit_evaluation function call")
+    return json.loads(function["arguments"])
 ```
 
 ### 5. scorer.py
@@ -479,7 +471,7 @@ class EvaluationError(Exception):
 | Decision | Rationale |
 |----------|-----------|
 | Orchestrator pattern (no state machine) | Single-invocation Lambda, linear flow, no branching logic needed |
-| Tool_use for structured output | Guarantees JSON schema conformance from LLM without post-hoc parsing |
+| Forced function call for structured output | Produces schema-shaped JSON arguments without post-hoc text parsing |
 | Scorer in Python, not LLM | Deterministic aggregation and classification; no LLM variance in math |
 | 1-5 scale (not 1-10) | Simpler for students to interpret; reduces LLM scoring variance |
 | Variable-length averaging | Students can stop early; no penalty for incomplete interviews |

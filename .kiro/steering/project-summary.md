@@ -147,7 +147,7 @@ The agreed deployment architecture uses one AWS account:
 - AWS Amplify Hosting serves the React/Vite frontend.
 - An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
 - AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
-- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke Claude Sonnet 4.6 through Amazon Bedrock; the Interviewer Lambda builds context from configuration without making a model call.
+- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke OpenAI GPT OSS 120B through Amazon Bedrock Mantle; the Interviewer Lambda builds context from configuration without making a model call.
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration resources. AgentCore remains a separate hosted container boundary.
 
