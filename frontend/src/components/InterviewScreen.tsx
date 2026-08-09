@@ -226,7 +226,7 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   const [showEndModal, setShowEndModal] = useState(false);
 
   // --- Mic toggle recording state ---
-  const [recording, setRecording] = useState(false);
+  const [recording, setRecording] = useState(true);
   const isRecordingRef = useRef(false);
 
   // Keep ref in sync with state (ref is read inside audio callback for zero-lag gating)
@@ -237,9 +237,6 @@ export function InterviewScreen({ wsClient }: { wsClient?: WebSocketClient | nul
   // Reset recording when a new user turn starts (turnState transitions to user_turn)
   const prevTurnStateRef = useRef(state.turnState);
   useEffect(() => {
-    if (state.turnState === 'user_turn' && prevTurnStateRef.current !== 'user_turn') {
-      setRecording(false);
-    }
     prevTurnStateRef.current = state.turnState;
   }, [state.turnState]);
 
