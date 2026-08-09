@@ -191,11 +191,24 @@ export function sessionReducer(
       };
     }
 
-    case 'UPDATE_LIVE_PARTIAL':
+    case 'UPDATE_LIVE_PARTIAL': {
+      const incoming = action.payload;
+      // Append to existing partial when role matches (incremental accumulation)
+      if (state.livePartial && state.livePartial.role === incoming.role) {
+        return {
+          ...state,
+          livePartial: {
+            role: incoming.role,
+            text: state.livePartial.text + incoming.text,
+          },
+        };
+      }
+      // First partial or role change — start fresh
       return {
         ...state,
-        livePartial: action.payload,
+        livePartial: incoming,
       };
+    }
 
     case 'CLEAR_LIVE_PARTIAL':
       return {
