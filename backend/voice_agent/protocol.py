@@ -98,7 +98,7 @@ class BrowserSessionProtocol:
         max_tokens = self._number(config, "maxTokens", 1024, int)
         temperature = self._number(config, "temperature", 0.7, float)
         top_p = self._number(config, "topP", 0.9, float)
-        endpointing = config.get("endpointingSensitivity", "HIGH")
+        endpointing = config.get("endpointingSensitivity", "LOW")
         voice_id = config.get("voiceId", "matthew")
         if endpointing not in {"LOW", "MEDIUM", "HIGH"}:
             raise BrowserProtocolError("endpointingSensitivity must be LOW, MEDIUM, or HIGH")
@@ -111,8 +111,9 @@ class BrowserSessionProtocol:
             "toolSpec": {
                 "name": "end_interview",
                 "description": (
-                    "Signal that the scripted interview is complete. Use this only after "
-                    "the candidate answers the third follow-up and you deliver the final closing."
+                    "Signal that the scripted interview is complete. Only call this after "
+                    "all 6 question-answer exchanges (3 main questions + 3 follow-ups) are "
+                    "finished AND you have spoken the closing farewell aloud."
                 ),
                 "inputSchema": {
                     "json": {
