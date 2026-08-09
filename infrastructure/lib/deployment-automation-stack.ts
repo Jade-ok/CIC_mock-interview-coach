@@ -73,6 +73,7 @@ export class DeploymentAutomationStack extends cdk.Stack {
         actions: [
           'amplify:GetApp',
           'amplify:GetBranch',
+          'amplify:UpdateBranch',
           'amplify:CreateDeployment',
           'amplify:StartDeployment',
           'amplify:GetJob',
