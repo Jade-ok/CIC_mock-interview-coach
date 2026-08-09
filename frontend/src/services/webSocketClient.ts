@@ -11,7 +11,8 @@ export type WebSocketConnectionState =
   | 'disconnected';
 
 export interface WebSocketClientConfig {
-  url: string;
+  url?: string;
+  urlProvider?: () => string | Promise<string>;
   maxReconnectAttempts: number;
   reconnectDelayMs: number[];
 }
@@ -62,7 +63,6 @@ export type NovaSonicOutputEvent =
 export type WebSocketMessage = WebSocketInputEvent;
 
 const DEFAULT_CONFIG: WebSocketClientConfig = {
-  url: '',
   maxReconnectAttempts: 2,
   reconnectDelayMs: [1000, 2000],
 };
@@ -73,6 +73,7 @@ export class WebSocketClient {
   private state: WebSocketConnectionState = 'disconnected';
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectionGeneration = 0;
   private connectResolve: (() => void) | null = null;
   private connectReject: ((reason: Error) => void) | null = null;
   private sessionStartResolve: (() => void) | null = null;
@@ -87,16 +88,18 @@ export class WebSocketClient {
   onSessionInvalid: () => void = () => {};
 
   connect(config: WebSocketClientConfig): Promise<void> {
+    const generation = ++this.connectionGeneration;
     this.clearReconnectTimer();
     this.rejectPendingConnect('Connection replaced');
     this.rejectPendingSessionStart('Connection replaced');
     this.closeCurrentSocket();
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.reconnectAttempts = 0;
-    return this.createConnection();
+    return this.createConnection(generation);
   }
 
   disconnect(): void {
+    this.connectionGeneration += 1;
     this.clearReconnectTimer();
     this.state = 'disconnected';
     this.rejectPendingConnect('Connection closed');
@@ -156,15 +159,27 @@ export class WebSocketClient {
     this.send(message);
   }
 
-  private createConnection(): Promise<void> {
+  private async createConnection(generation: number): Promise<void> {
+    this.state = 'connecting';
+    let url: string;
+    try {
+      url = await this.resolveConnectionUrl();
+    } catch (error) {
+      if (generation === this.connectionGeneration) {
+        this.state = 'disconnected';
+      }
+      throw error;
+    }
+    if (generation !== this.connectionGeneration) {
+      throw new Error('Connection replaced');
+    }
+
     return new Promise<void>((resolve, reject) => {
       this.connectResolve = resolve;
       this.connectReject = reject;
-      this.state = 'connecting';
-
       let socket: WebSocket;
       try {
-        socket = new WebSocket(this.config.url);
+        socket = new WebSocket(url);
         this.ws = socket;
       } catch (err) {
         this.state = 'disconnected';
@@ -255,42 +270,61 @@ export class WebSocketClient {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.doReconnect();
+      void this.doReconnect();
     }, delay);
   }
 
-  private doReconnect(): void {
+  private async doReconnect(): Promise<void> {
+    const generation = this.connectionGeneration;
     this.state = 'connecting';
 
     try {
-      this.ws = new WebSocket(this.config.url);
+      const url = await this.resolveConnectionUrl();
+      if (
+        generation !== this.connectionGeneration
+        || this.state !== 'connecting'
+      ) return;
+
+      const socket = new WebSocket(url);
+      this.ws = socket;
+
+      socket.onopen = () => {
+        if (this.ws !== socket) return;
+        this.state = 'connected';
+        this.reconnectAttempts = 0;
+        this.onReconnectSuccess();
+      };
+
+      socket.onclose = (event) => {
+        if (this.ws !== socket) return;
+        if (this.state === 'connecting') {
+          this.handleReconnectFailure();
+        } else {
+          this.handleDisconnect(event.reason || 'Connection closed');
+        }
+      };
+
+      socket.onerror = () => {
+        // onclose will be called after onerror, handle there
+      };
+
+      socket.onmessage = (event) => {
+        if (this.ws !== socket) return;
+        this.handleMessage(event.data as string);
+      };
     } catch {
-      this.handleReconnectFailure();
-      return;
-    }
-
-    this.ws.onopen = () => {
-      this.state = 'connected';
-      this.reconnectAttempts = 0;
-      this.onReconnectSuccess();
-    };
-
-    this.ws.onclose = (event) => {
-      if (this.state === 'connecting') {
-        // Reconnection attempt failed
+      if (generation === this.connectionGeneration) {
         this.handleReconnectFailure();
-      } else {
-        this.handleDisconnect(event.reason || 'Connection closed');
       }
-    };
+    }
+  }
 
-    this.ws.onerror = () => {
-      // onclose will be called after onerror, handle there
-    };
-
-    this.ws.onmessage = (event) => {
-      this.handleMessage(event.data as string);
-    };
+  private async resolveConnectionUrl(): Promise<string> {
+    const url = this.config.urlProvider
+      ? await this.config.urlProvider()
+      : this.config.url;
+    if (!url) throw new Error('WebSocket URL is unavailable');
+    return url;
   }
 
   private handleReconnectFailure(): void {

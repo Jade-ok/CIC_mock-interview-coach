@@ -1,6 +1,6 @@
 # Implementation Plan: Resume Analysis Pipeline
 
-> These completed tasks cover the Lambda implementation. Amplify frontend hosting and authenticated AgentCore environment verification are tracked in the frontend/interviewer specs.
+> These completed tasks cover the Lambda implementation. Amplify frontend hosting and signed AgentCore environment verification are tracked in the frontend/interviewer specs.
 
 > Historical implementation record. Last reconciled with the refactored paths on 2026-08-07.
 

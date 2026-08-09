@@ -4,7 +4,7 @@ AWS CDK application for the Mock Interview Coach Lambda/S3 backend. It is one de
 
 ## Provisioned Resources
 
-- Four Python 3.12 Lambdas: PDF Parser, Analyst, Interviewer, and Evaluator
+- Five Python 3.12 Lambdas: PDF Parser, Analyst, Interviewer, Evaluator, and Voice Session
 - Public Function URLs for those Lambdas
 - An S3 bucket containing the files from `backend/config/`
 - Bedrock permissions for Analyst and Evaluator
@@ -13,13 +13,13 @@ AWS CDK application for the Mock Interview Coach Lambda/S3 backend. It is one de
 The target deployment also includes:
 
 - React/Vite hosted by AWS Amplify Hosting
-- Browser authentication with an AgentCore-supported authorization flow
-- An authenticated `wss://` connection to the Python voice relay on Amazon Bedrock AgentCore Runtime
+- Short-lived SigV4-signed `wss://` URLs created by the Voice Session Lambda
+- The Python voice relay on Amazon Bedrock AgentCore Runtime
 - Nova 2 Sonic invoked only by the relay
 
-AgentCore is a serverless managed container runtime and is not part of this CDK stack. Amplify Hosting and authentication are also separate from this stack.
+AgentCore is a serverless managed container runtime and is not part of this CDK stack. Amplify Hosting is also separate from this stack.
 
-The Lambda Function URLs are currently public (`NONE` authentication with wildcard CORS). The hosted architecture requires an authenticated API boundary before the Amplify application is treated as public production infrastructure.
+The Lambda Function URLs are public (`NONE` authentication with wildcard CORS). The Voice Session role is scoped to one AgentCore runtime and its endpoints, and its signed URLs expire after five minutes; the no-login architecture still requires budgets and monitoring because public endpoints can incur model usage.
 
 ## Prerequisites
 

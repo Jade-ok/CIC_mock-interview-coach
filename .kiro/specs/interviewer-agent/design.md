@@ -1,6 +1,6 @@
 # Design: Interviewer and Voice Runtime
 
-> Maintained design. Last verified: 2026-08-07. This replaces the retired direct browser-to-Bedrock and signing-Lambda designs. Amplify hosting and authenticated browser-to-AgentCore WSS define the hosted architecture; their configuration and verification are environment-specific.
+> Maintained design. Last verified: 2026-08-08. This replaces direct browser-to-Bedrock access. Amplify hosting and short-lived signed browser-to-AgentCore WSS define the hosted architecture; their configuration and verification are environment-specific.
 
 ## Overview
 
@@ -19,14 +19,16 @@ React browser client (target: Amplify Hosting)
   │                           └─ reads interview configs from S3
   │<─ {success, runtime_context}
   │
-  ├─ authenticated WSS ─────> AgentCore serverless voice relay
+  ├─ POST voice session ────> Voice Session Lambda
+  │<─ five-minute signed WSS URL
+  ├─ signed WSS ────────────> AgentCore serverless voice relay
   │                            └─ bidirectional stream to Nova 2 Sonic
   │<─ audio/text Nova events
   │
   └─ POST evaluator input ──> Evaluator Function URL
 ```
 
-There is no signing Lambda or direct browser-to-Bedrock connection in the current repository. The React client, relay container, Lambdas, S3 configuration, and CDK backend stack exist; Amplify resources, authentication integration, deployment environment values, and a verified authenticated WSS connection do not yet exist. The final identity provider may use Amplify Auth/Cognito, but this document does not claim that choice is implemented.
+There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the public browser to connect without storing AWS credentials. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify build configuration exist; environment values and a verified hosted browser session remain environment-specific.
 
 ## Interviewer Lambda
 
@@ -70,7 +72,7 @@ Source: `backend/voice_agent/`
 
 The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/content identifiers and lifecycle sequencing, emits `session_start_ack`, sends audio through the bounded queue, and translates Nova output into the frontend event union. The adapter is covered by focused unit tests. A live browser session against Nova remains unverified.
 
-The production boundary is browser → authenticated `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
+The hosted boundary is browser → Voice Session Lambda → signed `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
 ## Nova Configuration
 
@@ -86,10 +88,10 @@ The context builder instructs Nova to conduct three main questions with one adap
 ## Hosted Architecture
 
 - Amplify Hosting serves the React/Vite static frontend.
-- CDK defines the four backend Lambdas and S3 configuration.
+- CDK defines four pipeline Lambdas, the Voice Session Lambda, and S3 configuration.
 - AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
-- Hosted environment values supply the HTTPS Lambda endpoints and authenticated AgentCore WSS endpoint; no account-specific endpoint is hard-coded.
+- Hosted environment values supply the five HTTPS Lambda endpoints; no account-specific endpoint is hard-coded.
 
 ## Remaining Integration Gaps
 
-The AgentCore endpoint and authentication flow are environment configuration. Each hosted environment must verify them with a live browser/Nova session. The frontend reads `VITE_VOICE_WS_URL` and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.
+Each hosted environment must verify the signed AgentCore handshake with a live browser/Nova session. The frontend reads `VITE_VOICE_SESSION_URL`, requests a fresh URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock.

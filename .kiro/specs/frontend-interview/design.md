@@ -6,7 +6,7 @@
 
 The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume and job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
 
-Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and an authenticated `wss://` connection to AgentCore.
+Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and a short-lived signed `wss://` connection to AgentCore.
 
 ## Architecture
 
@@ -15,7 +15,8 @@ Amplify-hosted React/Vite browser
   ├─ HTTPS → PDF Parser Lambda
   │           → Analyst Lambda (OpenAI GPT OSS 120B)
   │           → Interviewer Lambda + S3 configuration
-  ├─ authenticated WSS → AgentCore voice relay → Nova 2 Sonic
+  ├─ Voice Session Lambda → short-lived signed WSS
+  │                         └─ AgentCore voice relay → Nova 2 Sonic
   └─ HTTPS → Evaluator Lambda (OpenAI GPT OSS 120B)
 ```
 

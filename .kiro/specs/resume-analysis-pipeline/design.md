@@ -1,6 +1,6 @@
 # Design Document: Resume Analysis Pipeline
 
-> Maintained design. Last verified: 2026-08-07. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and authenticated AgentCore WSS are separate deployment boundaries.
+> Maintained design. Last verified: 2026-08-08. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and signed AgentCore WSS are separate hosted boundaries.
 
 ## Overview
 
@@ -28,6 +28,7 @@ sequenceDiagram
     participant Analyst as analyst Lambda
     participant Bedrock as Bedrock Mantle (GPT OSS)
     participant Interviewer as interviewer Lambda
+    participant VoiceSession as voice_session Lambda
     participant AgentCore as AgentCore voice relay
     participant NovaSonic as Nova Sonic
     participant Evaluator as evaluator Lambda
@@ -40,7 +41,9 @@ sequenceDiagram
     Analyst-->>Browser: analyst_output (schema v1.0)
     Browser->>Interviewer: POST analyst_output
     Interviewer-->>Browser: runtime context (for Nova Sonic)
-    Browser->>AgentCore: authenticated WSS (voice interview)
+    Browser->>VoiceSession: request short-lived signed URL
+    VoiceSession-->>Browser: signed WSS URL
+    Browser->>AgentCore: signed WSS (voice interview)
     AgentCore->>NovaSonic: Bedrock bidirectional stream
     NovaSonic-->>AgentCore: real-time audio/text
     AgentCore-->>Browser: real-time audio/text
@@ -48,7 +51,7 @@ sequenceDiagram
     Evaluator-->>Browser: scored evaluation report
 ```
 
-The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines all four Lambdas and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
+The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines four pipeline Lambdas, the Voice Session Lambda, and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
 
 ### Internal Lambda Architecture
 

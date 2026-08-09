@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/contexts/SessionContext';
 import { callAgent1 } from '@/services/agent1Client';
-import { VOICE_WS_URL } from '@/services/apiConfig';
+import { getVoiceWebSocketUrl } from '@/services/apiConfig';
 import { WebSocketClient } from '@/services/webSocketClient';
 import { MockWebSocketClient } from '@/services/mockWebSocketClient';
 
@@ -180,7 +180,11 @@ export function WaitingRoom() {
     };
 
     try {
-      await wsClient.connect({ url: VOICE_WS_URL, maxReconnectAttempts: 2, reconnectDelayMs: [1000, 2000] });
+      await wsClient.connect({
+        urlProvider: getVoiceWebSocketUrl,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: [1000, 2000],
+      });
       if (!isCurrentRequest()) return;
       dispatch({ type: 'WS_CONNECTED' });
     } catch (err) {

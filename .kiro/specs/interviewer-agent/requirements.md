@@ -1,6 +1,6 @@
 # Requirements: Interviewer and Voice Runtime
 
-> Maintained requirements. Last verified: 2026-08-07. A signing Lambda and direct browser-to-Bedrock access are retired. Amplify hosting and authenticated browser-to-AgentCore WSS are hosted-environment requirements.
+> Maintained requirements. Last verified: 2026-08-08. Direct browser-to-Bedrock access is retired. Amplify hosting and short-lived signed browser-to-AgentCore WSS are hosted-environment requirements.
 
 ## Interviewer Lambda
 
@@ -57,13 +57,13 @@ Current gap: the queue primitives exist, but `server.py` forwards audio through 
 2. The relay must own Nova-specific prompt/content identifiers and event ordering rather than exposing them to the browser.
 3. The adapter must translate session, audio, text, transcript, tool-use, interruption, and completion events; live Nova behavior remains an end-to-end verification requirement.
 
-### R8. Production Access Boundary
+### R8. Hosted Access Boundary
 
 1. Host the production React/Vite client on AWS Amplify Hosting.
-2. Require an authenticated `wss://` connection from the browser to AgentCore.
+2. Create five-minute SigV4-signed `wss://` URLs through a Lambda role scoped to the configured AgentCore runtime.
 3. Do not expose long-lived AWS credentials or direct Bedrock Nova invocation permissions to browser code.
-4. Supply the AgentCore endpoint and Lambda endpoints through deployment environment configuration.
-5. Treat Amplify/Auth provisioning, relay-side authentication validation, and production connection verification as pending until implemented and tested.
+4. Supply the five public Lambda endpoints through hosted environment configuration.
+5. Require live browser connection verification, budgets, and usage monitoring before sharing the no-login hosted application.
 
 ## Evaluator Handoff
 

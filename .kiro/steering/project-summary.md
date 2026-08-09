@@ -145,12 +145,12 @@ The implemented handoff marks an early-ended interview accordingly and scores on
 The agreed deployment architecture uses one AWS account:
 
 - AWS Amplify Hosting serves the React/Vite frontend.
-- An authenticated browser session opens a secure `wss://` connection to Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
+- The public browser obtains a five-minute signed `wss://` URL from the voice-session Lambda and opens Amazon Bedrock AgentCore Runtime. The browser does not invoke Bedrock directly or contain permanent AWS credentials.
 - AgentCore runs the FastAPI/Python voice relay as a serverless managed container runtime. The relay owns only connection-scoped state and proxies the bidirectional stream to Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`).
-- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. Analyst and Evaluator invoke OpenAI GPT OSS 120B through Amazon Bedrock Mantle; the Interviewer Lambda builds context from configuration without making a model call.
+- Four AWS Lambda functions handle PDF parsing, résumé analysis, Interviewer context building, and evaluation. A fifth Lambda signs short-lived AgentCore connection URLs. Analyst and Evaluator invoke OpenAI GPT OSS 120B through Amazon Bedrock Mantle; the Interviewer Lambda builds context from configuration without making a model call.
 - Amazon S3 stores the interview structure and student interview profile configuration.
 - AWS CDK defines the Lambda functions, their endpoints, permissions, and the S3 configuration resources. AgentCore remains a separate hosted container boundary.
 
-The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads its Lambda and AgentCore endpoints from environment configuration. The four hosted Lambda Function URLs are currently public and must be protected before the application is shared publicly.
+The frontend defaults to strict local mode, using the combined local HTTP/WebSocket server on port 8080, and the adapter has focused unit coverage. Hosted mode reads five Lambda endpoints from environment configuration. The no-login hosted design is public, so budgets, concurrency limits, and usage monitoring are operational requirements.
 
 No database or permanent interview history is currently implemented. Practice Mode presentation is implemented locally; cross-session history is not.

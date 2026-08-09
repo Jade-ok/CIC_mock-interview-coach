@@ -42,6 +42,19 @@ describe('WebSocketClient', () => {
       expect(client.getState()).toBe('connected');
     });
 
+    it('should resolve a URL provider before connecting', async () => {
+      const urlProvider = vi.fn().mockResolvedValue(TEST_URL);
+
+      await client.connect({
+        urlProvider,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: [10, 20],
+      });
+
+      expect(urlProvider).toHaveBeenCalledTimes(1);
+      expect(client.getState()).toBe('connected');
+    });
+
     it('should start in disconnected state', () => {
       expect(client.getState()).toBe('disconnected');
     });
@@ -435,6 +448,28 @@ describe('WebSocketClient', () => {
       expect(onReconnectSuccess).toHaveBeenCalledTimes(1);
       expect(client.getState()).toBe('connected');
 
+      client.disconnect();
+      newServer.close();
+    });
+
+    it('should request a fresh URL for reconnection', async () => {
+      const urlProvider = vi.fn().mockResolvedValue(TEST_URL);
+      const onReconnectSuccess = vi.fn();
+      client.onReconnectSuccess = onReconnectSuccess;
+
+      await client.connect({
+        urlProvider,
+        maxReconnectAttempts: 2,
+        reconnectDelayMs: [200, 400],
+      });
+      mockServer.close();
+      await flush();
+
+      const newServer = new Server(TEST_URL);
+      await delay(300);
+
+      expect(urlProvider).toHaveBeenCalledTimes(2);
+      expect(onReconnectSuccess).toHaveBeenCalledTimes(1);
       client.disconnect();
       newServer.close();
     });
