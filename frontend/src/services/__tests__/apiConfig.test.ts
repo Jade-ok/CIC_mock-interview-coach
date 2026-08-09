@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { API_ENDPOINTS, RUNTIME_MODE, VOICE_WS_URL } from '../apiConfig';
+import { API_ENDPOINTS, getVoiceWebSocketUrl, RUNTIME_MODE } from '../apiConfig';
 
 describe('local runtime configuration', () => {
   it('uses the combined local backend during Vite development', () => {
@@ -10,6 +10,9 @@ describe('local runtime configuration', () => {
       interviewer: 'http://localhost:8080/api/interviewer',
       evaluator: 'http://localhost:8080/api/evaluator',
     });
-    expect(VOICE_WS_URL).toBe('ws://localhost:8080/');
+  });
+
+  it('uses the local voice relay during Vite development', async () => {
+    await expect(getVoiceWebSocketUrl()).resolves.toBe('ws://localhost:8080/');
   });
 });

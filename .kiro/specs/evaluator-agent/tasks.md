@@ -1,6 +1,6 @@
 # Tasks
 
-> Historical implementation record. Paths and field names were refreshed on 2026-08-07; check current code and tests for implementation status. Amplify hosting, authenticated AgentCore WSS, and frontend handoff verification are tracked separately and are not implied complete below.
+> Historical implementation record. Paths and field names were refreshed on 2026-08-08; check current code and tests for implementation status. Amplify hosting, signed AgentCore WSS, and frontend handoff verification are tracked separately and are not implied complete below.
 
 ## Task 1: Project Setup and Module Scaffolding
 

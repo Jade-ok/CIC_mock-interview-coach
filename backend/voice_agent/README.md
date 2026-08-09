@@ -26,7 +26,8 @@ The target production path is:
 
 ```text
 React/Vite on Amplify Hosting
-  └─ authenticated WSS ─> AgentCore Runtime relay ─> Nova 2 Sonic
+  └─ Voice Session Lambda ─> short-lived signed WSS
+                             └─ AgentCore Runtime relay ─> Nova 2 Sonic
 ```
 
 Amplify Hosting does not proxy or authenticate this WebSocket automatically. Browser authentication/authorization and the public `wss://` endpoint are planned but not implemented in the repository. Use short-lived credentials or tokens supported by the selected AgentCore authorizer; never bundle permanent AWS credentials into the frontend.

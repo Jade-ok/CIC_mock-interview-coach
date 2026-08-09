@@ -7,13 +7,14 @@
 ```text
 React/Vite browser on AWS Amplify Hosting
   ├─ HTTPS ─> PDF Parser / Analyst / Interviewer / Evaluator Lambdas
-  └─ authenticated WSS ─> Amazon Bedrock AgentCore Runtime
+  └─ HTTPS ─> Voice Session Lambda ─> short-lived signed WSS
+                                      └─ Amazon Bedrock AgentCore Runtime
                                └─ Python voice relay ─> Nova 2 Sonic
 
-CDK ─> four Lambdas + S3 interview configuration
+CDK ─> five Lambdas + S3 interview configuration
 ```
 
-CDK defines the four Lambdas and S3 configuration bucket. Amplify Hosting serves the React build, while AgentCore runs the voice relay as a separate infrastructure boundary because the persistent bidirectional stream is not a good fit for a Lambda invocation.
+CDK defines the four pipeline Lambdas, the voice-session signer Lambda, and the S3 configuration bucket. Amplify Hosting serves the React build, while AgentCore runs the voice relay as a separate infrastructure boundary because the persistent bidirectional stream is not a good fit for a Lambda invocation.
 
 The hosted architecture places Amplify, AgentCore, Lambda, S3, and Bedrock access in one AWS account. Account-specific identifiers and generated deployment state do not belong in version control.
 
@@ -21,10 +22,10 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 
 ## What Exists Today
 
-- The CDK stack defines the four Lambda Function URLs and S3 configuration bucket.
+- The CDK stack defines five Lambda Function URLs and an S3 configuration bucket.
 - The Python relay runs locally and is configured for deployment with AWS's current `@aws/agentcore` CLI. Hosted runtime state and verification are environment-specific and are not tracked in this repository.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
-- Amplify Hosting resources/configuration and frontend authentication are not yet implemented.
+- `amplify.yml` defines the Amplify monorepo build. Environment-specific hosting state is not tracked in the repository.
 - The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
 - The frontend/relay wire protocol is aligned and unit-tested; a live Nova session remains unverified.
 
@@ -40,7 +41,7 @@ http://localhost:8080/api/evaluator
 ws://localhost:8080/
 ```
 
-Hosted mode reads `VITE_PDF_PARSER_URL`, `VITE_ANALYST_URL`, `VITE_INTERVIEWER_URL`, `VITE_EVALUATOR_URL`, and `VITE_VOICE_WS_URL` from its environment.
+Hosted mode reads `VITE_PDF_PARSER_URL`, `VITE_ANALYST_URL`, `VITE_INTERVIEWER_URL`, `VITE_EVALUATOR_URL`, and `VITE_VOICE_SESSION_URL` from its environment. The voice-session endpoint returns a fresh five-minute signed AgentCore WebSocket URL for each connection attempt.
 
 ### Local development workflow
 
@@ -48,7 +49,7 @@ Local testing requires AWS credentials with GPT OSS 120B and Nova 2 Sonic access
 
 Local mode runs the application services on the development machine. Bedrock model requests are authenticated with the active AWS identity shown by `aws sts get-caller-identity`. Never commit account identifiers or credentials.
 
-The hosted Amplify build uses an environment-driven secure WebSocket URL and browser-compatible authentication. Permanent AWS credentials are never Vite variables because `VITE_*` values are bundled into browser code.
+The hosted Amplify build requests a short-lived signed WebSocket URL from the voice-session Lambda. Permanent AWS credentials are never Vite variables because `VITE_*` values are bundled into browser code.
 
 ## Implemented HTTP Pipeline
 
@@ -116,7 +117,7 @@ Browser WebSocket → AgentCore FastAPI relay → Nova 2 Sonic
 
 The frontend and relay share application messages shaped as `{type, payload}`. `backend/voice_agent/protocol.py` expands those messages into the Nova event lifecycle, owns Nova identifiers, emits `session_start_ack`, and translates Nova responses back into browser audio/text/tool/interruption events. Focused contract tests cover setup, audio, text, shutdown, transcript stages, output audio, interruption, credential resolution, and the FastAPI endpoint with a fake Nova manager. A live browser/Nova session remains pending.
 
-In the hosted architecture, the browser-to-AgentCore connection uses short-lived user credentials or tokens. Amplify Hosting serves the frontend build but does not authenticate the WebSocket by itself. The runtime boundary is responsible for authorization, and long-lived AWS access keys never belong in the browser.
+In the hosted architecture, the public browser requests a short-lived signed AgentCore URL from the voice-session Lambda. AgentCore verifies the Lambda role's SigV4 signature during the WebSocket handshake, and long-lived AWS access keys never belong in the browser.
 
 ## Current Frontend Flow
 
@@ -134,6 +135,6 @@ The hosted flow requires live browser/Nova and authentication verification in it
 - [x] Full Analyst output remains available through the interview.
 - [x] Evaluator request matches `schemas/interviewer_output.json`.
 - [x] Evaluator response is treated as the returned object, not `{status, data}`.
-- [x] AgentCore endpoint is configurable through `VITE_VOICE_WS_URL`.
+- [x] Hosted voice sessions request fresh signed URLs through `VITE_VOICE_SESSION_URL`.
 - [x] Frontend and relay share one WebSocket wire protocol with focused unit coverage.
 - [ ] Real browser flow passes Upload → Waiting → Interview → Feedback.

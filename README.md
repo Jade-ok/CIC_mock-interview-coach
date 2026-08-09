@@ -12,6 +12,7 @@ backend/functions/analyst/  → Resume analysis (OpenAI GPT OSS 120B)
 backend/functions/interviewer/ → Interview context builder
 backend/functions/evaluator/   → Answer evaluation (OpenAI GPT OSS 120B)
 backend/functions/pdf_parser/  → PDF text extraction (pypdf)
+backend/functions/voice_session/ → Short-lived AgentCore WebSocket URL signer
 backend/voice_agent/         → Nova 2 Sonic WebSocket relay
 infrastructure/              → AWS CDK infrastructure definitions
 ```
@@ -127,7 +128,7 @@ Local mode uses `http://localhost:8080/api/*` for all four HTTP stages and `ws:/
 
 ## Hosted Architecture
 
-The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend, and Bedrock for GPT OSS 120B and Nova 2 Sonic. Keep account IDs, credentials, and physical resource names out of version control.
+The hosted architecture uses one AWS account: Amplify Hosting for React, AgentCore Runtime for the Python voice relay, Lambda/S3 for the HTTP backend and short-lived voice-session URLs, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The public client does not require a user login; its voice-session endpoint signs five-minute AgentCore connection URLs with a Lambda role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
 
 ## Important Notes
 

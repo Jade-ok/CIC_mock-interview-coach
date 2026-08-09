@@ -2,7 +2,7 @@
 
 > Maintained product stories. Last verified against current contracts and the hosted AWS architecture: 2026-08-07. Amplify hosting and authenticated voice access require environment-specific configuration and verification.
 
-Covers the full candidate journey across every component in the architecture: an Amplify-hosted React client → `pdf_parser` → `analyst` → `interviewer` → authenticated WSS to the AgentCore voice relay → Nova 2 Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior. CDK defines the Lambda/S3 backend infrastructure; AgentCore is a separate hosted-runtime boundary.
+Covers the full candidate journey across every component in the architecture: an Amplify-hosted React client → `pdf_parser` → `analyst` → `interviewer` → Voice Session Lambda → signed WSS to the AgentCore voice relay → Nova 2 Sonic (live interview) → `evaluator`, plus cross-cutting platform behavior. CDK defines the Lambda/S3 backend infrastructure; AgentCore is a separate hosted-runtime boundary.
 
 Module-level requirements (acceptance criteria, error handling, etc.) for the Interviewer Lambda are defined separately in `.kiro/specs/interviewer-agent/requirements.md`.
 
@@ -47,4 +47,4 @@ Module-level requirements (acceptance criteria, error handling, etc.) for the In
 - **US-6.2** As a candidate, I want a friendly error message and retry option if any step fails (upload, analysis, interview setup, evaluation), so that a transient backend hiccup doesn't end my session.
 - **US-6.3** As a candidate, I want no permanent interview record, so that I can practice without creating stored history (v1 has no database; AgentCore holds only transient voice-stream state). The planned authentication layer protects backend access and does not imply stored interview history.
 - **US-6.4** As a candidate, I want to repeat the same interview flow across multiple attempts, so that I can practice again without needing an account.
-- **US-6.5** As an operator, I want the public Amplify client to use authenticated WSS when opening AgentCore sessions, so that Nova access is not exposed through anonymous direct browser credentials.
+- **US-6.5** As an operator, I want the public Amplify client to use five-minute signed WSS URLs when opening AgentCore sessions, so that permanent AWS credentials are not exposed in browser code.

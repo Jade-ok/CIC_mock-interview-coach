@@ -12,6 +12,11 @@ export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const agentCoreRuntimeArn = new cdk.CfnParameter(this, 'AgentCoreRuntimeArn', {
+      type: 'String',
+      description: 'ARN of the AgentCore voice relay runtime for hosted browser sessions',
+    });
+
     // ------------------------------------------------------------------
     // S3 Bucket — interview structure + interview profile configs
     // ------------------------------------------------------------------
@@ -171,12 +176,45 @@ export class InfraStack extends cdk.Stack {
     });
 
     // ------------------------------------------------------------------
-    // Outputs — Function URLs for the frontend .env
+    // 5. Voice session Lambda — short-lived AgentCore WebSocket URLs
+    // ------------------------------------------------------------------
+    const voiceSessionFn = new lambda.Function(this, 'VoiceSessionFunction', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      code: lambda.Code.fromAsset(
+        path.join(__dirname, '../../backend/functions/voice_session'),
+        { exclude: functionAssetExcludes }
+      ),
+      handler: 'handler.lambda_handler',
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        AGENTCORE_RUNTIME_ARN: agentCoreRuntimeArn.valueAsString,
+      },
+    });
+
+    voiceSessionFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock-agentcore:InvokeAgentRuntimeWithWebSocketStream'],
+        resources: [
+          agentCoreRuntimeArn.valueAsString,
+          `${agentCoreRuntimeArn.valueAsString}/runtime-endpoint/*`,
+        ],
+      })
+    );
+
+    const voiceSessionUrl = voiceSessionFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: corsOptions,
+    });
+
+    // ------------------------------------------------------------------
+    // Outputs — hosted frontend configuration
     // ------------------------------------------------------------------
     new cdk.CfnOutput(this, 'AnalystUrl', { value: analystUrl.url });
     new cdk.CfnOutput(this, 'EvaluatorUrl', { value: evaluatorUrl.url });
     new cdk.CfnOutput(this, 'InterviewerUrl', { value: interviewerUrl.url });
     new cdk.CfnOutput(this, 'PdfParserUrl', { value: pdfParserUrl.url });
+    new cdk.CfnOutput(this, 'VoiceSessionUrl', { value: voiceSessionUrl.url });
     new cdk.CfnOutput(this, 'ConfigBucketName', { value: configBucket.bucketName });
   }
 }

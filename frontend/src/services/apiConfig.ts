@@ -29,8 +29,25 @@ export const API_ENDPOINTS = {
   evaluator: endpoint(import.meta.env.VITE_EVALUATOR_URL, 'evaluator'),
 } as const;
 
-export const VOICE_WS_URL = RUNTIME_MODE === 'local'
-  ? LOCAL_VOICE_WS_URL
-  : cleanUrl(import.meta.env.VITE_VOICE_WS_URL) || (() => {
-      throw new Error('Missing hosted voice WebSocket endpoint');
-    })();
+export async function getVoiceWebSocketUrl(): Promise<string> {
+  if (RUNTIME_MODE === 'local') return LOCAL_VOICE_WS_URL;
+
+  const sessionEndpoint = cleanUrl(import.meta.env.VITE_VOICE_SESSION_URL);
+  if (!sessionEndpoint) {
+    throw new Error('Missing hosted voice session endpoint');
+  }
+
+  const response = await fetch(sessionEndpoint, { method: 'POST' });
+  const payload: unknown = await response.json().catch(() => null);
+  const url = (
+    payload
+    && typeof payload === 'object'
+    && 'url' in payload
+    && typeof payload.url === 'string'
+  ) ? payload.url : undefined;
+
+  if (!response.ok || !url?.startsWith('wss://')) {
+    throw new Error('Unable to create a secure voice session');
+  }
+  return url;
+}
