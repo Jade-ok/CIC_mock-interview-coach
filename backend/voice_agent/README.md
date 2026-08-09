@@ -26,8 +26,9 @@ The hosted path is:
 
 ```text
 React/Vite on Amplify Hosting
-  └─ Voice Session Lambda ─> short-lived signed WSS
-                             └─ AgentCore Runtime relay ─> Nova 2 Sonic
+  └─ CloudFront `/voice-session` route (OAC)
+       └─ private Voice Session Function URL ─> short-lived signed WSS
+                                              └─ AgentCore relay ─> Nova 2 Sonic
 ```
 
 The application has no end-user login. The browser calls the CloudFront `/voice-session` route; OAC invokes the private Voice Session Function URL, whose resource-scoped role creates a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly. Hosted sessions have an eight-minute application limit, and the Voice Session Lambda is covered by alarms and the stack's AWS cost budget. Its optional normal concurrency cap defaults off until the target account quota supports it; the zero-concurrency emergency switch remains available.
@@ -39,6 +40,7 @@ The combined local backend resolves credentials through boto3's standard chain. 
 ```bash
 export AWS_PROFILE="<profile-name>"
 export AWS_REGION="us-east-1"
+aws sso login --profile "<profile-name>" # IAM Identity Center profiles only
 ```
 
 Alternatively, export access keys in the relay terminal. `AWS_SESSION_TOKEN` is required only for temporary credentials:

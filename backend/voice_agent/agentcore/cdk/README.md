@@ -10,6 +10,8 @@ This CDK project is managed by the AgentCore CLI and defines the hosted relay in
 
 ## Local validation
 
+The AgentCore CLI and CI generate ignored `agentcore/aws-targets.json` for the selected environment. For a fresh manual validation, copy `agentcore/aws-targets.example.json` to that ignored path and replace its placeholder target values first.
+
 - `npm run build` compile TypeScript to JavaScript
 - `npm run test` run unit tests
 - `npx cdk synth` emit the synthesized CloudFormation template

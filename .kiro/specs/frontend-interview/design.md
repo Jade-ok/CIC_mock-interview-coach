@@ -1,10 +1,10 @@
 # Frontend Interview Design
 
-> Maintained design. Last verified: 2026-08-08.
+> Maintained design. Last verified: 2026-08-09.
 
 ## Overview
 
-The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume and job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
+The frontend is a React, TypeScript, and Vite single-page application. A candidate uploads a PDF resume, pastes a job description, completes a real-time voice interview with Nova 2 Sonic, and receives structured feedback.
 
 Local development connects to `backend.local_server:app` for the HTTP pipeline and voice relay. The hosted architecture uses AWS Amplify Hosting, Lambda, and a short-lived signed `wss://` connection to AgentCore.
 
@@ -12,19 +12,20 @@ Local development connects to `backend.local_server:app` for the HTTP pipeline a
 
 ```text
 Amplify-hosted React/Vite browser
-  ├─ HTTPS → PDF Parser Lambda
-  │           → Analyst Lambda (OpenAI GPT OSS 120B)
-  │           → Interviewer Lambda + S3 configuration
-  ├─ Voice Session Lambda → short-lived signed WSS
-  │                         └─ AgentCore voice relay → Nova 2 Sonic
-  └─ HTTPS → Evaluator Lambda (OpenAI GPT OSS 120B)
+  └─ HTTPS → public CloudFront API distribution (OAC)
+               ├─ private PDF Parser Function URL
+               ├─ private Analyst Function URL (OpenAI GPT OSS 120B)
+               ├─ private Interviewer Function URL + S3 configuration
+               ├─ private Evaluator Function URL (OpenAI GPT OSS 120B)
+               └─ private Voice Session Function URL → signed WSS
+                                                       └─ AgentCore relay → Nova 2 Sonic
 ```
 
 Hosted integration requirements:
 
 - Production builds select the configured CloudFront HTTPS API base URL with `VITE_RUNTIME_MODE=hosted`; the voice-session response supplies a temporary signed WSS URL.
 - Amplify Hosting, the Voice Session Lambda, and the signed AgentCore WebSocket flow are deployed; the application intentionally has no end-user login.
-- One public CloudFront API gateway routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus the local Vite origin.
+- One public CloudFront API distribution routes to private `AWS_IAM` Lambda Function URLs using Origin Access Control. The Function URL CORS settings allow the configured Amplify origin plus exactly `http://localhost:5173` for hosted-mode local testing.
 - Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them. Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
 - Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
 - The protocol is unit-tested and has been exercised through the hosted browser/Nova path; real reconnection and session-restoration edge cases remain targeted verification work.
@@ -46,7 +47,7 @@ Upload → Waiting Room → Interview → Feedback
 
 ### UploadScreen
 
-- Accept one `application/pdf` file no larger than the shared 4 MB frontend/backend limit.
+- Accept one `application/pdf` file no larger than the shared 4 MiB (4,194,304 bytes) frontend/backend limit.
 - Accept job-description text up to 5,000 characters and display its live count.
 - Disable submission when either required input is missing.
 - Pass the actual `File` and text to the session reducer.
@@ -211,18 +212,17 @@ Local development uses the combined backend on port 8080. Hosted builds receive 
 
 ## Verification Properties
 
-1. Non-PDF or over-4-MB uploads are rejected by the current frontend.
+1. Non-PDF or over-4-MiB uploads are rejected by the current frontend.
 2. Submit remains disabled until both inputs exist.
 3. Waiting Room times out unless both dependencies become ready.
 4. Retry invokes only the failed dependency.
 5. Barge-in stops playback immediately.
-6. Text composition pauses microphone transmission.
-7. Reconnection attempts remain bounded.
-8. Practice Mode changes UI only.
-9. Only final transcript events are retained, in order.
-10. `session_start` is sent only after context and socket readiness.
-11. `end_interview` waits for playback before automatic shutdown.
-12. The End button remains enabled throughout the interview.
+6. Reconnection attempts remain bounded.
+7. Practice Mode changes UI only.
+8. Only final transcript events are retained, in order.
+9. `session_start` is sent only after context and socket readiness.
+10. `end_interview` waits for playback before automatic shutdown.
+11. The End button remains enabled throughout the interview.
 
 ## Remaining Work
 

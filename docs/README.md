@@ -1,6 +1,6 @@
 # Documentation Index
 
-Last verified: 2026-08-08.
+Last verified: 2026-08-09.
 
 ## Current Guides
 
@@ -26,6 +26,6 @@ The JSON files in `schemas/` are descriptive cross-component payload shapes, not
 
 The hosted architecture is a React/Vite frontend on AWS Amplify Hosting. A CloudFront route invokes the private Voice Session Lambda to create five-minute signed browser WebSocket URLs for an Amazon Bedrock AgentCore Runtime voice relay. AgentCore is a serverless managed container runtime; AWS operates and scales the underlying compute while this project owns the Python relay. The relay invokes Nova 2 Sonic. Four additional private Lambdas provide PDF parsing, resume analysis, interview context construction, and evaluation, while S3 stores interview configuration and CDK defines the CloudFront/five-Lambda/S3 backend.
 
-The browser/relay protocol adapter, Voice Session Lambda, Amplify site, local URL, and opt-in mock are implemented. The no-login hosted design uses one CloudFront API gateway with Origin Access Control in front of private IAM-protected Function URLs, exact browser origins, alarms, a default $25 account-wide AWS cost budget, hosted workload limits, and a zero-concurrency emergency switch. Optional nonzero per-function concurrency caps remain disabled unless the target account quota supports them. Path-filtered GitHub Actions workflows publish frontend, Lambda/CDK, and AgentCore changes from `main`; GitHub OIDC supplies short-lived AWS credentials without repository access keys. Pure local development uses the active developer AWS identity and does not enable the hosted text, output-token, model-timeout, retry, or voice-duration guardrails.
+The browser/relay protocol adapter, Voice Session Lambda, Amplify site, local URL, and opt-in mock are implemented. The no-login hosted design uses one CloudFront API distribution with Origin Access Control in front of private IAM-protected Function URLs, exact browser origins, alarms, a default $25 account-wide AWS cost budget, hosted workload limits, and a zero-concurrency emergency switch. Optional nonzero per-function concurrency caps remain disabled unless the target account quota supports them. Path-filtered GitHub Actions workflows publish frontend, Lambda/CDK, and AgentCore changes from `main`; GitHub OIDC supplies short-lived AWS credentials without repository access keys. Pure local development uses the active developer AWS identity and does not enable the hosted text, output-token, model-timeout, retry, or voice-duration guardrails.
 
 For local development, one Python process runs the four HTTP handlers and Nova voice relay using the developer's AWS credential chain. The credentials must allow GPT OSS 120B and Nova 2 Sonic, and startup prints the active AWS identity that owns local model usage and charges. See `guides/frontend-backend-wiring.md` for the complete two-terminal workflow. Hosted operation uses the Amplify + AgentCore architecture.

@@ -1,6 +1,6 @@
 # Requirements Document
 
-> Maintained requirements. Last verified: 2026-08-08. This Lambda is part of the deployed CDK-managed backend consumed by the no-login Amplify-hosted React client.
+> Maintained requirements. Last verified: 2026-08-09. This Lambda is a private Function URL origin reached through the CloudFront OAC distribution by the no-login Amplify-hosted React client.
 
 ## Introduction
 

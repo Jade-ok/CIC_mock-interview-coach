@@ -1,6 +1,6 @@
 # Guide Panel v2 — Tasks
 
-> Maintained implementation record. Last verified: 2026-08-08.
+> Maintained implementation record. Last verified: 2026-08-09.
 
 - [x] Refactor `GuidePanel.tsx` to avoid predictive-question wording.
 - [x] Add the `Key Competencies` section through `RoleSkillsHint`.

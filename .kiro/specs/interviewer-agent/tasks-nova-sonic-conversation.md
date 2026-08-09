@@ -1,6 +1,6 @@
 # Tracker: Nova Sonic Conversation Runtime
 
-> Active tracker. Last verified: 2026-08-08. The relay and hosted browser path are deployed; account-specific runtime identifiers remain environment configuration.
+> Active tracker. Last verified: 2026-08-09. The relay and hosted browser path are deployed; account-specific runtime identifiers remain environment configuration.
 
 ## Implemented Backend
 

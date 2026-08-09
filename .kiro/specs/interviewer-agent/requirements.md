@@ -1,6 +1,6 @@
 # Requirements: Interviewer and Voice Runtime
 
-> Maintained requirements. Last verified: 2026-08-08. Direct browser-to-Bedrock access is retired. Amplify hosting and short-lived signed browser-to-AgentCore WSS are hosted-environment requirements.
+> Maintained requirements. Last verified: 2026-08-09. Direct browser-to-Bedrock access is retired. Amplify hosting and short-lived signed browser-to-AgentCore WSS are hosted-environment requirements.
 
 ## Interviewer Lambda
 

@@ -1,6 +1,6 @@
 # Feedback Report Requirements
 
-> Maintained requirements. Last verified: 2026-08-08. `FeedbackReport` is integrated into `FeedbackScreen` and consumes `schemas/evaluator_output.json` through the `EvaluatorOutput` TypeScript type.
+> Maintained requirements. Last verified: 2026-08-09. `FeedbackReport` is integrated into `FeedbackScreen` and consumes `schemas/evaluator_output.json` through the `EvaluatorOutput` TypeScript type.
 
 ## Purpose
 

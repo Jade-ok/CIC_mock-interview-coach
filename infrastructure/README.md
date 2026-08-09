@@ -31,7 +31,7 @@ The stack does not provision AWS WAF, so it avoids WAF's fixed monthly web-ACL b
 
 Path-filtered GitHub Actions workflows publish changes from `main`. The application workflow serializes matching revisions by testing and deploying `MockInterviewStack` through CDK before building React/Vite and publishing that same revision to the existing manual Amplify app. Voice-relay changes update AgentCore separately; both paths reject stale revisions and share one production concurrency lock. AWS access uses temporary OIDC credentials from a role whose trust is restricted to the immutable repository identity and `refs/heads/main`; no long-lived AWS deployment keys are stored in GitHub.
 
-The deployment role ARN and Amplify app ID are repository variables. Account IDs, physical resource names, endpoint URLs, and generated environment state stay out of tracked documentation.
+The deployment role ARN, Amplify app ID, and cost-alert email are repository variables. Account IDs, physical resource names, endpoint URLs, email values, and generated environment state stay out of tracked documentation. Changes to `deployment-automation-stack.ts` or its entry point are excluded from the application workflow and require an explicit update of that bootstrap stack.
 
 ## Prerequisites
 

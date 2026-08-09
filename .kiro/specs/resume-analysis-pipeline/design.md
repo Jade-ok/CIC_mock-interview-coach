@@ -1,6 +1,6 @@
 # Design Document: Resume Analysis Pipeline
 
-> Maintained design. Last verified: 2026-08-08. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and signed AgentCore WSS are separate hosted boundaries.
+> Maintained design. Last verified: 2026-08-09. The testing inventory near the end describes current coverage and environment verification separately. Amplify hosting and signed AgentCore WSS are separate hosted boundaries.
 
 ## Overview
 
@@ -9,7 +9,7 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Mantle Chat Completions with a forced function call, validates the response against the analyst_output schema, and returns it to the frontend.
 
-The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses one CloudFront OAC gateway in front of private Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
+The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses one CloudFront API distribution with OAC in front of private Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
@@ -24,6 +24,7 @@ The React browser client orchestrates the pipeline: it calls pdf_parser first, t
 ```mermaid
 sequenceDiagram
     participant Browser
+    participant CloudFront as CloudFront API distribution
     participant PdfParser as pdf_parser Lambda
     participant Analyst as analyst Lambda
     participant Bedrock as Bedrock Mantle (GPT OSS)
@@ -33,22 +34,27 @@ sequenceDiagram
     participant NovaSonic as Nova Sonic
     participant Evaluator as evaluator Lambda
 
-    Browser->>PdfParser: POST resume PDF + job posting (base64/text)
-    PdfParser-->>Browser: extracted text (resume_text, job_posting_text)
-    Browser->>Analyst: POST extracted text
+    Browser->>CloudFront: POST /pdf-parser
+    CloudFront->>PdfParser: OAC-signed origin request
+    PdfParser-->>Browser: extracted text (via CloudFront)
+    Browser->>CloudFront: POST /analyst
+    CloudFront->>Analyst: OAC-signed extracted text
     Analyst->>Bedrock: Chat Completions (forced function)
     Bedrock-->>Analyst: forced function response (structured JSON)
-    Analyst-->>Browser: analyst_output (schema v1.0)
-    Browser->>Interviewer: POST analyst_output
-    Interviewer-->>Browser: runtime context (for Nova Sonic)
-    Browser->>VoiceSession: request short-lived signed URL
-    VoiceSession-->>Browser: signed WSS URL
+    Analyst-->>Browser: analyst_output via CloudFront (schema v1.0)
+    Browser->>CloudFront: POST /interviewer
+    CloudFront->>Interviewer: OAC-signed analyst_output
+    Interviewer-->>Browser: runtime context via CloudFront
+    Browser->>CloudFront: POST /voice-session
+    CloudFront->>VoiceSession: OAC-signed request
+    VoiceSession-->>Browser: signed WSS URL via CloudFront
     Browser->>AgentCore: signed WSS (voice interview)
     AgentCore->>NovaSonic: Bedrock bidirectional stream
     NovaSonic-->>AgentCore: real-time audio/text
     AgentCore-->>Browser: real-time audio/text
-    Browser->>Evaluator: POST analyst_output + transcript
-    Evaluator-->>Browser: scored evaluation report
+    Browser->>CloudFront: POST /evaluator
+    CloudFront->>Evaluator: OAC-signed analyst_output + transcript
+    Evaluator-->>Browser: scored report via CloudFront
 ```
 
 The browser never connects directly to Nova or receives long-lived Bedrock credentials. AgentCore runs the Python relay as an AWS-managed serverless container runtime. CDK defines four pipeline Lambdas, the Voice Session Lambda, and the S3 interview-configuration resources; Amplify Hosting and AgentCore are separate infrastructure boundaries.
@@ -441,7 +447,7 @@ analyst_output = json.loads(arguments)
 | REGION | `"us-east-1"` | `bedrock_client.py` |
 | MODEL_ID | `"openai.gpt-oss-120b"` | `prompt_builder.py` |
 | MAX_ATTEMPTS | `1` | `bedrock_client.py` |
-| MAX_PDF_SIZE_BYTES | `4_194_304` (4 MB) | `validation.py` (pdf_parser) |
+| MAX_PDF_SIZE_BYTES | `4_194_304` (4 MiB) | `validation.py` (pdf_parser) |
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
 | MIN_JOB_POSTING_WORDS | `30` | `parser.py` (analyst) |
 | SCHEMA_VERSION | `"1.0"` | `parser.py` (analyst) |
@@ -485,7 +491,7 @@ analyst_output = json.loads(arguments)
 
 ### Property 6: pdf_parser Validation Rejects Malformed Requests
 
-*For any* request payload that (a) contains neither `resume` nor `job_posting`, (b) has a PDF document exceeding 4 MB, or (c) is missing required sub-fields for a declared document, the pdf_parser SHALL return an error response and never attempt PDF processing.
+*For any* request payload that (a) contains neither `resume` nor `job_posting`, (b) has a PDF document exceeding 4 MiB (4,194,304 bytes), or (c) is missing required sub-fields for a declared document, the pdf_parser SHALL return an error response and never attempt PDF processing.
 
 **Validates: Requirements 4.1, 4.2, 4.3**
 

@@ -1,6 +1,6 @@
 # Design: Interviewer and Voice Runtime
 
-> Maintained design. Last verified: 2026-08-08. This replaces direct browser-to-Bedrock access. Amplify hosting and short-lived signed browser-to-AgentCore WSS are deployed parts of the hosted architecture.
+> Maintained design. Last verified: 2026-08-09. This replaces direct browser-to-Bedrock access. Amplify hosting and short-lived signed browser-to-AgentCore WSS are deployed parts of the hosted architecture.
 
 ## Overview
 
@@ -15,17 +15,20 @@ The browser retains UI state and transcript data. No persistent interview sessio
 
 ```text
 React browser client on Amplify Hosting
-  ├─ POST analyst_output ──> Interviewer Function URL
-  │                           └─ reads interview configs from S3
-  │<─ {success, runtime_context}
+  ├─ POST /interviewer ──> CloudFront API distribution (OAC)
+  │                           └─ private Interviewer Function URL
+  │                                └─ reads interview configs from S3
+  │<─ {success, runtime_context} via CloudFront
   │
-  ├─ POST voice session ────> Voice Session Lambda
-  │<─ five-minute signed WSS URL
+  ├─ POST /voice-session ─> CloudFront API distribution (OAC)
+  │                           └─ private Voice Session Function URL
+  │<─ five-minute signed WSS URL via CloudFront
   ├─ signed WSS ────────────> AgentCore serverless voice relay
   │                            └─ bidirectional stream to Nova 2 Sonic
   │<─ audio/text Nova events
   │
-  └─ POST evaluator input ──> Evaluator Function URL
+  └─ POST /evaluator ────> CloudFront API distribution (OAC)
+                              └─ private Evaluator Function URL
 ```
 
 There is no direct browser-to-Bedrock connection. The Voice Session Lambda signs five-minute AgentCore URLs with its resource-scoped execution role, allowing the public browser to connect without storing AWS credentials or requiring an end-user login. The React client, relay container, Lambdas, S3 configuration, CDK backend stack, and Amplify-hosted path are deployed; account-specific identifiers remain environment configuration.
@@ -92,7 +95,7 @@ The context builder instructs Nova to conduct three main questions with one adap
 - Amplify Hosting serves the React/Vite static frontend.
 - CDK defines four pipeline Lambdas, the Voice Session Lambda, and S3 configuration.
 - AgentCore runs the managed serverless voice relay as a separate infrastructure boundary.
-- Hosted environment values supply the five HTTPS Lambda endpoints; no account-specific endpoint is hard-coded.
+- Hosted environment configuration supplies one `VITE_API_BASE_URL`; the frontend appends the five CloudFront route paths, and no account-specific endpoint is hard-coded.
 
 ## Remaining Verification Gaps
 

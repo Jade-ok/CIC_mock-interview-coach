@@ -8,7 +8,7 @@ Receives interview conversation + analyst output, calls Bedrock Mantle Chat Comp
 
 During local development, `backend.local_server:app` invokes the handler directly. Its Bedrock request uses the AWS identity active in the local SDK credential chain.
 
-In hosted mode, the Evaluator runs behind a private IAM-protected Function URL reached through the CloudFront OAC gateway. It uses one 55-second Mantle attempt, a 4,096-token output ceiling, a 60,000-character conversation cap, and a 120,000-character Analyst-output cap. Its Lambda is covered by alarms and the stack's AWS cost budget; its optional normal concurrency cap defaults off until the target account quota supports it. Local execution retains two 120-second attempts, the 8,192-token output budget, and does not apply the hosted text caps.
+In hosted mode, the Evaluator runs behind a private IAM-protected Function URL reached through the CloudFront API distribution and OAC. It uses one 55-second Mantle attempt, a 4,096-token output ceiling, a 60,000-character conversation cap, and a 120,000-character Analyst-output cap. Its Lambda is covered by alarms and the stack's AWS cost budget; its optional normal concurrency cap defaults off until the target account quota supports it. Local execution retains two 120-second attempts, the 8,192-token output budget, and does not apply the hosted text caps.
 
 ## Input
 
@@ -54,5 +54,5 @@ The role also permits `bedrock-mantle:GetProject`, `ListProjects`, and `ListTags
 ```bash
 pip install -r backend/functions/evaluator/requirements.txt
 pip install pytest
-python -m pytest backend/functions/evaluator/tests/ -v
+python3 -m pytest backend/functions/evaluator/tests/ -v
 ```
