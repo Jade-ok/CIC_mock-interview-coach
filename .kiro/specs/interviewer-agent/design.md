@@ -74,6 +74,8 @@ The relay accepts the frontend's `{type, payload}` messages, owns Nova prompt/co
 
 The hosted boundary is browser → Voice Session Lambda → signed `wss://` → AgentCore relay → Nova. The browser must not receive long-lived AWS credentials or invoke Nova directly.
 
+AgentCore sets `HOSTED_GUARDRAILS_ENABLED=true`, which applies an eight-minute application limit to hosted voice sessions. The combined local server explicitly sets that flag to `false`, so a stale shell value cannot enable the hosted duration limit locally. The Voice Session Lambda itself is covered by hosted alarm/budget controls and the emergency shutdown switch; its optional normal concurrency cap defaults off until the target account quota supports it.
+
 ## Nova Configuration
 
 | Setting | Value |
@@ -94,4 +96,4 @@ The context builder instructs Nova to conduct three main questions with one adap
 
 ## Remaining Verification Gaps
 
-The frontend reads `VITE_VOICE_SESSION_URL`, requests a fresh five-minute signed URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock. Continue targeted verification of reconnect exhaustion, expired sessions, and transcript preservation across reconnects.
+The frontend requests `VITE_API_BASE_URL/voice-session`, receives a fresh five-minute signed URL for connection and reconnection, and uses the real relay by default; `VITE_USE_MOCK_WEBSOCKET=true` explicitly enables the mock. Continue targeted verification of reconnect exhaustion, expired sessions, and transcript preservation across reconnects.

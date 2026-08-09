@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Callable
@@ -20,6 +21,10 @@ from fastapi import FastAPI, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+# This module is the pure local entry point. Prevent a stale shell variable from
+# accidentally enabling hosted cost guardrails in the local process.
+os.environ["HOSTED_GUARDRAILS_ENABLED"] = "false"
 
 from backend.functions.interviewer.context_builder import build_runtime_context
 from backend.functions.interviewer.validation import validate_input

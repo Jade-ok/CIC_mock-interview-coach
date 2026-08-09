@@ -30,7 +30,7 @@ React/Vite on Amplify Hosting
                              └─ AgentCore Runtime relay ─> Nova 2 Sonic
 ```
 
-The application has no end-user login. The public browser calls the Voice Session Lambda, which uses its resource-scoped role to create a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly. The Voice Session Lambda is one of five public Function URLs, so budgets, monitoring, and concurrency controls remain necessary.
+The application has no end-user login. The browser calls the CloudFront `/voice-session` route; OAC invokes the private Voice Session Function URL, whose resource-scoped role creates a fresh five-minute SigV4-signed AgentCore `wss://` URL. The browser never receives permanent AWS credentials or invokes Nova directly. Hosted sessions have an eight-minute application limit, and the Voice Session Lambda is covered by alarms and the stack's AWS cost budget. Its optional normal concurrency cap defaults off until the target account quota supports it; the zero-concurrency emergency switch remains available.
 
 ## Local Run
 
@@ -62,6 +62,8 @@ aws sts get-caller-identity
 ```
 
 The combined server exposes HTTP handlers under `/api`, WebSocket routes at `/` and `/ws`, and health checks at `/api/health`, `/ping`, and `/health`.
+
+Pure local voice sessions do not enable the hosted eight-minute application limit. AWS service quotas and credential lifetime still apply.
 
 ## Hosted Runtime
 

@@ -36,7 +36,7 @@
 ## Task 4: Implement Bedrock Client
 
 - [x] Implement SigV4-signed Bedrock Mantle Chat Completions requests in us-east-1
-- [x] Implement `invoke(system, messages, tool_config)` with retry logic (max 2 attempts)
+- [x] Implement environment-aware `invoke(system, messages, tool_config)`: one hosted attempt and at most two local attempts
 - [x] Implement `_extract_tool_input(response)` to parse the forced function arguments from Chat Completions
 - [x] Raise `EvaluationError` on total failure or missing function call
 - [x] Write unit tests with mocked Mantle HTTP responses: success, retry, terminal failure, and malformed output
@@ -71,5 +71,5 @@
 - [x] Run full integration test locally with mocked Bedrock response
 - [x] Verify response JSON matches the defined output schema
 - [x] Add requirements.txt or pyproject.toml with boto3 dependency
-- [x] Keep the infrastructure template aligned with the Lambda runtime configuration (300s timeout, Python 3.12 runtime)
+- [x] Keep the infrastructure template aligned with the runtime: hosted calls use one 55-second attempt inside a 60-second Lambda; local calls retain two 120-second attempts
 - [x] Document credential-chain behavior and model-scoped Bedrock Mantle IAM permissions

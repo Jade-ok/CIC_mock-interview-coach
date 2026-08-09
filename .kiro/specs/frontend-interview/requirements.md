@@ -13,6 +13,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 3. PDFs larger than 4 MB must be rejected before upload, matching the PDF Parser's backend limit.
 4. The Submit button must remain disabled until both a file and non-empty job-description text exist.
 5. Submission must store the actual `File` and job-description text in session state.
+6. Job-description text must be capped at 5,000 characters in every runtime mode.
 
 ## 2. Waiting Room
 
@@ -21,7 +22,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 3. `session_start` must not be sent until Agent 1 context and a connected socket both exist.
 4. The interview must not begin until `session_start_ack` is received.
 5. If the voice relay is not connected after 30 seconds, the UI must show a retryable connection error.
-6. Agent 1 may run for up to 330 seconds so two sequential 120-second Bedrock calls plus pipeline overhead can complete.
+6. Agent 1 may run for up to 330 seconds so local schema recovery and pipeline overhead can complete; hosted Analyst execution is bounded to one 55-second model attempt.
 7. Retry must preserve a successful or still-running dependency and retry only the failed dependency.
 8. Going back must abort the active Agent 1 request, disconnect the active socket, and reset session state.
 
@@ -77,9 +78,12 @@ This specification covers the React frontend and its use of existing HTTP and We
 2. The current application intentionally has no end-user login.
 3. The signed AgentCore URL authenticates the Voice Session Lambda role to AgentCore; it is not an end-user login mechanism.
 4. Permanent AWS credentials must never be embedded in browser code.
-5. Five Lambda Function URLs currently use public `NONE` authentication and wildcard CORS; budgets, monitoring, and concurrency controls are required for this public design.
+5. The browser uses one public CloudFront API base URL. CloudFront OAC signs requests to five private `AWS_IAM` Function URLs, and CORS is restricted to the configured Amplify origin and local Vite origin.
 6. Hosted endpoint values must be supplied through environment configuration rather than committed source.
 7. The hosted application must support end-to-end verification from its Amplify origin.
+8. Hosted Lambdas must have invocation/error/throttle alarms and an AWS monthly cost budget with email notifications. A zero-concurrency emergency switch must be available. Optional normal concurrency caps must remain disabled unless the target AWS account quota supports them.
+9. Hosted Analyst/Evaluator calls must use bounded text inputs and a 4,096-token output ceiling; hosted Nova sessions must end after eight minutes.
+10. Pure local execution must leave the additional hosted text, output-token, and voice-duration guardrails disabled. Existing AWS quotas, the shared 4 MiB PDF limit, and the product-wide 5,000-character job-description limit still apply.
 
 ## 8. Accessibility and Presentation
 
@@ -107,4 +111,4 @@ Still pending:
 
 - Transcript viewing from the FeedbackReport.
 - Real AgentCore reconnection and session-history restoration edge cases.
-- Additional cost controls for the public Function URLs.
+- Optional stronger public-endpoint abuse controls beyond the implemented alarms, budget notifications, model/session caps, and emergency shutdown switch. Normal concurrency caps also remain optional until the target account quota supports them.

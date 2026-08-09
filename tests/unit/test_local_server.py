@@ -1,11 +1,16 @@
 import asyncio
 import json
+import os
 
 from backend import local_server
 
 
 def response_json(response) -> dict:
     return json.loads(response.body.decode("utf-8"))
+
+
+def test_local_entry_point_disables_hosted_guardrails():
+    assert os.environ["HOSTED_GUARDRAILS_ENABLED"] == "false"
 
 
 def test_local_interviewer_reads_repository_config():

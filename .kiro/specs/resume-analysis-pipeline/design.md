@@ -9,13 +9,13 @@ The Resume Analysis Pipeline consists of two stateless AWS Lambda functions that
 1. **pdf_parser** — accepts base64-encoded PDFs and plain-text job postings, extracts text using pypdf, and returns the extracted content.
 2. **analyst** — receives extracted text (resume + job posting), calls Amazon Bedrock Mantle Chat Completions with a forced function call, validates the response against the analyst_output schema, and returns it to the frontend.
 
-The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
+The React browser client orchestrates the pipeline: it calls pdf_parser first, then passes extracted text to the analyst. The hosted client uses one CloudFront OAC gateway in front of private Lambda Function URLs (no API Gateway). Local mode sends the same HTTP payloads to `backend.local_server:app`, which invokes the Python handlers directly. Each Lambda retains Function URL and direct-invocation compatibility.
 
 **Key Design Decisions:**
 - Stateless architecture — no database, no S3 for session state; the browser holds all state.
 - Forced function pattern — the analyst_output schema is supplied as a Chat Completions function and selected through `tool_choice`, producing structured JSON arguments without brittle text parsing.
 - Partial success — when processing combined documents, pdf_parser returns results for successful extractions alongside errors for failed ones.
-- Bounded retry — each Bedrock client call makes one transport attempt. The orchestrator makes one additional call only when the first response fails schema validation, for a maximum of two Bedrock calls within the 300-second Lambda budget.
+- Environment-aware recovery — hosted uses one 55-second Mantle call and does not make a schema-recovery call; local uses a 120-second transport timeout and makes one additional call only when the first response fails schema validation.
 
 ## Architecture
 
@@ -119,6 +119,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     - Decoded PDF size <= 4 MiB (4,194,304 bytes) per document
     - Required fields present for each document type
     - Format flag is valid ("pdf" or "text") for job_posting
+    - Plain-text job posting content is no longer than 5,000 characters
     
     Returns:
         (is_valid, error_message_or_none)
@@ -192,7 +193,7 @@ def validate_request(payload: dict) -> tuple[bool, str | None]:
     """
     Validates:
     - resume_text present and non-empty string
-    - job_posting_text present and non-empty string
+    - job_posting_text present, non-empty, and no longer than 5,000 characters in every invocation mode
     
     Returns:
         (is_valid, error_message_or_none)
@@ -417,7 +418,7 @@ The `data` field contains the full analyst_output conforming to `schemas/analyst
         }
     ],
     "tool_choice": {"type": "function", "function": {"name": "analyst_output"}},
-    "max_tokens": 8192,
+    "max_tokens": 4096,  // hosted; pure local mode retains 8192
     "temperature": 0.0,
     "reasoning_effort": "low"
 }
@@ -557,23 +558,23 @@ Validation failures use the error envelope/status indicators below. Extraction f
 | Both fields missing/empty | `{"status": "error", "error": "Missing or empty fields: resume_text, job_posting_text"}` | 400 |
 | Malformed JSON in event['body'] | `{"status": "error", "error": "Failed to parse request body as JSON"}` | 400 |
 | Bedrock transient failure | `{"status": "error", "error": "Bedrock service error: Bedrock Mantle call failed after 1 attempt: <reason>"}` | 502 |
-| Bedrock response not parseable on the recovery call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
-| Schema validation failure on the recovery call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
+| Bedrock response not parseable after the allowed local recovery, or on the single hosted call | `{"status": "error", "error": "Response validation error: <parser detail>"}` | 502 |
+| Schema validation failure after the allowed local recovery, or on the single hosted call | `{"status": "error", "error": "Response validation error: <schema detail>"}` | 502 |
 | Unexpected exception | `{"status": "error", "error": "Internal error: <brief description>"}` | 500 |
 
 ### Retry Strategy (analyst)
 
 ```text
-orchestrator attempt 1
+local orchestrator attempt 1
   └─ bedrock_client: 1 transport attempt
   └─ parse and validate
-if schema validation fails:
+if local schema validation fails:
   orchestrator attempt 2
     └─ bedrock_client: 1 fresh transport attempt
     └─ parse and validate
 ```
 
-`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Schema-invalid model output receives one recovery call, so the maximum is two service calls.
+`ReadTimeoutError`, throttling, and Bedrock 5xx responses are surfaced immediately by the client. Local schema-invalid output receives one recovery call, for at most two service calls; hosted schema-invalid output is returned after its single call.
 
 ## Testing Strategy: Current and Planned
 
@@ -581,7 +582,7 @@ if schema validation fails:
 
 - `backend/functions/pdf_parser/tests/test_validation.py` covers the ten validation and invocation-mode cases migrated from the original standalone check script.
 - `tests/integration/test_pipeline.py` runs a mocked Analyst → Interviewer → Evaluator contract flow in isolated subprocesses.
-- Analyst operational tests cover the Bedrock timeout/retry configuration, GPT OSS 120B model, 8,192-token budget, and one schema-recovery call.
+- Analyst operational tests cover the Bedrock timeout/retry configuration, GPT OSS 120B model, the hosted 4,096/local 8,192-token budgets, hosted input caps, and one schema-recovery call.
 - Evaluator and Interviewer have their own unit suites under their function directories.
 - There is currently no PDF extraction/orchestrator suite, Hypothesis suite, or real-AWS integration suite.
 

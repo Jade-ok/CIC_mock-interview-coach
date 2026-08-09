@@ -22,13 +22,14 @@ AgentCore is serverless infrastructure from the application's perspective: it ru
 
 ## What Exists Today
 
-- The CDK stack defines five Lambda Function URLs and an S3 configuration bucket.
+- The CDK stack defines five private IAM-protected Lambda Function URLs, one CloudFront OAC gateway, and an S3 configuration bucket.
 - The Python relay runs locally and on an AgentCore Runtime. Environment-specific runtime state is not tracked in this repository.
 - The React frontend, HTTP clients, mock WebSocket path, and interview UI exist.
 - Amplify hosts the production React build. Its app identifier, domain, and environment-specific endpoint values are not tracked in this documentation.
-- The current Function URLs use public `NONE` authentication and wildcard CORS; they must not be described as protected production APIs.
+- Browsers use the CloudFront API base URL. CloudFront signs origin requests with Origin Access Control; direct Function URL requests require IAM and are rejected for anonymous callers.
+- Hosted usage is monitored by invocation/error/throttle alarms and a default $25 account-wide AWS cost budget, and bounded by 4,096-token Analyst/Evaluator output caps, explicit text-size caps, and an eight-minute voice-session limit. The stack has a zero-concurrency emergency switch. Optional normal concurrency caps default off until the AWS account quota supports them.
 - The frontend/relay wire protocol is aligned, unit-tested, and used by the hosted Nova flow.
-- Three path-filtered GitHub Actions workflows publish matching frontend, Lambda/CDK, and AgentCore changes from `main`. They assume a restricted AWS role through GitHub OIDC and do not store permanent AWS access keys.
+- The serialized application workflow deploys the CDK backend before publishing the same `main` revision to Amplify; a separate workflow updates AgentCore. Both reject stale revisions and share one production lock. They assume a restricted AWS role through GitHub OIDC and do not store permanent AWS access keys.
 
 ## Runtime Modes
 
@@ -42,7 +43,7 @@ http://localhost:8080/api/evaluator
 ws://localhost:8080/
 ```
 
-Hosted mode reads `VITE_PDF_PARSER_URL`, `VITE_ANALYST_URL`, `VITE_INTERVIEWER_URL`, `VITE_EVALUATOR_URL`, and `VITE_VOICE_SESSION_URL` from its environment. The voice-session endpoint returns a fresh five-minute signed AgentCore WebSocket URL for each connection attempt.
+Hosted mode reads one `VITE_API_BASE_URL` from its environment and uses its `/pdf-parser`, `/analyst`, `/interviewer`, `/evaluator`, and `/voice-session` routes. Hosted JSON POSTs include a SHA-256 payload hash so CloudFront can sign the private Function URL request. The voice-session route returns a fresh five-minute signed AgentCore WebSocket URL for each connection attempt.
 
 ### Local development workflow
 
@@ -82,7 +83,7 @@ npm ci
 npm run dev
 ```
 
-PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity. The Vite development server forcibly selects local routing, so hosted `VITE_*_URL` values are ignored and no deployed endpoint is required. Never commit account identifiers or credentials.
+PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity. With `VITE_RUNTIME_MODE=local` (the default), `VITE_API_BASE_URL` is ignored and no deployed endpoint is required. Setting the mode explicitly to `hosted` exercises the bounded hosted services. The additional hosted text/output/session guardrails are disabled in the pure local path; local model calls retain the 8,192-token output budget and local voice has no application-imposed eight-minute limit. The product-wide 5,000-character job-description and 4 MiB PDF limits still apply, as do AWS quotas. Never commit account identifiers or credentials.
 
 The hosted Amplify build requests a short-lived signed WebSocket URL from the voice-session Lambda. Permanent AWS credentials are never Vite variables because `VITE_*` values are bundled into browser code.
 
@@ -162,7 +163,7 @@ In the hosted architecture, the public browser requests a short-lived signed Age
 - The submitted PDF/JD and complete Analyst output are retained in active session state for downstream calls.
 - Feedback offers **Retry with This Resume**, which preserves the uploaded inputs and analysis, and **Retry with New Resume**, which resets the flow to upload.
 
-The hosted application intentionally has no end-user login. Its public Function URLs and model-backed operations require cost monitoring and tightly scoped infrastructure roles.
+The hosted application intentionally has no end-user login. Its public CloudFront gateway and model-backed operations require cost monitoring and tightly scoped infrastructure roles; the raw Function URLs are private.
 
 ## Verification Checklist
 
@@ -171,6 +172,6 @@ The hosted application intentionally has no end-user login. Its public Function 
 - [x] Full Analyst output remains available through the interview.
 - [x] Evaluator request matches `schemas/interviewer_output.json`.
 - [x] Evaluator response is treated as the returned object, not `{status, data}`.
-- [x] Hosted voice sessions request fresh signed URLs through `VITE_VOICE_SESSION_URL`.
+- [x] Hosted voice sessions request fresh signed URLs through `VITE_API_BASE_URL/voice-session`.
 - [x] Frontend and relay share one WebSocket wire protocol with focused unit coverage.
 - [x] Hosted browser flow is wired through Upload → Waiting → Interview → Feedback.

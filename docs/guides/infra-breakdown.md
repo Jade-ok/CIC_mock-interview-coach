@@ -50,16 +50,19 @@ One stack defines the HTTP backend and interview configuration. The AgentCore vo
 | PDF Parser Lambda | `PdfParserFunction` | Extracts text from uploaded resumes using pypdf |
 | Voice Session Lambda | `VoiceSessionFunction` | Creates five-minute signed AgentCore WebSocket URLs |
 
-Every Lambda currently gets a **Function URL** with public `NONE` authentication for hosted operation. Local requests reach the same handler logic through `backend.local_server:app`. The application intentionally has no end-user login, so budgets, monitoring, scoped IAM roles, and appropriate service limits are important safeguards for the public endpoints.
+Every Lambda gets a private **Function URL** with `AWS_IAM` authentication. A single CloudFront distribution uses Origin Access Control to sign requests to those origins. Local requests reach the same handler logic through `backend.local_server:app`. The application intentionally has no end-user login, so the stack applies exact hosted browser origins, alarms, a monthly cost budget, workload limits, an emergency switch, and scoped IAM roles to the public CloudFront surface.
 
 The names above are CDK construct IDs. Because `functionName` is not set, CloudFormation generates the deployed physical Lambda names.
 
 ### Key Design Decisions
 
-- **No API Gateway.** Function URLs provide the HTTP surface. CORS is configured on the URL resource itself (`allowedOrigins: ['*']`), not in Python code.
+- **CloudFront without API Gateway.** CloudFront provides path routing and OAC request signing; private Function URLs remain the origins. CORS is configured on the URL resource for the hosted Amplify origin and `http://localhost:5173`, not in Python code.
 - **No VPC.** Lambdas run in the default VPC-less mode for simplicity.
 - **Docker bundling for pypdf.** The PDF Parser uses CDK's `bundling` option to `pip install pypdf` into the deployment package at synth time.
 - **IAM permissions are scoped by responsibility.** Analyst/Evaluator receive model-scoped Bedrock Mantle inference, Interviewer receives `s3:GetObject` through `grantRead`, and Voice Session can invoke only the configured AgentCore runtime and its endpoints.
+- **Hosted cost controls.** Invocation alarms trigger above 10 Analyst/Evaluator/Voice Session or 25 Interviewer/PDF Parser calls in five minutes; error alarms trigger at three errors in five minutes; throttle alarms trigger at the first throttle. They publish to an email-backed SNS topic. The default $25 account-wide AWS monthly budget alerts at 50%, 80%, and 100%; the recipient must confirm the SNS subscription. These notifications do not automatically stop usage and AWS Budgets reporting can lag.
+- **Emergency and optional concurrency controls.** The emergency stack switch sets all five functions to zero concurrency. Optional normal caps are 2 Analyst, 2 Evaluator, 4 Interviewer, 4 PDF Parser, and 2 Voice Session, but default off because AWS requires sufficient account concurrency quota before nonzero reserved concurrency can be assigned.
+- **Model/session caps.** Every mode accepts at most 5,000 job-description characters. Hosted Analyst and Evaluator calls use a 4,096-token output ceiling; hosted Analyst resume text is capped at 60,000 characters; hosted Evaluator input is capped at 60,000 conversation and 120,000 Analyst-output characters. AgentCore voice sessions have an eight-minute application limit. The local server disables these additional hosted-only caps.
 
 ---
 
@@ -107,9 +110,9 @@ The complete target is intentionally split across managed services:
 
 | Concern | Deployment target | Repository status |
 |---------|-------------------|-------------------|
-| React/Vite frontend | AWS Amplify Hosting | Deployed; published independently from the application CDK stack |
+| React/Vite frontend | AWS Amplify Hosting | Deployed after the same-revision application CDK update completes |
 | Browser identity | No end-user login | Public client by design |
-| PDF/Analyst/Interviewer/Evaluator HTTP backend | Lambda + S3 via the application CDK stack | Deployed; Function URLs are public |
+| PDF/Analyst/Interviewer/Evaluator HTTP backend | CloudFront OAC + private Lambda Function URLs + S3 | Deployed; direct Function URL access requires IAM |
 | Signed voice-session broker | Voice Session Lambda | Deployed; signs five-minute AgentCore URLs |
 | Real-time Python voice relay | Amazon Bedrock AgentCore Runtime | Deployed; runtime-specific state remains outside version control |
 | Speech-to-speech model | Amazon Nova 2 Sonic through the relay | Active hosted and local integration |
@@ -118,15 +121,14 @@ AgentCore Runtime is a serverless managed container runtime, not a server that t
 
 ## Automated Updates
 
-Three path-filtered GitHub Actions workflows respond to matching changes on `main`:
+Two automatic release paths respond to matching changes on `main`:
 
 | Change area | Automated result |
 |-------------|------------------|
-| `frontend/**` | The frontend is built and the static output is published to Amplify |
-| Lambda functions, configuration, schemas, or application infrastructure | Python and CDK checks run, then `MockInterviewStack` is updated |
+| Frontend, Lambda functions, configuration, schemas, or application infrastructure | Frontend/backend checks run, `MockInterviewStack` is updated, then the same revision is built in hosted mode and published to Amplify |
 | Voice relay runtime code | Relay tests run, then the existing AgentCore target is updated |
 
-The workflows obtain short-lived AWS credentials through GitHub OIDC. The deployment role trust is restricted to this repository's `main` branch, and permanent AWS access keys are not stored in repository configuration.
+The workflows obtain short-lived AWS credentials through GitHub OIDC. Application releases share one concurrency group, reject stale revisions, and deploy the backend before publishing the matching frontend. The deployment role trust is restricted to this repository's `main` branch, and permanent AWS access keys are not stored in repository configuration.
 
 ---
 

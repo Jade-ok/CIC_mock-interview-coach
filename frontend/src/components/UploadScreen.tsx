@@ -5,6 +5,8 @@ export interface UploadScreenProps {
   onSubmit: (pdf: File, jdText: string) => void;
 }
 
+export const MAX_JOB_DESCRIPTION_CHARS = 5000;
+
 export function UploadScreen({ onSubmit }: UploadScreenProps) {
   const [file, setFile] = useState<File | null>(null);
   const [jdText, setJdText] = useState('');
@@ -139,13 +141,13 @@ export function UploadScreen({ onSubmit }: UploadScreenProps) {
               id="jd-textarea"
               className="upload-screen__textarea"
               value={jdText}
-              onChange={(e) => setJdText(e.target.value.slice(0, 5000))}
+              onChange={(e) => setJdText(e.target.value.slice(0, MAX_JOB_DESCRIPTION_CHARS))}
               placeholder="Paste the job description here"
               rows={8}
-              maxLength={5000}
+              maxLength={MAX_JOB_DESCRIPTION_CHARS}
             />
-            <span className={`upload-screen__char-count ${jdText.length >= 4500 ? 'upload-screen__char-count--warn' : ''}`}>
-              {jdText.length} / 5000
+            <span className={`upload-screen__char-count ${jdText.length >= MAX_JOB_DESCRIPTION_CHARS * 0.9 ? 'upload-screen__char-count--warn' : ''}`}>
+              {jdText.length} / {MAX_JOB_DESCRIPTION_CHARS}
             </span>
           </div>
 

@@ -1,6 +1,7 @@
 """Amazon Bedrock Mantle client for the Evaluator agent."""
 
 import json
+import os
 import urllib.error
 import urllib.request
 
@@ -18,8 +19,25 @@ REGION = "us-east-1"
 ENDPOINT = f"https://bedrock-mantle.{REGION}.api.aws/v1/chat/completions"
 MAX_ATTEMPTS = 2
 REQUEST_TIMEOUT_SECONDS = 120
+HOSTED_REQUEST_TIMEOUT_SECONDS = 55
 
 _session = boto3.Session()
+
+
+def _max_output_tokens() -> int:
+    return 4096 if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true" else 8192
+
+
+def _max_attempts() -> int:
+    return 1 if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true" else MAX_ATTEMPTS
+
+
+def _request_timeout_seconds() -> int:
+    return (
+        HOSTED_REQUEST_TIMEOUT_SECONDS
+        if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true"
+        else REQUEST_TIMEOUT_SECONDS
+    )
 
 
 def invoke(system: str, messages: list, tool_config: dict) -> dict:
@@ -28,13 +46,14 @@ def invoke(system: str, messages: list, tool_config: dict) -> dict:
         "model": MODEL_ID,
         "messages": [{"role": "system", "content": system}, *messages],
         **tool_config,
-        "max_tokens": 8192,
+        "max_tokens": _max_output_tokens(),
         "temperature": 0.0,
         "reasoning_effort": "low",
     }
 
     last_error: Exception | None = None
-    for attempt in range(MAX_ATTEMPTS):
+    max_attempts = _max_attempts()
+    for attempt in range(max_attempts):
         try:
             return _extract_tool_input(_post_chat_completion(request))
         except EvaluationError:
@@ -51,9 +70,10 @@ def invoke(system: str, messages: list, tool_config: dict) -> dict:
         except Exception as error:
             last_error = error
 
-        if attempt == MAX_ATTEMPTS - 1:
+        if attempt == max_attempts - 1:
+            attempt_word = "attempt" if max_attempts == 1 else "attempts"
             raise EvaluationError(
-                f"Bedrock Mantle call failed after {MAX_ATTEMPTS} attempts: {last_error}"
+                f"Bedrock Mantle call failed after {max_attempts} {attempt_word}: {last_error}"
             ) from last_error
 
     raise EvaluationError(f"Bedrock Mantle call failed: {last_error}")
@@ -82,7 +102,7 @@ def _post_chat_completion(payload: dict) -> dict:
         method="POST",
         headers=dict(aws_request.headers.items()),
     )
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+    with urllib.request.urlopen(request, timeout=_request_timeout_seconds()) as response:
         return json.load(response)
 
 

@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import math
+import os
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
@@ -29,6 +30,12 @@ app = FastAPI(title="Mock Interview Voice Agent")
 
 # Maximum event size before splitting (bytes)
 MAX_EVENT_SIZE = 10 * 1024  # 10KB
+
+
+def _max_session_duration_seconds() -> int | None:
+    if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true":
+        return 8 * 60
+    return None
 
 
 def split_large_event(event_json: str) -> list[str]:
@@ -162,12 +169,26 @@ async def websocket_endpoint(websocket: WebSocket):
     protocol = BrowserSessionProtocol()
     response_task = None
     audio_drain_task = None
+    max_duration = _max_session_duration_seconds()
+    session_deadline = (
+        asyncio.get_running_loop().time() + max_duration
+        if max_duration is not None
+        else None
+    )
 
     try:
         # Wait for session_start before opening the paid Nova stream.
         while True:
             try:
-                message = await websocket.receive_text()
+                if session_deadline is None:
+                    message = await websocket.receive_text()
+                else:
+                    remaining_seconds = session_deadline - asyncio.get_running_loop().time()
+                    if remaining_seconds <= 0:
+                        raise asyncio.TimeoutError
+                    message = await asyncio.wait_for(
+                        websocket.receive_text(), timeout=remaining_seconds
+                    )
             except WebSocketDisconnect:
                 logger.info("Client disconnected")
                 break
@@ -206,6 +227,18 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info("Client ended browser session")
                 break
 
+    except asyncio.TimeoutError:
+        logger.info("Voice session reached the maximum duration")
+        try:
+            await websocket.send_json(
+                {
+                    "type": "session_invalid",
+                    "payload": {"reason": "Voice session reached the 8-minute limit"},
+                }
+            )
+            await websocket.close(code=1000, reason="Session duration limit reached")
+        except Exception:
+            pass
     except Exception as e:
         logger.error("WebSocket session error: %s", e)
         try:

@@ -5,7 +5,7 @@
 
 import type { Agent3Request, SessionState, TranscriptEntry } from '@/types/session';
 import type { EvaluatorOutput } from '@/types/evaluator';
-import { API_ENDPOINTS } from '@/services/apiConfig';
+import { API_ENDPOINTS, jsonPostInit } from '@/services/apiConfig';
 
 /** Controls whether the stub should simulate failure (for testing) */
 let simulateFailure = false;
@@ -126,11 +126,7 @@ export async function callAgent3(request: Agent3Request): Promise<EvaluatorOutpu
     throw new Error('At least one completed question and answer is required for evaluation.');
   }
 
-  const response = await fetch(API_ENDPOINTS.evaluator, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-  });
+  const response = await fetch(API_ENDPOINTS.evaluator, await jsonPostInit(request));
 
   const result = await response.json().catch(() => null);
   if (!response.ok) {

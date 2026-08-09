@@ -231,12 +231,12 @@ EVALUATION_TOOL_SCHEMA = {
 
 ### 4. bedrock_client.py
 
-**Responsibility:** Signs and sends Bedrock Mantle Chat Completions requests with retry logic.
+**Responsibility:** Signs and sends environment-bounded Bedrock Mantle Chat Completions requests.
 
 **Key design decisions:**
 - Uses model ID `openai.gpt-oss-120b` in `us-east-1`
 - Forces the `submit_evaluation` function through `tool_choice`
-- Retries transport/API exceptions once (max 2 total attempts)
+- Hosted mode uses one 55-second attempt; local mode retries transport/API exceptions once (max 2 total attempts)
 - Does not retry malformed responses or missing tool output (`EvaluationError`)
 - Extracts JSON function arguments from the response
 
@@ -244,9 +244,11 @@ EVALUATION_TOOL_SCHEMA = {
 MODEL_ID = "openai.gpt-oss-120b"
 REGION = "us-east-1"
 MAX_ATTEMPTS = 2
+HOSTED_REQUEST_TIMEOUT_SECONDS = 55
 
 def invoke(system: str, messages: list, tool_config: dict) -> dict:
-    for attempt in range(MAX_ATTEMPTS):
+    max_attempts = 1 if hosted_guardrails_enabled() else MAX_ATTEMPTS
+    for attempt in range(max_attempts):
         try:
             response = _post_chat_completion({
                 "model": MODEL_ID,
@@ -257,8 +259,8 @@ def invoke(system: str, messages: list, tool_config: dict) -> dict:
         except EvaluationError:
             raise
         except Exception as e:
-            if attempt == MAX_ATTEMPTS - 1:
-                raise EvaluationError(f"Bedrock Mantle call failed after {MAX_ATTEMPTS} attempts: {str(e)}")
+            if attempt == max_attempts - 1:
+                raise EvaluationError(f"Bedrock Mantle call failed after {max_attempts} attempts: {str(e)}")
     
 def _extract_tool_input(response: dict) -> dict:
     function = response["choices"][0]["message"]["tool_calls"][0]["function"]
@@ -496,12 +498,12 @@ class EvaluationError(Exception):
 | 1-5 scale (not 1-10) | Simpler for students to interpret; reduces LLM scoring variance |
 | Variable-length averaging | Students can stop early; no penalty for incomplete interviews |
 | Co-op calibration in system prompt | Ensures LLM expectations match student-level experience |
-| Single retry on transport/API failure | Balances reliability with the 300-second Lambda timeout; malformed model output fails immediately |
+| Environment-aware transport attempts | Hosted uses one bounded attempt to limit cost; local retains one retry; malformed model output fails immediately |
 | Separate modules per concern | Testable units; clear responsibility boundaries |
 
 ## Constraints and Assumptions
 
-- Lambda timeout is 300 seconds so two 120-second Bedrock attempts plus connection and response-processing overhead fit in one invocation
+- Hosted Lambda timeout is 60 seconds with one 55-second Mantle attempt; local execution retains two 120-second transport attempts
 - Transcript is pre-formatted by the Interviewer agent as an array of {question, answer} objects
 - Analyst output is a structured JSON object from the Analyst agent containing candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, and analysis_warnings
 - The function URL handles CORS at the API layer (not in Lambda code)

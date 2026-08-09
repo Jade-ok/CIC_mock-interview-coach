@@ -1,6 +1,12 @@
 """Prompt construction for the Analyst's Bedrock Mantle request."""
 
+import os
+
 MODEL_ID = "openai.gpt-oss-120b"
+
+
+def _max_output_tokens() -> int:
+    return 4096 if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true" else 8192
 
 SYSTEM_PROMPT = """You are a resume analyst for a mock behavioral interview coaching application \
 designed for university students and new graduates.
@@ -73,7 +79,7 @@ def build_chat_request(resume_text: str, job_posting_text: str) -> dict:
             }
         ],
         **_build_tool_config(),
-        "max_tokens": 8192,
+        "max_tokens": _max_output_tokens(),
         "temperature": 0.0,
         "reasoning_effort": "low",
     }

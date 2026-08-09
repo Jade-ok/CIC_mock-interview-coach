@@ -2,7 +2,11 @@
 
 import json
 import pytest
-from evaluator.validator import parse_and_validate
+from evaluator.validator import (
+    MAX_ANALYST_OUTPUT_CHARS,
+    MAX_CONVERSATION_TEXT_CHARS,
+    parse_and_validate,
+)
 from evaluator.exceptions import ValidationError
 
 
@@ -97,6 +101,31 @@ class TestConversationLength:
         payload = _valid_payload(num_turns=7)
         with pytest.raises(ValidationError, match="max 6"):
             parse_and_validate(_make_event(payload))
+
+    def test_rejects_conversation_text_above_character_limit(self, monkeypatch):
+        monkeypatch.setenv("HOSTED_GUARDRAILS_ENABLED", "true")
+        payload = _valid_payload(num_turns=1)
+        payload["conversation"][0]["answer"] = "a" * (
+            MAX_CONVERSATION_TEXT_CHARS + 1
+        )
+        with pytest.raises(ValidationError, match="Conversation exceeds"):
+            parse_and_validate(_make_event(payload))
+
+    def test_rejects_oversized_analyst_output(self, monkeypatch):
+        monkeypatch.setenv("HOSTED_GUARDRAILS_ENABLED", "true")
+        payload = _valid_payload(num_turns=1)
+        payload["analyst_output"]["padding"] = "x" * MAX_ANALYST_OUTPUT_CHARS
+        with pytest.raises(ValidationError, match="analyst_output exceeds"):
+            parse_and_validate(_make_event(payload))
+
+    def test_local_mode_does_not_apply_hosted_character_limits(self, monkeypatch):
+        monkeypatch.delenv("HOSTED_GUARDRAILS_ENABLED", raising=False)
+        payload = _valid_payload(num_turns=1)
+        payload["conversation"][0]["answer"] = "a" * (
+            MAX_CONVERSATION_TEXT_CHARS + 1
+        )
+
+        assert parse_and_validate(_make_event(payload)) == payload
 
 
 class TestTurnFieldValidation:

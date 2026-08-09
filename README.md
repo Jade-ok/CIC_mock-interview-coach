@@ -137,7 +137,9 @@ npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. The Vite development server always uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice. It does not require hosted endpoint variables and ignores hosted `VITE_*_URL` values in development mode. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+Open the local URL printed by Vite. With the default `VITE_RUNTIME_MODE=local`, the development server uses `http://localhost:8080/api/*` for all four HTTP stages and `ws://localhost:8080/` for voice, requires no hosted endpoint variable, and ignores `VITE_API_BASE_URL`. Setting `VITE_RUNTIME_MODE=hosted` explicitly exercises the bounded hosted services instead. Never put AWS credentials in a `VITE_*` variable or commit `.env.local`.
+
+Hosted cost guardrails are deliberately disabled in this pure local path. Local Analyst and Evaluator calls retain the 8,192-token output budget, and local voice sessions have no application-imposed eight-minute limit. The product-wide 5,000-character job-description limit and 4 MiB PDF limit still apply, as do AWS model availability and account quotas.
 
 If port `8080` is already in use, identify and stop the previous local backend before retrying:
 
@@ -149,13 +151,17 @@ The frontend is configured for port `8080`, so changing only the Uvicorn port wi
 
 ## Hosted Architecture
 
-The hosted architecture uses Amplify Hosting for React, AgentCore Runtime for the Python voice relay, five Lambda Function URLs for the four HTTP pipeline stages and short-lived voice sessions, S3 for interview configuration, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The public client does not require a user login; its Voice Session Lambda signs five-minute AgentCore connection URLs with a role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
+The hosted architecture uses Amplify Hosting for React, AgentCore Runtime for the Python voice relay, a CloudFront API gateway backed by five private IAM-protected Lambda Function URLs, S3 for interview configuration, and Bedrock for GPT OSS 120B and Nova 2 Sonic. The client does not require a user login; its Voice Session Lambda signs five-minute AgentCore connection URLs with a role scoped to the configured runtime and its endpoints. Keep account IDs, credentials, and physical resource names out of version control.
 
-Three path-filtered GitHub Actions workflows keep the hosted application current when matching changes reach `main`: frontend changes build and publish the Amplify site, Lambda/config/infrastructure changes test and deploy the CDK stack, and voice-relay changes test and deploy AgentCore. The workflows use GitHub OIDC to assume a short-lived AWS role instead of storing permanent AWS access keys in GitHub.
+Two serialized GitHub Actions release paths keep the hosted application current when matching changes reach `main`: application changes test and deploy the CDK backend before building and publishing the same revision to Amplify, while voice-relay changes test and deploy AgentCore. Both reject stale revisions and share one production concurrency lock. The workflows use GitHub OIDC to assume a short-lived AWS role instead of storing permanent AWS access keys in GitHub.
+
+The hosted surface uses exact Amplify/localhost CORS origins, high-usage/error/throttle alarms, and a default $25 account-wide AWS monthly cost budget with email notifications. Direct Function URL requests are rejected; CloudFront Origin Access Control signs each origin request. The notification email must confirm its SNS subscription before messages are delivered. Hosted Analyst and Evaluator use one model attempt with a 55-second read timeout and 4,096-token output cap; hosted Analyst resume input is capped at 60,000 characters; every job description is capped at 5,000 characters; hosted Evaluator input is capped at 60,000 conversation and 120,000 Analyst-output characters; hosted Nova sessions have an eight-minute application limit. These controls reduce accidental cost and abuse exposure, but the login-free CloudFront endpoint remains internet-accessible and alarms and budgets notify rather than automatically block requests. The stack provides an emergency switch that sets all five functions to zero concurrency. Optional per-function caps (2 Analyst, 2 Evaluator, 4 Interviewer, 4 PDF Parser, and 2 Voice Session) default off because small/new AWS accounts may not have enough Lambda concurrency quota to deploy them.
+
+AWS WAF is intentionally not provisioned, avoiding its fixed web-ACL baseline cost. CloudFront is usage-priced, so the public gateway still needs the workload limits and monitoring above.
 
 ## Important Notes
 
-- Function URL calls: parse JSON from `event['body']`
+- CloudFront forwards JSON requests to private Function URLs; handlers parse `event['body']`
 - CORS is configured on the Function URL settings, not in Python code
 - Permissions require both `lambda:InvokeFunctionUrl` AND `lambda:InvokeFunction`
 - The frontend and PDF Parser both enforce a 4 MiB (4,194,304-byte) PDF limit; Lambda Function URL request payloads are capped at 6 MiB

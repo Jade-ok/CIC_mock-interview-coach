@@ -38,10 +38,10 @@ const validEvaluatorOutput = {
   per_question_scores: [{
     question_text: 'Tell me about yourself',
     feedback: { strength: 'Clear example.', improvement: 'Add a metric.' },
-    scores: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 2 },
+    scores: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 2 },
   }],
   overall_scores: {
-    dimensions: { concrete_example: 3, situation_action_result: 3, link_to_job: 3, quantifiable_outcome: 2 },
+    dimensions: { concrete_example: 3, star_structure: 3, link_to_job: 3, quantifiable_outcome: 2 },
     total: 2.8,
   },
   question_count: 1,

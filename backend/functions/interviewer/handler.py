@@ -1,6 +1,6 @@
 import json
+import logging
 import os
-import traceback
 
 try:
     from .validation import validate_input
@@ -14,6 +14,8 @@ except ImportError:  # Lambda loads handler.py as a top-level module.
     from validation import validate_input
     from config_loader import ConfigLoadError, load_interview_profile, load_interview_structure
     from context_builder import build_runtime_context
+
+logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event: dict, context) -> dict:
@@ -96,11 +98,12 @@ def lambda_handler(event: dict, context) -> dict:
             }),
         }
 
-    except Exception as e:
+    except Exception:
+        logger.exception("Unexpected error building interview context")
         return {
             "statusCode": 500,
             "body": json.dumps({
                 "success": False,
-                "error_message": str(e),
+                "error_message": "An unexpected error occurred",
             }),
         }

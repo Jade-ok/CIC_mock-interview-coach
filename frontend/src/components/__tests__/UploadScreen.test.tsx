@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { UploadScreen } from '@/components/UploadScreen';
+import { MAX_JOB_DESCRIPTION_CHARS, UploadScreen } from '@/components/UploadScreen';
 
 function createMockFile(
   name: string,
@@ -107,6 +107,18 @@ describe('UploadScreen', () => {
       fireEvent.change(textarea, { target: { value: 'Frontend Engineer' } });
 
       expect(textarea).toHaveValue('Frontend Engineer');
+    });
+
+    it('caps job-description text at 5,000 characters', () => {
+      render(<UploadScreen onSubmit={vi.fn()} />);
+      const textarea = screen.getByPlaceholderText('Paste the job description here');
+
+      fireEvent.change(textarea, {
+        target: { value: 'j'.repeat(MAX_JOB_DESCRIPTION_CHARS + 1) },
+      });
+
+      expect(textarea).toHaveValue('j'.repeat(MAX_JOB_DESCRIPTION_CHARS));
+      expect(screen.getByText('5000 / 5000')).toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,7 @@
 """Lambda entry point for the pdf_parser function."""
 
 import json
+import logging
 
 try:
     from .validation import detect_invocation_mode, validate_request
@@ -8,6 +9,8 @@ try:
 except ImportError:  # Lambda loads handler.py as a top-level module.
     from validation import detect_invocation_mode, validate_request
     from orchestrator import process_documents
+
+logger = logging.getLogger(__name__)
 
 
 def lambda_handler(event: dict, context) -> dict:
@@ -39,8 +42,9 @@ def lambda_handler(event: dict, context) -> dict:
     # Step 3: Process documents
     try:
         result = process_documents(payload)
-    except Exception as exc:
-        return _error_response(f"Internal error: {exc}", 500)
+    except Exception:
+        logger.exception("Unexpected error during document processing")
+        return _error_response("An unexpected error occurred", 500)
 
     # Step 4: Wrap result in success envelope
     return _success_response(result)

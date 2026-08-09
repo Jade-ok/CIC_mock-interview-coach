@@ -16,6 +16,16 @@ from s2s_session_manager import Boto3CredentialsResolver  # noqa: E402
 import server as voice_server  # noqa: E402
 
 
+def test_voice_session_duration_is_unlimited_locally(monkeypatch):
+    monkeypatch.delenv("HOSTED_GUARDRAILS_ENABLED", raising=False)
+    assert voice_server._max_session_duration_seconds() is None
+
+
+def test_voice_session_duration_is_bounded_when_hosted(monkeypatch):
+    monkeypatch.setenv("HOSTED_GUARDRAILS_ENABLED", "true")
+    assert voice_server._max_session_duration_seconds() == 8 * 60
+
+
 def event_name(event_json: str) -> str:
     return next(iter(json.loads(event_json)["event"]))
 
@@ -377,3 +387,46 @@ def test_websocket_endpoint_adapts_browser_session_without_aws(monkeypatch):
         "contentEnd", "promptEnd", "sessionEnd",
     ]
     assert [event_name(item) for item in fake_manager.audio_events] == ["audioInput"]
+
+
+def test_hosted_websocket_duration_limit_notifies_closes_and_cleans_up(monkeypatch):
+    class FakeSessionManager:
+        def __init__(self):
+            self.closed = False
+
+        async def close(self):
+            self.closed = True
+
+    fake_manager = FakeSessionManager()
+    monkeypatch.setattr(voice_server, "S2sSessionManager", lambda: fake_manager)
+    monkeypatch.setattr(voice_server, "_max_session_duration_seconds", lambda: 0)
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.sent = []
+            self.close_args = None
+
+        async def accept(self):
+            return None
+
+        async def receive_text(self):
+            raise AssertionError("An expired hosted session must not wait for input")
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
+
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.websocket_endpoint(websocket))
+
+    assert websocket.sent == [{
+        "type": "session_invalid",
+        "payload": {"reason": "Voice session reached the 8-minute limit"},
+    }]
+    assert websocket.close_args == {
+        "code": 1000,
+        "reason": "Session duration limit reached",
+    }
+    assert fake_manager.closed is True

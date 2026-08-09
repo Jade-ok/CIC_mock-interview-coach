@@ -8,7 +8,7 @@ Receives interview conversation + analyst output, calls Bedrock Mantle Chat Comp
 
 During local development, `backend.local_server:app` invokes the handler directly. Its Bedrock request uses the AWS identity active in the local SDK credential chain.
 
-In hosted mode, the Evaluator runs as one of four pipeline Lambdas behind a public Function URL. The application has no end-user login; public endpoint usage therefore requires budgets, monitoring, and concurrency controls.
+In hosted mode, the Evaluator runs behind a private IAM-protected Function URL reached through the CloudFront OAC gateway. It uses one 55-second Mantle attempt, a 4,096-token output ceiling, a 60,000-character conversation cap, and a 120,000-character Analyst-output cap. Its Lambda is covered by alarms and the stack's AWS cost budget; its optional normal concurrency cap defaults off until the target account quota supports it. Local execution retains two 120-second attempts, the 8,192-token output budget, and does not apply the hosted text caps.
 
 ## Input
 
@@ -28,7 +28,7 @@ See `../../../schemas/evaluator_output.json` for the current output shape.
 - **Runtime**: Python 3.12
 - **Region**: us-east-1
 - **Model**: openai.gpt-oss-120b
-- **Timeout**: 300 seconds (allows two 120-second application attempts plus overhead)
+- **Timeout**: hosted Lambda 60 seconds with one 55-second model attempt; local calls retain two 120-second attempts
 
 Hosted backend changes merged to `main` are tested and deployed with the Lambda/S3 CDK stack by GitHub Actions using temporary, branch-restricted OIDC credentials.
 

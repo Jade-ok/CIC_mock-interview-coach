@@ -1,6 +1,7 @@
 """SigV4 client for Amazon Bedrock Mantle Chat Completions."""
 
 import json
+import os
 import urllib.error
 import urllib.request
 
@@ -12,6 +13,7 @@ REGION = "us-east-1"
 ENDPOINT = f"https://bedrock-mantle.{REGION}.api.aws/v1/chat/completions"
 MAX_ATTEMPTS = 1
 REQUEST_TIMEOUT_SECONDS = 120
+HOSTED_REQUEST_TIMEOUT_SECONDS = 55
 
 _session = boto3.Session()
 
@@ -20,11 +22,19 @@ class BedrockCallFailed(Exception):
     """Raised when a Bedrock Mantle request cannot be completed."""
 
 
+def _request_timeout_seconds() -> int:
+    return (
+        HOSTED_REQUEST_TIMEOUT_SECONDS
+        if os.getenv("HOSTED_GUARDRAILS_ENABLED", "").lower() == "true"
+        else REQUEST_TIMEOUT_SECONDS
+    )
+
+
 def call_chat_completion(request: dict) -> dict:
     """Call Bedrock Mantle with one predictable transport attempt.
 
-    The orchestrator separately makes one recovery call when a successful model
-    response does not satisfy the Analyst output schema.
+    Local orchestration may make one recovery call when a successful model
+    response does not satisfy the Analyst output schema; hosted mode does not.
     """
     last_error: Exception | None = None
 
@@ -75,5 +85,5 @@ def _post_chat_completion(payload: dict) -> dict:
         method="POST",
         headers=dict(aws_request.headers.items()),
     )
-    with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+    with urllib.request.urlopen(request, timeout=_request_timeout_seconds()) as response:
         return json.load(response)

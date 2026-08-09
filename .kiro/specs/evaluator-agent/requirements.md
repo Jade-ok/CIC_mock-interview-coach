@@ -68,7 +68,7 @@ The Evaluator is invoked exactly once per interview session and operates as a st
 
 1. THE Bedrock_Client SHALL call Bedrock Mantle Chat Completions using model ID `openai.gpt-oss-120b` in region `us-east-1`
 2. THE Bedrock_Client SHALL force the `submit_evaluation` function to return structured JSON matching the defined evaluation schema
-3. IF a transport or API failure occurs, THEN THE Bedrock_Client SHALL retry the call once for a maximum of two total attempts
+3. IF a transport or API failure occurs locally, THEN THE Bedrock_Client SHALL retry once; hosted execution SHALL use one 55-second attempt
 4. IF both transport/API attempts fail, or a successful response contains malformed function output, THEN THE Bedrock_Client SHALL return an error response with a 500 status code and a descriptive error message
 
 ### Requirement 4: Per-Question Scoring
