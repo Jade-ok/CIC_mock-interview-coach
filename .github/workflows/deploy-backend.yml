@@ -1,0 +1,88 @@
+name: Deploy Lambda backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/functions/**'
+      - 'backend/config/**'
+      - 'backend/requirements-dev.txt'
+      - 'backend/requirements-local.txt'
+      - 'infrastructure/**'
+      - '!infrastructure/bin/deployment-automation.ts'
+      - '!infrastructure/lib/deployment-automation-stack.ts'
+      - 'schemas/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: production-lambda-backend
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    name: Test and deploy CDK stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: test -n "${{ vars.AWS_DEPLOY_ROLE_ARN }}" || { echo "Missing AWS_DEPLOY_ROLE_ARN repository variable."; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements-dev.txt
+
+      - name: Run Python tests
+        run: pytest -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: infrastructure/package-lock.json
+
+      - name: Build infrastructure
+        working-directory: infrastructure
+        run: |
+          npm ci
+          npm run build
+          npm test -- --runInBand
+
+      - name: Configure temporary AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Discover AgentCore runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_arn="$(aws bedrock-agentcore-control list-agent-runtimes --query "agentRuntimes[?agentRuntimeName=='MockInterviewVoice_MockInterviewVoiceRelay'].agentRuntimeArn | [0]" --output text)"
+          test -n "$runtime_arn" && test "$runtime_arn" != "None" || { echo 'AgentCore runtime was not found.'; exit 1; }
+          echo "AGENTCORE_RUNTIME_ARN=$runtime_arn" >> "$GITHUB_ENV"
+
+      - name: Deploy Lambda and S3 stack
+        working-directory: infrastructure
+        run: >-
+          npx cdk deploy MockInterviewStack
+          --parameters "MockInterviewStack:AgentCoreRuntimeArn=$AGENTCORE_RUNTIME_ARN"
+          --require-approval never
