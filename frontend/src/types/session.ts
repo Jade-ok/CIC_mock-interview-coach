@@ -90,7 +90,8 @@ export type SessionAction =
   | { type: 'TIMEOUT' }
   | { type: 'MIC_DENIED' }
   | { type: 'TICK' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'RETRY_INTERVIEW' };
 
 export interface Agent1Response {
   nova_sonic_context: string;

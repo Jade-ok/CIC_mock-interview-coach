@@ -29,14 +29,24 @@
 }
 
 .footer-cta__button--primary {
-  background: var(--accent-ink);
-  color: var(--accent);
+  background: var(--bg-tile, #1C1C1E);
+  color: var(--text-primary, #FFFFFF);
+  font-size: 1rem;
+  padding: 14px 28px;
+  font-weight: 700;
 }
 
 .footer-cta__button--secondary {
   background: transparent;
-  color: var(--text-primary);
-  border: 2px solid var(--text-primary);
+  color: var(--accent-ink, #1E2611);
+  border: 1px solid var(--accent-ink, #1E2611);
+}
+
+.footer-cta__button--tertiary {
+  background: transparent;
+  color: var(--accent-ink, #1E2611);
+  font-size: 0.8125rem;
+  opacity: 0.7;
 }
 
 @media (max-width: 640px) {

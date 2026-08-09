@@ -103,20 +103,14 @@ describe('QuestionBreakdown', () => {
 
 describe('FooterCTA', () => {
   it('displays motivational message', () => {
-    render(<FooterCTA onPracticeAgain={() => {}} onViewTranscript={() => {}} />);
+    render(<FooterCTA onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
     expect(screen.getByText(/Every practice round/)).toBeTruthy();
   });
 
-  it('triggers onPracticeAgain callback', () => {
-    const onPracticeAgain = vi.fn();
-    render(<FooterCTA onPracticeAgain={onPracticeAgain} onViewTranscript={() => {}} />);
-    fireEvent.click(screen.getByText('Practice again'));
-    expect(onPracticeAgain).toHaveBeenCalledOnce();
-  });
 
   it('triggers onViewTranscript callback', () => {
     const onViewTranscript = vi.fn();
-    render(<FooterCTA onPracticeAgain={() => {}} onViewTranscript={onViewTranscript} />);
+    render(<FooterCTA onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={onViewTranscript} />);
     fireEvent.click(screen.getByText('View full transcript'));
     expect(onViewTranscript).toHaveBeenCalledOnce();
   });

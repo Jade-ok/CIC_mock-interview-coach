@@ -49,6 +49,7 @@ describe('FeedbackScreen', () => {
     feedbackResult: null,
     onRetry: vi.fn(),
     onNewSession: vi.fn(),
+    onPracticeAgain: vi.fn(),
   };
 
   describe('Loading state', () => {
@@ -136,10 +137,10 @@ describe('FeedbackScreen', () => {
     });
 
     it('starts a new session from the feedback report', () => {
-      const onNewSession = vi.fn();
-      render(<FeedbackScreen {...resultProps} onNewSession={onNewSession} />);
-      fireEvent.click(screen.getAllByText('Practice again')[0]);
-      expect(onNewSession).toHaveBeenCalledOnce();
+      const onPracticeAgain = vi.fn();
+      render(<FeedbackScreen {...resultProps} onPracticeAgain={onPracticeAgain} />);
+      fireEvent.click(screen.getAllByText('Retry with This Resume')[0]);
+      expect(onPracticeAgain).toHaveBeenCalledOnce();
     });
   });
 });

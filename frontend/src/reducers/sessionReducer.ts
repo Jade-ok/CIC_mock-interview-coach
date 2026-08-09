@@ -292,6 +292,18 @@ export function sessionReducer(
     case 'RESET':
       return initialState;
 
+    case 'RETRY_INTERVIEW':
+      return {
+        ...initialState,
+        // Preserve analysis results so WaitingRoom skips Agent1
+        analystOutput: state.analystOutput,
+        novaSonicContext: state.novaSonicContext,
+        uploadData: state.uploadData,
+        agent1Ready: true,
+        // Start from waiting phase — WS needs to reconnect
+        phase: 'waiting' as const,
+      };
+
     default:
       return state;
   }
