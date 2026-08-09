@@ -173,7 +173,7 @@ The browser orchestrates the workflow and retains the active interview content. 
 
 ### Architecture Diagram
 
-[![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.svg)](docs/Architecture/aws-architecture-diagram.svg)
+[![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.png)](docs/Architecture/aws-architecture-diagram.png)
 
 ### Resume and Job Analysis
 
