@@ -1,5 +1,7 @@
 # Design Document — Interview Guide STAR Cards
 
+> Superseded historical design. See `../guide-panel-v2/design.md` for the maintained two-section, English-only, non-predictive Guide Panel design.
+
 ## Architecture Overview
 
 This feature replaces the dynamic keyword-matching competency guide cards with static, analyst-driven STAR-method preparation cards. The data flow simplifies from a speech-reactive pipeline to a one-time render-time computation:
@@ -64,49 +66,49 @@ const STAR_CATEGORIES: StarCategory[] = [
     label: 'Above & Beyond / Problem Solving',
     triggerKeywords: ['beyond', 'extra', 'above'],
     starElements: ['Task', 'Action'],
-    reasoning: '왜 그게 필요했는지(기대 이상의 기준을 스스로 설정) + 어떻게 풀었는지',
+    reasoning: 'Why you set a higher bar than expected and how you solved it',
   },
   {
     label: 'Team Experience',
     triggerKeywords: ['team', 'conflict', 'collaborat', 'disagreement'],
     starElements: ['Action', 'Result'],
-    reasoning: '팀 내에서 실제로 어떻게 행동했는지, 그 결과 관계/성과가 어떻게 됐는지',
+    reasoning: 'What you did within the team and how it affected relationships or outcomes',
   },
   {
     label: 'Initiative',
     triggerKeywords: ['initiative', 'self-motivat', 'own idea', 'ownership', 'autonom'],
     starElements: ['Task'],
-    reasoning: '"시키지 않았는데 스스로 목표를 설정했다"는 판단 지점이 핵심',
+    reasoning: 'Show that you set your own goal without being told',
   },
   {
     label: 'Leadership',
     triggerKeywords: ['lead', 'leadership', 'mentor', 'delegate'],
     starElements: ['Action', 'Result'],
-    reasoning: '어떻게 팀을 움직였고, 결과적으로 무엇이 바뀌었는지',
+    reasoning: 'How you moved the team and what changed as a result',
   },
   {
     label: 'Failure / Mistake',
     triggerKeywords: ['failure', 'mistake', 'fail', 'wrong'],
     starElements: ['Learning', 'Action'],
-    reasoning: '무엇을 했는지보다 "실패를 인정하고 무엇을 배워 바꿨는지"가 핵심. 이 카테고리는 유일하게 L이 R보다 중요',
+    reasoning: 'Focus on acknowledging the failure, what you learned, and what you changed',
   },
   {
     label: 'Pressure and Time Management',
     triggerKeywords: ['deadline', 'pressure', 'time management', 'prioritiz'],
     starElements: ['Action'],
-    reasoning: '우선순위 판단 과정, 즉 무엇을 먼저 처리하기로 판단했는지, 그 판단 기준이 핵심',
+    reasoning: 'Explain what you prioritized first and why',
   },
   {
     label: 'Problem Solving',
     triggerKeywords: ['problem', 'solve', 'debug', 'issue', 'implement', 'technical', 'develop', 'design'],
     starElements: ['Action'],
-    reasoning: '접근 방식, 시도와 조정 과정이 핵심',
+    reasoning: 'Explain your approach, iterations, and adjustments',
   },
   {
     label: 'Communication',
     triggerKeywords: ['communicat', 'explain', 'non-technical'],
     starElements: ['Situation', 'Action'],
-    reasoning: '상대가 누구였는지를 짧게라도 짚어야 번역의 의미가 살고, 실제로 어떻게 설명/조정했는지가 핵심',
+    reasoning: 'Identify the audience and explain how you adapted your communication',
   },
 ];
 ```
@@ -118,7 +120,7 @@ const STAR_CATEGORIES: StarCategory[] = [
 const DEFAULT_CLASSIFICATION: StarClassification = {
   label: 'General',
   starElements: ['Situation', 'Task', 'Action', 'Result'],
-  reasoning: '일반적인 행동 질문입니다. 상황과 과제를 짧게, 본인의 행동과 결과를 구체적으로 답하세요.',
+  reasoning: 'Keep Situation and Task brief; make your Actions and Results specific.',
 };
 ```
 
@@ -256,7 +258,7 @@ function deriveKeywordChips(
 
 ```
 <li class="star-card">
-  <span class="star-card__label">예상 질문 1</span>
+  <span class="star-card__label">Expected Question 1</span>
   <p class="star-card__topic">{topic}</p>
   <div class="star-card__chips">{keywordChips.map → pill}</div>
   <div class="star-card__star-section">
@@ -549,7 +551,7 @@ Tests for `deriveKeywordChips` (if exported, or tested via component):
 2. **Renders fewer cards if plan has fewer items**: given 2 plan items, 2 cards rendered
 3. **Empty state when analystOutput is null**: no cards, no errors
 4. **Empty state when interview_plan is empty array**: no cards
-5. **Card labels show "예상 질문 N"**: verify 1-based index
+5. **Card labels show "Expected Question N"**: verify 1-based index
 6. **Topic text is displayed**: verify `topic` field shown
 7. **Keyword chips rendered**: verify derived chips present
 8. **STAR section rendered**: verify label, element badges, reasoning text
@@ -684,8 +686,8 @@ These are local utility types for safe casting of `analystOutput` fields. The `a
   Thoughts: Same as 2.1.
   Classification: PROPERTY (merged with 2.1)
 
-3.2 Card label reads "예상 질문 N"
-  Thoughts: For any card at index i, its label should be "예상 질문 {i+1}". This is a formatting invariant.
+3.2 Card label reads "Expected Question N"
+  Thoughts: For any card at index i, its label should be "Expected Question {i+1}". This is a formatting invariant.
   Classification: PROPERTY
   Test Strategy: For any set of cards, verify label matches 1-based index.
 

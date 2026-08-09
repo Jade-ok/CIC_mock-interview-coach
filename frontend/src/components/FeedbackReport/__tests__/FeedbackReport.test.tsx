@@ -44,9 +44,9 @@ describe('FeedbackReport (full page)', () => {
     expect(screen.getByText('How your answers scored')).toBeTruthy();
     expect(screen.getAllByText('Concrete example').length).toBeGreaterThan(0);
 
-    // Feedback columns
-    expect(screen.getByText('What you did well')).toBeTruthy();
-    expect(screen.getByText('What to work on next')).toBeTruthy();
+    // Summary and keyword coverage
+    expect(screen.getByText('Overall Summary')).toBeTruthy();
+    expect(screen.getByText('Role requirements you covered')).toBeTruthy();
 
     // Contextual advice
     expect(screen.getByText('For your next interview')).toBeTruthy();
@@ -56,13 +56,14 @@ describe('FeedbackReport (full page)', () => {
     expect(screen.getByText('Q1?')).toBeTruthy();
     expect(screen.getByText('Q2?')).toBeTruthy();
 
-    // Footer
-    expect(screen.getAllByText('Practice again').length).toBeGreaterThan(0);
+    // Header/footer retry actions
+    expect(screen.getAllByText('Retry with This Resume').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Retry with New Resume').length).toBeGreaterThan(0);
   });
 
   it('passes correct question count', () => {
     render(<FeedbackReport data={mockData} onPracticeAgain={() => {}} onNewSession={() => {}} onViewTranscript={() => {}} />);
-    expect(screen.getByText(/2 questions answered/)).toBeTruthy();
+    expect(screen.getByText(/You answered 2 questions/)).toBeTruthy();
   });
 
   it('hides transcript controls until transcript viewing is implemented', () => {

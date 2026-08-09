@@ -31,20 +31,15 @@ describe('HeroSection', () => {
     expect(screen.getByText('3.0')).toBeTruthy();
   });
 
-  it('displays question count', () => {
-    render(<HeroSection {...defaultProps} />);
-    expect(screen.getByText(/4 questions answered/)).toBeTruthy();
-  });
-
   it('displays YOUR ONE THING TO FIX label', () => {
     render(<HeroSection {...defaultProps} />);
     expect(screen.getByText('YOUR ONE THING TO FIX')).toBeTruthy();
   });
 
-  it('shows weakest dimension chip', () => {
+  it('shows the action for the weakest dimension', () => {
     render(<HeroSection {...defaultProps} />);
-    // star_structure at 2.5 is weakest
-    expect(screen.getByText(/Action.*Result.*2\.5/)).toBeTruthy();
+    // star_structure at 2.5 is weakest — callout shows STAR action text
+    expect(screen.getByText(/STAR/)).toBeTruthy();
   });
 
   it('shows ring gauge with accessible label', () => {

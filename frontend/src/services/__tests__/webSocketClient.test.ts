@@ -35,6 +35,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should connect successfully and set state to connected', async () => {
@@ -105,6 +106,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer?.close();
+      mockServer?.stop();
     });
 
     it('should resolve when session_start_ack is received', async () => {
@@ -190,6 +192,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should send audio_chunk with correct format', async () => {
@@ -227,6 +230,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should send text_input with correct format', async () => {
@@ -263,6 +267,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer?.close();
+      mockServer?.stop();
     });
 
     it('should call onSessionInvalid when session_invalid is received', async () => {
@@ -325,6 +330,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should forward all output events to onMessage', async () => {
@@ -396,6 +402,7 @@ describe('WebSocketClient', () => {
     afterEach(() => {
       client.disconnect();
       mockServer.close();
+      mockServer.stop();
     });
 
     it('should attempt reconnection with exponential backoff delays', async () => {
@@ -450,6 +457,7 @@ describe('WebSocketClient', () => {
 
       client.disconnect();
       newServer.close();
+      newServer.stop();
     });
 
     it('should request a fresh URL for reconnection', async () => {
@@ -472,6 +480,7 @@ describe('WebSocketClient', () => {
       expect(onReconnectSuccess).toHaveBeenCalledTimes(1);
       client.disconnect();
       newServer.close();
+      newServer.stop();
     });
 
     it('should call onDisconnect when connection drops', async () => {
@@ -523,6 +532,7 @@ describe('WebSocketClient', () => {
       expect(onReconnectAttempt).toHaveBeenLastCalledWith(1);
 
       client.disconnect();
+      newServer.stop();
     });
   });
 
@@ -589,6 +599,7 @@ describe('WebSocketClient', () => {
             } finally {
               localClient.disconnect();
               server.close();
+              server.stop();
             }
           }
         ),
@@ -637,6 +648,7 @@ describe('WebSocketClient', () => {
             } finally {
               localClient.disconnect();
               server.close();
+              server.stop();
             }
           }
         ),

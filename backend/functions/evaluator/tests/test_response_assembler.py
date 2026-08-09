@@ -7,7 +7,10 @@ def _sample_per_question_scores():
     return [
         {
             "question_text": "Tell me about a team project.",
-            "answer_summary": "Led a team of 4 in SE course.",
+            "feedback": {
+                "strength": "Clearly described a team contribution.",
+                "improvement": "Add a measurable outcome.",
+            },
             "scores": {
                 "concrete_example": 4,
                 "star_structure": 3,

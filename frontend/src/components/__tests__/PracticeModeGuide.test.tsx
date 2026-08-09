@@ -44,7 +44,7 @@ const transcriptEntryArb = fc.record({
 // --- Unit Tests ---
 
 describe('PracticeBubbles (Chat Log View)', () => {
-  it('shows both interviewer and user bubbles in transcript order', () => {
+  it('shows interviewer bubbles and omits candidate answers', () => {
     const transcript = [
       makeTranscriptEntry('interviewer', 'Tell me about yourself'),
       makeTranscriptEntry('user', 'I am a student'),
@@ -53,11 +53,9 @@ describe('PracticeBubbles (Chat Log View)', () => {
     render(<PracticeBubbles transcript={transcript} livePartial={null} turnState="idle" />);
 
     const interviewerBubbles = screen.getAllByTestId('practice-bubble-interviewer');
-    const userBubbles = screen.getAllByTestId('practice-bubble-user');
     expect(interviewerBubbles).toHaveLength(2);
-    expect(userBubbles).toHaveLength(1);
+    expect(screen.queryAllByTestId('practice-bubble-user')).toHaveLength(0);
     expect(interviewerBubbles[0].textContent).toContain('Tell me about yourself');
-    expect(userBubbles[0].textContent).toContain('I am a student');
     expect(interviewerBubbles[1].textContent).toContain('What project are you proud of?');
   });
 
@@ -122,9 +120,9 @@ describe('InterviewScreen: Practice Mode layout switching', () => {
 
 // --- Property-Based Tests ---
 
-describe('Property 8: Practice Mode 격리', () => {
+describe('Property 8: Practice Mode isolation', () => {
   /**
-   * Feature: frontend-interview, Property 8: Practice Mode 격리
+   * Feature: frontend-interview, Property 8: Practice Mode isolation
    * Validates: Requirements 5.2
    *
    * For any Practice Mode toggle state change, WebSocket messages or
@@ -181,16 +179,16 @@ describe('Property 8: Practice Mode 격리', () => {
   });
 });
 
-describe('Property 9: Practice Mode ON — Chat Log 표시 규칙', () => {
+describe('Property 9: Practice Mode ON — caption display rules', () => {
   /**
-   * Feature: frontend-interview, Property 9: Practice Mode ON — 표시 규칙
+   * Feature: frontend-interview, Property 9: Practice Mode ON — display rules
    * Validates: Requirements 5.3, 5.4
    *
    * For any transcript entries when PracticeBubbles is rendered (Practice Mode ON):
-   * - Both interviewer and user text are shown in the chat log
-   * - Entries appear in transcript order
+   * - Interviewer text is shown in the chat log
+   * - Candidate answers are omitted
    */
-  it('PBT: Chat log shows all transcript entries in order', () => {
+  it('PBT: Chat log shows interviewer entries only', () => {
     fc.assert(
       fc.property(
         fc.array(transcriptEntryArb, { minLength: 0, maxLength: 20 }),
@@ -200,16 +198,9 @@ describe('Property 9: Practice Mode ON — Chat Log 표시 규칙', () => {
           );
 
           const interviewerBubbles = screen.queryAllByTestId('practice-bubble-interviewer');
-          const userBubbles = screen.queryAllByTestId('practice-bubble-user');
-          const totalBubbles = interviewerBubbles.length + userBubbles.length;
-
-          // Total bubbles should equal total transcript entries
-          expect(totalBubbles).toBe(transcript.length);
-
           const interviewerEntries = transcript.filter((e) => e.role === 'interviewer');
-          const userEntries = transcript.filter((e) => e.role === 'user');
           expect(interviewerBubbles.length).toBe(interviewerEntries.length);
-          expect(userBubbles.length).toBe(userEntries.length);
+          expect(screen.queryAllByTestId('practice-bubble-user')).toHaveLength(0);
 
           unmount();
         }
@@ -219,9 +210,9 @@ describe('Property 9: Practice Mode ON — Chat Log 표시 규칙', () => {
   });
 });
 
-describe('Property 10: Practice Mode OFF — 조건부 렌더링', () => {
+describe('Property 10: Practice Mode OFF — conditional rendering', () => {
   /**
-   * Feature: frontend-interview, Property 10: Practice Mode OFF — 타일만 표시
+   * Feature: frontend-interview, Property 10: Practice Mode OFF — tiles only
    * Validates: Requirements 5.5
    *
    * When Practice Mode is OFF, the parent (InterviewScreen) does not render
@@ -260,9 +251,9 @@ describe('Property 10: Practice Mode OFF — 조건부 렌더링', () => {
   });
 });
 
-describe('Property 11: 두 뷰가 동시에 렌더링되지 않음', () => {
+describe('Property 11: mutually exclusive views', () => {
   /**
-   * Feature: frontend-interview, Property 11: 중복 렌더링 방지
+   * Feature: frontend-interview, Property 11: prevent duplicate views
    * Validates: Requirements 5.6
    *
    * For any practiceMode state, participant-tiles and practice-bubbles
