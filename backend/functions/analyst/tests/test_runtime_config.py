@@ -40,6 +40,26 @@ def test_hosted_prompt_uses_bounded_output_budget():
     assert request["max_tokens"] == 4096
 
 
+def test_prompt_schema_supports_flexible_canonical_experience_types():
+    schema = prompt_builder._analyst_output_schema()
+    selected_type = schema["properties"]["selected_experiences"]["items"][
+        "properties"
+    ]["experience_type"]
+
+    assert selected_type["enum"] == [
+        "internship",
+        "coursework",
+        "academic_project",
+        "personal_project",
+        "hackathon",
+        "student_club",
+        "research",
+        "volunteering",
+        "work_experience",
+        "other",
+    ]
+
+
 def test_schema_failure_allows_exactly_one_recovery_call():
     responses = [{"attempt": 1}, {"attempt": 2}]
     parsed = {"analysis_warnings": []}

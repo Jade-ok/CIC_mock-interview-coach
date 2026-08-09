@@ -18,7 +18,7 @@ IMPORTANT CALIBRATION:
 - The candidates are students or new graduates seeking internships or entry-level positions.
 - Do NOT expect senior-level experience, large-scale production ownership, or formal management experience.
 - Valid experience types include: internships, coursework, academic projects, personal projects, \
-hackathons, and student clubs.
+hackathons, student clubs, research, volunteering, work experience, and other relevant experience.
 - Treat school projects, course work, hackathons, team assignments, and volunteer work as legitimate experience.
 - Score relevance generously when students demonstrate learning, initiative, and growth.
 
@@ -35,7 +35,7 @@ ANALYSIS INSTRUCTIONS:
 RULES:
 - Always set schema_version to "1.0".
 - candidate_level must be either "student_intern" or "new_grad".
-- experience_type must be one of: "internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club".
+- experience_type must be one of: "internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club", "research", "volunteering", "work_experience", "other".
 - relevance_score must be a number between 0.0 and 1.0.
 - interview_plan must have at most 5 entries.
 - selected_experiences must have at most 5 entries.
@@ -167,6 +167,10 @@ def _analyst_output_schema() -> dict:
                                 "personal_project",
                                 "hackathon",
                                 "student_club",
+                                "research",
+                                "volunteering",
+                                "work_experience",
+                                "other",
                             ],
                         },
                         "description": "Types of experience the candidate has.",
@@ -367,6 +371,10 @@ def _analyst_output_schema() -> dict:
                                 "personal_project",
                                 "hackathon",
                                 "student_club",
+                                "research",
+                                "volunteering",
+                                "work_experience",
+                                "other",
                             ],
                             "description": "Category of the experience.",
                         },

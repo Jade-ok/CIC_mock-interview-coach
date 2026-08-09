@@ -92,11 +92,13 @@ The Resume Analysis Pipeline is a two-Lambda pipeline for the mock interview coa
 
 1. THE Analyst SHALL include the field `schema_version` set to `"1.0"` in every Analyst_Output response.
 2. THE Analyst SHALL include all top-level keys (candidate_profile, target_role, resume_job_alignment, interview_plan, selected_experiences, analysis_warnings) in every Analyst_Output response.
-3. THE Analyst SHALL set `experience_type` to one of the allowed values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, or `"student_club"`.
-4. THE Analyst SHALL use the Mantle_Chat_API with a forced function call to produce JSON conforming to the defined schema.
-5. WHEN a local Mantle_Chat_API response does not conform to the expected schema, THE Analyst SHALL retry once; hosted execution SHALL return the schema error after its single call.
-6. IF the local Analyst_Output still does not conform after recovery, or the hosted output fails validation, THEN THE Analyst SHALL return a schema-validation error response.
-7. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
+3. THE Analyst SHALL set `experience_type` to one of the canonical values: `"internship"`, `"coursework"`, `"academic_project"`, `"personal_project"`, `"hackathon"`, `"student_club"`, `"research"`, `"volunteering"`, `"work_experience"`, or `"other"`.
+4. WHEN the model returns a common synonym such as `"work"`, `"employment"`, `"part_time_work"`, or `"co_op"`, THE Analyst SHALL normalize it to the corresponding canonical value before validation.
+5. WHEN the model returns an unfamiliar non-empty experience category, THE Analyst SHALL normalize it to `"other"` rather than fail the complete analysis.
+6. THE Analyst SHALL use the Mantle_Chat_API with a forced function call to produce JSON conforming to the defined schema.
+7. WHEN a local Mantle_Chat_API response does not conform to the expected schema, THE Analyst SHALL retry once; hosted execution SHALL return the schema error after its single call.
+8. IF the local Analyst_Output still does not conform after recovery, or the hosted output fails validation, THEN THE Analyst SHALL return a schema-validation error response.
+9. THE `interview_plan` SHALL contain at most 5 entries describing topic, priority, question type, target skill, and source experience.
 
 ### Requirement 7: Analyst Bedrock Configuration
 

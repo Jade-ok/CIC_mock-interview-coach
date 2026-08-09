@@ -6,7 +6,7 @@ Build a voice-based résumé deep-dive mock interview app for students and inter
 
 The user uploads a résumé, pastes a target job description, completes a spoken interview, and receives student-appropriate feedback.
 
-The Analyst currently accepts internships, coursework, academic projects, personal projects, hackathons, and student clubs as selected experience types. The interview profile also intends to support research, volunteering, and part-time work, but the Analyst enum must be expanded before those types work end to end. The app should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
+The Analyst accepts internships, coursework, academic projects, personal projects, hackathons, student clubs, research, volunteering, and work experience. Common model synonyms are normalized to these stable categories, while unfamiliar non-empty labels become `other` so category wording cannot fail an otherwise valid analysis. The app should not expect senior-level system design, large-scale production ownership, formal management experience, or many years of professional work.
 
 ## Interview Format
 

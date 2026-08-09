@@ -451,7 +451,7 @@ analyst_output = json.loads(arguments)
 | MIN_RESUME_WORDS | `50` | `parser.py` (analyst) |
 | MIN_JOB_POSTING_WORDS | `30` | `parser.py` (analyst) |
 | SCHEMA_VERSION | `"1.0"` | `parser.py` (analyst) |
-| ALLOWED_EXPERIENCE_TYPES | `["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club"]` | `parser.py` (analyst) |
+| ALLOWED_EXPERIENCE_TYPES | `["internship", "coursework", "academic_project", "personal_project", "hackathon", "student_club", "research", "volunteering", "work_experience", "other"]` | `parser.py` (analyst) |
 
 
 
@@ -503,7 +503,7 @@ analyst_output = json.loads(arguments)
 
 ### Property 8: Schema Validator Rejects Non-Conforming Output
 
-*For any* dict that is missing required top-level keys, has `schema_version` != "1.0", contains an `experience_type` outside the allowed enum set, has a `relevance_score` outside [0.0, 1.0], or has more than 5 entries in `interview_plan`, the schema validator SHALL raise a validation error.
+*For any* dict that is missing required top-level keys, has `schema_version` != "1.0", contains a missing or non-string `experience_type`, has a `relevance_score` outside [0.0, 1.0], or has more than 5 entries in `interview_plan`, the schema validator SHALL raise a validation error. Known experience-type aliases SHALL map to canonical values, and unfamiliar non-empty strings SHALL map to `other`.
 
 **Validates: Requirements 5.5, 5.6, 6.1, 6.2, 6.3**
 
