@@ -16,6 +16,18 @@ import { createAudioManager, type AudioManager } from '@/services/audioManager';
 import type { WebSocketClient, NovaSonicOutputEvent } from '@/services/webSocketClient';
 import type { SessionAction, TranscriptEntry } from '@/types/session';
 
+/** Returns true if text is a raw JSON control message (e.g. {"interrupted":true}) */
+function isControlJson(text: string): boolean {
+  const t = text.trim();
+  if ((!t.startsWith('{') && !t.startsWith('[')) || t.length > 200) return false;
+  try {
+    const parsed = JSON.parse(t);
+    return typeof parsed === 'object' && parsed !== null;
+  } catch {
+    return false;
+  }
+}
+
 export interface UseInterviewStreamingOptions {
   phase: string;
   wsClient: InterviewWebSocketClient | null;
@@ -152,10 +164,15 @@ export function useInterviewStreaming({
 
       // Sub-task 4: text_output → PARTIAL updates livePartial, FINAL commits to transcript
       case 'text_output': {
+        const text = event.payload.content;
+        // Filter out control/JSON messages (e.g. {"interrupted":true}) that Nova
+        // may emit as text_output events — these should not appear in transcript.
+        if (isControlJson(text)) break;
+
         if (event.payload.generationStage === 'FINAL') {
           const entry: TranscriptEntry = {
             role: event.payload.role,
-            text: event.payload.content,
+            text,
             timestamp: new Date().toISOString(),
           };
           dispatchRef.current({ type: 'APPEND_TRANSCRIPT', payload: entry });
@@ -163,7 +180,7 @@ export function useInterviewStreaming({
           // PARTIAL — update live caption
           dispatchRef.current({
             type: 'UPDATE_LIVE_PARTIAL',
-            payload: { role: event.payload.role, text: event.payload.content },
+            payload: { role: event.payload.role, text },
           });
         }
         break;

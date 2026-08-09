@@ -77,23 +77,30 @@ export function GuidePanel({ analystOutput }: GuidePanelProps) {
     <div className="guide-panel" data-testid="guide-panel">
       {panelData && (
         <div className="guide-panel__content" data-testid="guide-panel-layer2">
-          <RoleSkillsHint
-            targetSkills={panelData.targetSkills}
-            evaluationPriorities={panelData.evaluationPriorities}
-          />
+          <div className="guide-panel__card-entry" style={{ animationDelay: '0ms' }}>
+            <RoleSkillsHint
+              targetSkills={panelData.targetSkills}
+              evaluationPriorities={panelData.evaluationPriorities}
+            />
+          </div>
 
           {panelData.experienceCards.length > 0 && (
             <div className="guide-panel__experiences-section">
               <span className="guide-panel__section-title">Experiences to Prepare</span>
               <ul className="guide-panel__list" data-testid="experience-card-list">
-                {panelData.experienceCards.map((card) => (
-                  <ExperienceCard
+                {panelData.experienceCards.map((card, i) => (
+                  <li
                     key={card.exp.experience_id}
-                    index={card.index}
-                    title={card.exp.title}
-                    classification={card.classification}
-                    keywordChips={card.chips}
-                  />
+                    className="guide-panel__card-entry"
+                    style={{ animationDelay: `${(i + 1) * 120}ms` }}
+                  >
+                    <ExperienceCard
+                      index={card.index}
+                      title={card.exp.title}
+                      classification={card.classification}
+                      keywordChips={card.chips}
+                    />
+                  </li>
                 ))}
               </ul>
             </div>
@@ -130,6 +137,22 @@ export function GuidePanel({ analystOutput }: GuidePanelProps) {
           display: flex;
           flex-direction: column;
           gap: 8px;
+        }
+
+        .guide-panel__card-entry {
+          opacity: 0;
+          animation: guideFadeIn 0.35s ease-out forwards;
+        }
+
+        @keyframes guideFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .guide-panel__content {
