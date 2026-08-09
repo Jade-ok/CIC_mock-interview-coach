@@ -146,11 +146,12 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 
 | Component | Technologies |
 |---|---|
-| Frontend | React, TypeScript, HTML, CSS |
-| Build Tool | Vite |
+| Frontend | React, TypeScript, HTML, CSS, Vite |
 | Backend | Python |
+| PDF Parser | AWS Lambda, pypdf |
 | Analyst Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
-| Interviewer Agent | AWS Lambda context builder, Amazon Nova 2 Sonic through Amazon Bedrock, Amazon Bedrock AgentCore |
+| Voice Session | AWS Lambda |
+| Interviewer Agent | AWS Lambda, Amazon Nova 2 Sonic through Amazon Bedrock, Amazon Bedrock AgentCore |
 | Evaluator Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
 | Configuration | Amazon S3 |
 | Infrastructure | AWS CDK |
@@ -168,31 +169,11 @@ The application uses three specialized agents connected through structured JSON 
 2. **Interviewer Agent:** Combines the personalized analysis with the interview structure and student profile, then conducts the spoken interview through Nova 2 Sonic.
 3. **Evaluator Agent:** Reviews the completed question-and-answer pairs together with the original analysis and generates the final feedback report.
 
-The browser orchestrates the workflow and retains the active interview content. Amazon S3 stores interview configuration rather than uploaded documents, while a small DynamoDB table holds only expiring hashed demo-session metadata and counters.
+The browser orchestrates the workflow and retains the active interview content. Amazon S3 stores interview configuration rather than uploaded documents.
 
 ### Architecture Diagram
 
-```mermaid
-flowchart TD
-    User --> Frontend[React frontend<br/>AWS Amplify Hosting]
-    Frontend --> CloudFront[Amazon CloudFront<br/>API distribution]
-
-    CloudFront --> Admission[Demo Session<br/>AWS Lambda]
-    CloudFront --> PDF[PDF Parser<br/>AWS Lambda]
-    CloudFront --> Analyst[Analyst Agent<br/>AWS Lambda]
-    CloudFront --> Interviewer[Interviewer Agent<br/>AWS Lambda]
-    CloudFront --> Evaluator[Evaluator Agent<br/>AWS Lambda]
-    CloudFront --> VoiceSession[Voice Session<br/>AWS Lambda]
-    Admission --> Quotas[Amazon DynamoDB<br/>Expiring quota records]
-
-    Analyst <--> GPT[Amazon Bedrock<br/>OpenAI GPT OSS 120B]
-    Evaluator <--> GPT
-    S3[Amazon S3<br/>Interview configuration] --> Interviewer
-
-    VoiceSession -. Short-lived signed WebSocket URL .-> Frontend
-    Frontend <-->|Live audio and transcript events| AgentCore[Amazon Bedrock AgentCore<br/>Voice relay]
-    AgentCore <-->|Bidirectional speech stream| Nova[Amazon Bedrock<br/>Nova 2 Sonic]
-```
+![AWS Architecture Diagram](docs/Architecture/aws-architecture-diagram.png)
 
 ### Resume and Job Analysis
 
@@ -204,7 +185,7 @@ The Interviewer Agent receives the complete Analyst output and combines it with 
 
 ### Real-Time Speech-to-Speech Interview
 
-For the hosted application, the browser requests a fresh signed connection from the Voice Session Lambda and opens a WebSocket to the AgentCore-hosted Python relay. The relay manages Nova's bidirectional streaming protocol, including audio input, audio playback, transcript events, interruptions, tool calls, and graceful shutdown. Nova 2 Sonic listens to the student's speech and responds directly with synthesized speech, allowing the conversation to continue naturally without push-to-talk controls.
+For the hosted application, the browser requests a connection from the Voice Session Lambda and opens a WebSocket to the AgentCore-hosted Python relay. The relay manages Nova's bidirectional streaming protocol, including audio input, audio playback, transcript events, interruptions, tool calls, and graceful shutdown. Nova 2 Sonic listens to the student's speech and responds directly with synthesized speech, allowing the conversation to continue naturally without push-to-talk controls.
 
 Nova is instructed to ask three main questions and one adaptive follow-up after each main question, drawing from project ownership, technical problem-solving, and learning or collaboration experiences. The follow-up sequence remains model-directed, so the application evaluates the completed question-and-answer pairs rather than penalizing an interview that ends early.
 
@@ -217,7 +198,7 @@ When the interview finishes, the frontend pairs final interviewer and student tr
 | Agent | Model or Service |
 |---|---|
 | Analyst | OpenAI GPT OSS 120B through Amazon Bedrock |
-| Interviewer | Amazon Nova 2 Sonic through Amazon Bedrock |
+| Interviewer | Amazon Nova 2 Sonic through Amazon Bedrock, Amazon Bedrock AgentCore |
 | Evaluator | OpenAI GPT OSS 120B through Amazon Bedrock |
 
 Inter-agent payload definitions live in `schemas/`:
@@ -238,7 +219,7 @@ backend/functions/analyst/
 ├── orchestrator.py     # Business-logic coordination
 ├── validation.py       # Input validation
 ├── prompt_builder.py   # Prompt and function construction
-├── bedrock_client.py   # Signed model request
+├── bedrock_client.py   # Model request
 └── parser.py           # Structured response parsing and validation
 ```
 
@@ -259,7 +240,7 @@ backend/functions/evaluator/
 ├── lambda_handler.py      # Lambda entry point and orchestration
 ├── validator.py           # Input validation
 ├── prompt_builder.py      # Prompt and feedback-function construction
-├── bedrock_client.py      # Signed model request and function extraction
+├── bedrock_client.py      # Model request and function extraction
 ├── scorer.py              # Score aggregation and readiness classification
 ├── response_assembler.py  # Final feedback response
 ├── schemas.py             # Evaluator function and response schemas
@@ -268,15 +249,16 @@ backend/functions/evaluator/
 
 ### Hosted Architecture
 
-AWS Amplify Hosting serves the React application. The browser sends hosted HTTP requests through one Amazon CloudFront distribution, which routes each path to the appropriate Lambda function. The Voice Session Lambda creates short-lived AgentCore connection URLs, while AgentCore runs the session-long Python relay needed for Nova's bidirectional audio stream. Amazon S3 stores interview configuration deployed from the repository, and AWS CDK defines the CloudFront, Lambda, permissions, storage, monitoring, and budget resources.
+AWS Amplify Hosting serves the React application. The browser sends hosted HTTP requests through one Amazon CloudFront distribution, which routes each path to the appropriate Lambda function. The Voice Session Lambda creates AgentCore connection URLs, while AgentCore runs the session-long Python relay needed for Nova's bidirectional audio stream. Amazon S3 stores interview configuration deployed from the repository, and AWS CDK defines the application infrastructure.
 
-Two GitHub Actions release paths keep the hosted application synchronized with `main`. Application changes test and update the CDK backend before building and publishing the same frontend revision to Amplify. Voice-relay changes test and update the AgentCore runtime separately. Both workflows use short-lived GitHub OIDC credentials rather than permanent AWS access keys.
+Two GitHub Actions release paths keep the hosted application synchronized with `main`. Application changes test and update the CDK backend before building and publishing the same frontend revision to Amplify. Voice-relay changes test and update the AgentCore runtime separately.
 
 ### Security and Cost Controls
 
 The hosted application intentionally does not require an end-user login. Its security and cost controls include:
 
 - All six Lambda Function URLs require AWS IAM authentication. CloudFront Origin Access Control signs hosted origin requests, while anonymous requests sent directly to the Function URLs are rejected.
+- Amazon DynamoDB stores only expiring hashed demo-session metadata, admission records, and attempt counters.
 - The deployed demo admits at most 100 interview sessions per UTC day and at most 5 per trusted viewer IP per UTC day. Source-level parameter bounds prevent either value from being raised above those ceilings; the global limit can later be lowered to 5 without an application rewrite.
 - Every hosted pipeline stage requires the IP-bound, two-hour opaque session token. Each token permits at most 2 PDF Parser, 2 Analyst, 2 Interviewer, 2 Evaluator, and 3 Voice Session attempts, preventing one admitted session from repeatedly invoking paid work.
 - A CloudFront viewer-request guard rejects unknown API paths and methods other than `POST` and `OPTIONS` before they reach Lambda.
@@ -291,9 +273,7 @@ Atomic admission enforces the configured global daily ceiling. CORS controls bro
 
 ### Important Implementation Notes
 
-- Hosted JSON requests travel through CloudFront to private Function URLs; Lambda handlers parse the payload from `event["body"]`.
-- CloudFront origin access requires both `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` permissions scoped to the distribution.
-- Lambda Function URL CORS is infrastructure configuration rather than Python response logic.
+- Hosted Lambda handlers parse JSON request payloads from `event["body"]`.
 - A 4 MiB PDF expands when base64 encoded, so the product limit also leaves space under the Lambda Function URL request-payload quota.
 - Local mode invokes the same Python handlers directly and reads interview configuration from the repository instead of Amazon S3.
 - Hosted endpoint configuration is selected only when the frontend explicitly builds or runs with hosted runtime mode.
@@ -306,7 +286,7 @@ Atomic admission enforces the configured global daily ceiling. CORS controls bro
 - Keeping microphone capture, streamed playback, partial transcripts, final transcripts, and active-speaker state synchronized during a natural conversation
 - Producing reliable structured outputs from generative models and validating them before the data moves between Analyst, Interviewer, Evaluator, and the frontend
 - Coordinating a multi-step cloud workflow while preserving the student's resume analysis and interview state in the browser
-- Supporting both local and hosted workflows while balancing a login-free student experience with the operational constraints of a real-time multi-agent application
+- Supporting both local and hosted workflows while maintaining an accessible student experience across a real-time multi-agent application
 
 <br>
 
