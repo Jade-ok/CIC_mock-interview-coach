@@ -139,6 +139,21 @@ describe('sessionReducer', () => {
       });
       expect(result.wsConnectionState).toBe('disconnected');
     });
+
+    it('preserves a voice-service failure reason for the user', () => {
+      const state: SessionState = {
+        ...initialState,
+        phase: 'interview',
+        wsReady: true,
+        wsConnectionState: 'connected',
+      };
+      const result = sessionReducer(state, {
+        type: 'WS_SESSION_INVALID',
+        payload: { message: 'The voice interview could not start.' },
+      });
+      expect(result.error?.message).toBe('The voice interview could not start.');
+      expect(result.error?.retryable).toBe(false);
+    });
   });
 
   describe('WS_RECONNECT_SUCCESS', () => {

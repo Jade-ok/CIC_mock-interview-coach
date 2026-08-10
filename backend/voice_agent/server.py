@@ -141,10 +141,43 @@ async def forward_responses(
                 response_json = json.dumps(item)
                 for chunk in split_large_event(response_json):
                     await websocket.send_text(chunk)
+
+        # A response stream should remain open until the browser ends the
+        # session. If Nova closes it first (including a model safety rejection),
+        # stop accepting microphone audio and give the browser a recoverable
+        # error instead of leaving the interview silently connected.
+        if not protocol.closed:
+            await websocket.send_json(
+                {
+                    "type": "session_invalid",
+                    "payload": {
+                        "reason": (
+                            "The voice interview could not start with this interview "
+                            "context. Please go back and try again."
+                        )
+                    },
+                }
+            )
+            await websocket.close(code=1011, reason="Voice response stream ended")
     except WebSocketDisconnect:
         logger.info("Client disconnected during response forwarding")
     except Exception as e:
         logger.error("Error forwarding responses: %s", e)
+        try:
+            await websocket.send_json(
+                {
+                    "type": "session_invalid",
+                    "payload": {
+                        "reason": (
+                            "The voice interview ended unexpectedly. Please go back "
+                            "and try again."
+                        )
+                    },
+                }
+            )
+            await websocket.close(code=1011, reason="Voice response failure")
+        except Exception:
+            pass
     finally:
         session_manager.is_active = False
 

@@ -291,6 +291,51 @@ def test_response_forwarder_acknowledges_tool_before_browser_auto_end():
     ]
 
 
+def test_response_forwarder_reports_unexpected_nova_stream_end():
+    protocol = BrowserSessionProtocol()
+    start_protocol(protocol)
+
+    class FakeSessionManager:
+        def __init__(self):
+            self.is_active = True
+
+        async def process_responses(self):
+            if False:
+                yield {}
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.sent = []
+            self.close_args = None
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
+
+    manager = FakeSessionManager()
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.forward_responses(manager, websocket, protocol))
+
+    assert websocket.sent == [
+        {
+            "type": "session_invalid",
+            "payload": {
+                "reason": (
+                    "The voice interview could not start with this interview "
+                    "context. Please go back and try again."
+                )
+            },
+        }
+    ]
+    assert websocket.close_args == {
+        "code": 1011,
+        "reason": "Voice response stream ended",
+    }
+    assert manager.is_active is False
+
+
 def test_boto3_resolver_bridges_refreshable_credentials():
     class FakeCredentials:
         def get_frozen_credentials(self):

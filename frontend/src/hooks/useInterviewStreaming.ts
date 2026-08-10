@@ -192,7 +192,10 @@ export function useInterviewStreaming({
       // session_invalid → error + route to upload
       case 'session_invalid': {
         wsClientRef.current?.disconnect();
-        dispatchRef.current({ type: 'WS_SESSION_INVALID' });
+        dispatchRef.current({
+          type: 'WS_SESSION_INVALID',
+          payload: { message: event.payload.reason },
+        });
         break;
       }
 

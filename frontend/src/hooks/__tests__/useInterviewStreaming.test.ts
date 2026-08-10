@@ -394,7 +394,10 @@ describe('useInterviewStreaming', () => {
         (mockWs as unknown as { onMessage: (e: NovaSonicOutputEvent) => void }).onMessage(event);
       });
 
-      expect(dispatch).toHaveBeenCalledWith({ type: 'WS_SESSION_INVALID' });
+      expect(dispatch).toHaveBeenCalledWith({
+        type: 'WS_SESSION_INVALID',
+        payload: { message: 'Session expired' },
+      });
       expect(mockWs.disconnect).toHaveBeenCalled();
     });
   });

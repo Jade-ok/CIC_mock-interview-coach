@@ -85,7 +85,7 @@ export class WebSocketClient {
   onReconnectAttempt: (attempt: number) => void = () => {};
   onReconnectSuccess: () => void = () => {};
   onReconnectFailed: () => void = () => {};
-  onSessionInvalid: () => void = () => {};
+  onSessionInvalid: (reason: string) => void = () => {};
 
   connect(config: WebSocketClientConfig): Promise<void> {
     const generation = ++this.connectionGeneration;
@@ -237,7 +237,7 @@ export class WebSocketClient {
 
     // Handle session_invalid
     if (parsed.type === 'session_invalid') {
-      this.onSessionInvalid();
+      this.onSessionInvalid(parsed.payload.reason);
     }
 
     // Forward to general message handler

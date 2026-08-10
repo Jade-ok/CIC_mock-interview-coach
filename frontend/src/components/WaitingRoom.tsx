@@ -266,9 +266,9 @@ export function WaitingRoom() {
       if (!isCurrentRequest()) return;
       dispatch({ type: 'WS_RECONNECT_FAILED' });
     };
-    wsClient.onSessionInvalid = () => {
+    wsClient.onSessionInvalid = (reason) => {
       if (!isCurrentRequest()) return;
-      dispatch({ type: 'WS_SESSION_INVALID' });
+      dispatch({ type: 'WS_SESSION_INVALID', payload: { message: reason } });
     };
 
     try {

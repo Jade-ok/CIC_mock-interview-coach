@@ -65,7 +65,7 @@ export type SessionAction =
   | { type: 'WS_DISCONNECTED'; payload: { reason: string } }
   | { type: 'WS_RECONNECT_SUCCESS' }
   | { type: 'WS_RECONNECT_FAILED' }
-  | { type: 'WS_SESSION_INVALID' }
+  | { type: 'WS_SESSION_INVALID'; payload?: { message?: string } }
   | { type: 'INTERVIEW_READY' }
   | { type: 'AI_SPEAKING' }
   | { type: 'USER_TURN' }

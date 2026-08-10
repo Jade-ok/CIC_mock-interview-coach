@@ -129,7 +129,9 @@ export function sessionReducer(
         wsConnectionState: 'disconnected',
         error: {
           code: 'WS_SESSION_INVALID',
-          message: 'Session is no longer valid. Please start a new session.',
+          message:
+            action.payload?.message
+            || 'Session is no longer valid. Please start a new session.',
           retryable: false,
         },
       };
