@@ -1,4 +1,5 @@
 <h1 align="center">AI Mock Interview Coach</h1>
+<h2 align="center">(Cloud Innovation Centre Hackathon)</h2>
 
 <h4 align="center">
   A personalized, student-first, multi-agent AI mock interview coach<br>
