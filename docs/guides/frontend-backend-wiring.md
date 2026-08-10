@@ -81,7 +81,8 @@ The STS result and the server startup log identify the AWS account that owns loc
 
 ```bash
 cd frontend
-npm ci && npm run dev
+npm ci
+npm run dev
 ```
 
 PDF parsing and interview configuration remain local; Analyst, Evaluator, and Nova calls use the displayed AWS identity. With `VITE_RUNTIME_MODE=local` (the default), `VITE_API_BASE_URL` is ignored and no deployed endpoint is required. Setting the mode explicitly to `hosted` exercises the hosted services. Hosted-mode browser testing must use `http://localhost:5173`, the exact local origin allowed by hosted CORS; stop another Vite process instead of accepting Vite's fallback to port 5174. Local model calls retain the 8,192-token output budget and local voice has no application-imposed eight-minute limit. The product-wide 5,000-character job-description and 4 MiB PDF limits still apply, as do AWS quotas. Never commit account identifiers or credentials.
