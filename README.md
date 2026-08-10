@@ -55,7 +55,7 @@ Many digital mock interviews also rely on text chat or stop-and-start recordings
 
 AI Mock Interview Coach is a full-stack, multi-agent AI web application that gives students a personalized resume deep-dive interview for internship and co-op preparation. Students upload a PDF resume and paste a target job description, which are used to identify the experiences and skills most relevant to the role. Both modes provide live, hands-free, conversational speech-to-speech interviews with natural responses and possible follow-up questions. Practice Mode adds supportive, role-specific guidance and personalized hints based on the student's background, while Live Mode simulates a realistic virtual interview. After the interview, students receive a thorough report with an overall assessment, dimension scores, question-specific strengths and improvements, keyword coverage, and focused next steps.
 
-The application was built with React, TypeScript, HTML, and CSS on the frontend, with Vite as the build tool. Its backend uses Python and AWS Lambda for the Analyst, Evaluator, PDF Parser, Voice Session signer, and Interviewer context builder. Three specialized agents coordinate the experience: the Analyst Agent and Evaluator Agent use OpenAI GPT OSS 120B through Amazon Bedrock, while the spoken Interviewer Agent uses Amazon Nova 2 Sonic through Amazon Bedrock and a session-long Amazon Bedrock AgentCore voice relay. Amazon S3 stores interview configuration, AWS CDK defines the infrastructure, Amazon CloudFront routes hosted API traffic, and AWS Amplify Hosting serves the application. Additional AWS Lambda and Amazon DynamoDB components enforce hosted usage limits, while Amazon CloudWatch Alarms, Amazon SNS, and AWS Budgets provide monitoring and cost controls.
+The application was built with React, TypeScript, HTML, and CSS on the frontend, with Vite as the build tool. Its backend uses FastAPI and Python. AWS Lambda runs the Analyst, Evaluator, PDF Parser, Voice Session signer, and Interviewer context builder. Three specialized agents coordinate the experience: the Analyst Agent and Evaluator Agent use OpenAI GPT OSS 120B through Amazon Bedrock, while the spoken Interviewer Agent uses Amazon Nova 2 Sonic through Amazon Bedrock and a session-long Amazon Bedrock AgentCore voice relay. Amazon S3 stores interview configuration, AWS CDK defines the infrastructure, Amazon CloudFront routes hosted API traffic, and AWS Amplify Hosting serves the application. Additional AWS Lambda and Amazon DynamoDB components enforce hosted usage limits, while Amazon CloudWatch Alarms, Amazon SNS, and AWS Budgets provide monitoring and cost controls. Docker containerizes the AgentCore voice relay.
 
 <br>
 
@@ -144,10 +144,10 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 
 ## Tech Stack
 
-| Component | Technologies |
+| Layer | Technologies |
 |---|---|
 | Frontend | React, TypeScript, HTML, CSS, Vite |
-| Backend | Python |
+| Backend | FastAPI, Python |
 | PDF Parser | AWS Lambda, pypdf |
 | Analyst Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
 | Voice Session | AWS Lambda |
@@ -155,6 +155,7 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 | Evaluator Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
 | Configuration | Amazon S3 |
 | Infrastructure | AWS CDK |
+| Containerization | Docker |
 | Deployment | Amazon CloudFront, AWS Amplify Hosting |
 | Security and Cost Controls | AWS Lambda, Amazon DynamoDB, Amazon CloudWatch Alarms, Amazon SNS, AWS Budgets |
 
