@@ -12,7 +12,12 @@ VOICE_AGENT_DIR = Path(__file__).resolve().parents[2] / "backend" / "voice_agent
 sys.path.insert(0, str(VOICE_AGENT_DIR))
 
 from protocol import BrowserProtocolError, BrowserSessionProtocol  # noqa: E402
-from s2s_session_manager import Boto3CredentialsResolver  # noqa: E402
+import s2s_session_manager as s2s_module  # noqa: E402
+from s2s_session_manager import (  # noqa: E402
+    AudioInputStreamError,
+    Boto3CredentialsResolver,
+    S2sSessionManager,
+)
 import server as voice_server  # noqa: E402
 
 
@@ -427,21 +432,94 @@ def test_boto3_resolver_bridges_refreshable_credentials():
     assert identity.session_token == "temporary-session-token"
 
 
+def test_stop_audio_input_waits_for_inflight_send_and_discards_pending_audio():
+    async def scenario():
+        manager = S2sSessionManager()
+        manager.is_active = True
+        manager.accepting_audio = True
+        first_send_started = asyncio.Event()
+        release_first_send = asyncio.Event()
+        sent = []
+
+        async def fake_send_event(event_json):
+            sent.append(event_json)
+            first_send_started.set()
+            await release_first_send.wait()
+
+        manager.send_event = fake_send_event
+        await manager.send_audio_chunk("first-audio")
+        await manager.send_audio_chunk("queued-audio")
+        drain_task = asyncio.create_task(manager.drain_audio_queue())
+        await first_send_started.wait()
+
+        stop_task = asyncio.create_task(manager.stop_audio_input())
+        await asyncio.sleep(0)
+        assert stop_task.done() is False
+
+        release_first_send.set()
+        await stop_task
+
+        # The audio-specific gate must reject late chunks even while the Nova
+        # session remains active long enough to send its terminal events.
+        await manager.send_audio_chunk("late-audio")
+        assert manager.audio_queue.empty()
+
+        manager.is_active = False
+        await drain_task
+
+        assert sent == ["first-audio"]
+
+    asyncio.run(scenario())
+
+
+def test_stalled_audio_send_is_bounded_and_disables_audio(monkeypatch):
+    async def scenario():
+        manager = S2sSessionManager()
+        manager.is_active = True
+        manager.accepting_audio = True
+
+        class StalledInputStream:
+            async def send(self, _event):
+                await asyncio.Event().wait()
+
+        manager.stream = type("Stream", (), {"input_stream": StalledInputStream()})()
+        monkeypatch.setattr(s2s_module, "INPUT_SEND_TIMEOUT_SECONDS", 0.01)
+        await manager.send_audio_chunk("stalled-audio")
+
+        with pytest.raises(AudioInputStreamError, match="could not be sent"):
+            await manager.drain_audio_queue()
+
+        assert manager.is_active is False
+        assert manager.accepting_audio is False
+        assert manager.audio_queue.empty()
+
+    asyncio.run(scenario())
+
+
 def test_websocket_endpoint_adapts_browser_session_without_aws(monkeypatch):
     class FakeSessionManager:
         def __init__(self):
             self.is_active = False
             self.events = []
             self.audio_events = []
+            self.timeline = []
 
         async def start_session(self):
             self.is_active = True
 
         async def send_event(self, event_json):
             self.events.append(event_json)
+            self.timeline.append(event_name(event_json))
 
         async def send_audio_chunk(self, event_json):
             self.audio_events.append(event_json)
+
+        async def stop_audio_input(self):
+            self.timeline.append("stopAudioInput")
+
+        async def send_terminal_events(self, event_jsons):
+            for event_json in event_jsons:
+                await self.send_event(event_json)
 
         async def process_responses(self):
             while self.is_active:
@@ -501,6 +579,9 @@ def test_websocket_endpoint_adapts_browser_session_without_aws(monkeypatch):
         "contentEnd", "promptEnd", "sessionEnd",
     ]
     assert [event_name(item) for item in fake_manager.audio_events] == ["audioInput"]
+    assert fake_manager.timeline[-4:] == [
+        "stopAudioInput", "contentEnd", "promptEnd", "sessionEnd",
+    ]
 
 
 def test_hosted_websocket_duration_limit_notifies_closes_and_cleans_up(monkeypatch):
@@ -544,3 +625,198 @@ def test_hosted_websocket_duration_limit_notifies_closes_and_cleans_up(monkeypat
         "reason": "Session duration limit reached",
     }
     assert fake_manager.closed is True
+
+
+def test_terminal_events_are_atomic_and_reject_late_writers():
+    async def scenario():
+        manager = S2sSessionManager()
+        manager.is_active = True
+        manager.accepting_audio = True
+        first_send_started = asyncio.Event()
+        release_first_send = asyncio.Event()
+        sent_event_names = []
+
+        class ControlledInputStream:
+            async def send(self, event):
+                payload = json.loads(event.value.bytes_.decode("utf-8"))
+                name = next(iter(payload["event"]))
+                sent_event_names.append(name)
+                if name == "toolResult":
+                    first_send_started.set()
+                    await release_first_send.wait()
+
+        manager.stream = type(
+            "Stream", (), {"input_stream": ControlledInputStream()}
+        )()
+        initial_tool = json.dumps({"event": {"toolResult": {}}})
+        late_tool = json.dumps({"event": {"toolResult": {}}})
+        terminal = [
+            json.dumps({"event": {"contentEnd": {}}}),
+            json.dumps({"event": {"promptEnd": {}}}),
+            json.dumps({"event": {"sessionEnd": {}}}),
+        ]
+
+        initial_task = asyncio.create_task(manager.send_event(initial_tool))
+        await first_send_started.wait()
+        terminal_task = asyncio.create_task(manager.send_terminal_events(terminal))
+        await asyncio.sleep(0)
+        late_task = asyncio.create_task(manager.send_event(late_tool))
+        release_first_send.set()
+        await asyncio.gather(initial_task, terminal_task, late_task)
+
+        assert sent_event_names == [
+            "toolResult", "contentEnd", "promptEnd", "sessionEnd",
+        ]
+        assert manager.closing_input is True
+
+    asyncio.run(scenario())
+
+
+def test_websocket_endpoint_surfaces_audio_drain_failure(monkeypatch):
+    class FakeSessionManager:
+        def __init__(self):
+            self.is_active = False
+            self.closed = False
+
+        async def start_session(self):
+            self.is_active = True
+
+        async def send_event(self, _event_json):
+            return None
+
+        async def send_audio_chunk(self, _event_json):
+            return None
+
+        async def stop_audio_input(self):
+            return None
+
+        async def process_responses(self):
+            while self.is_active:
+                await asyncio.sleep(0.01)
+            if False:
+                yield {}
+
+        async def drain_audio_queue(self):
+            await asyncio.sleep(0)
+            self.is_active = False
+            raise AudioInputStreamError("simulated audio failure")
+
+        async def close(self):
+            self.is_active = False
+            self.closed = True
+
+    fake_manager = FakeSessionManager()
+    monkeypatch.setattr(voice_server, "S2sSessionManager", lambda: fake_manager)
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.receive_count = 0
+            self.sent = []
+            self.close_args = None
+
+        async def accept(self):
+            return None
+
+        async def receive_text(self):
+            self.receive_count += 1
+            if self.receive_count == 1:
+                return json.dumps({
+                    "type": "session_start",
+                    "payload": {"novaSonicContext": "Context", "inferenceConfig": {}},
+                })
+            await asyncio.Event().wait()
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
+
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.websocket_endpoint(websocket))
+
+    assert websocket.sent[0]["type"] == "session_start_ack"
+    assert websocket.sent[1] == {
+        "type": "session_invalid",
+        "payload": {
+            "reason": (
+                "The voice connection could not continue. Please go back and try again."
+            )
+        },
+    }
+    assert websocket.close_args == {
+        "code": 1011,
+        "reason": "Voice audio input failed",
+    }
+    assert fake_manager.closed is True
+
+
+def test_terminal_transport_timeout_is_not_reported_as_duration_limit(monkeypatch):
+    class FakeSessionManager:
+        def __init__(self):
+            self.is_active = False
+
+        async def start_session(self):
+            self.is_active = True
+
+        async def send_event(self, _event_json):
+            return None
+
+        async def send_audio_chunk(self, _event_json):
+            return None
+
+        async def stop_audio_input(self):
+            return None
+
+        async def send_terminal_events(self, _event_jsons):
+            raise asyncio.TimeoutError
+
+        async def process_responses(self):
+            while self.is_active:
+                await asyncio.sleep(0.01)
+            if False:
+                yield {}
+
+        async def drain_audio_queue(self):
+            while self.is_active:
+                await asyncio.sleep(0.01)
+
+        async def close(self):
+            self.is_active = False
+
+    monkeypatch.setattr(voice_server, "S2sSessionManager", FakeSessionManager)
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.messages = [
+                json.dumps({
+                    "type": "session_start",
+                    "payload": {"novaSonicContext": "Context", "inferenceConfig": {}},
+                }),
+                json.dumps({"type": "session_end", "payload": {}}),
+            ]
+            self.sent = []
+            self.close_args = None
+
+        async def accept(self):
+            return None
+
+        async def receive_text(self):
+            return self.messages.pop(0)
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
+
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.websocket_endpoint(websocket))
+
+    assert websocket.sent[-1]["payload"]["reason"].startswith(
+        "The voice connection could not continue"
+    )
+    assert websocket.close_args == {
+        "code": 1011,
+        "reason": "Voice input transport timed out",
+    }

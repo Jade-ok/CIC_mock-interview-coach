@@ -93,7 +93,7 @@ export function useInterviewStreaming({
 
     // Wire onAudioChunk: PCM chunk → base64 → sendAudioChunk (gated by isRecordingRef)
     am.onAudioChunk = (chunk: ArrayBuffer) => {
-      if (cleanedUpRef.current) return;
+      if (cleanedUpRef.current || endingRef.current) return;
       // Audio gate: only forward chunks when recording is active
       if (isRecordingRef && !isRecordingRef.current) return;
       const ws = wsClientRef.current;
@@ -111,13 +111,13 @@ export function useInterviewStreaming({
 
     // Wire onPlaybackEnd: when AI finishes speaking, transition to user_turn
     am.onPlaybackEnd = () => {
-      if (cleanedUpRef.current) return;
+      if (cleanedUpRef.current || endingRef.current) return;
       dispatchRef.current({ type: 'USER_TURN' });
     };
 
     // Initialize and start capture
     am.initialize().then(({ granted }) => {
-      if (cleanedUpRef.current) return;
+      if (cleanedUpRef.current || endingRef.current) return;
 
       if (!granted) {
         // Sub-task 5: Mic denied → show permission remediation
@@ -209,6 +209,7 @@ export function useInterviewStreaming({
         if (event.payload.toolName === 'end_interview' && !endingRef.current) {
           console.log('[DIAG] end_interview detected, dispatching INTERVIEW_ENDING');
           endingRef.current = true;
+          am?.pauseCapture();
           dispatchRef.current({ type: 'INTERVIEW_ENDING' });
           const lifecycleId = lifecycleIdRef.current;
 

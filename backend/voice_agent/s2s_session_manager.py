@@ -37,6 +37,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL_ID = "amazon.nova-2-sonic-v1:0"
 DEFAULT_REGION = "us-east-1"
 MAX_AUDIO_QUEUE_SIZE = 500
+INPUT_SEND_TIMEOUT_SECONDS = 5
+
+
+class AudioInputStreamError(RuntimeError):
+    """Raised when microphone audio can no longer be sent to Nova."""
 
 
 class Boto3CredentialsResolver(IdentityResolver):
@@ -75,7 +80,12 @@ class S2sSessionManager:
         self.client: AsyncBedrockRuntimeClient | None = None
         self.stream = None
         self.is_active = False
+        self.accepting_audio = False
         self.audio_queue: asyncio.Queue = asyncio.Queue(maxsize=MAX_AUDIO_QUEUE_SIZE)
+        self._audio_send_lock = asyncio.Lock()
+        self._input_send_lock = asyncio.Lock()
+        self._dropped_audio_chunks = 0
+        self.closing_input = False
 
     def _initialize_client(self):
         """Initialize the Bedrock Runtime client with SigV4 auth."""
@@ -97,6 +107,8 @@ class S2sSessionManager:
             InvokeModelWithBidirectionalStreamOperationInput(model_id=self.model_id)
         )
         self.is_active = True
+        self.accepting_audio = True
+        self.closing_input = False
         logger.info("Nova Sonic session started (model=%s)", self.model_id)
 
     async def send_event(self, event_json: str):
@@ -106,14 +118,44 @@ class S2sSessionManager:
         Args:
             event_json: A JSON string conforming to the Nova Sonic protocol.
         """
-        if not self.is_active or not self.stream:
+        if not self.is_active or not self.stream or self.closing_input:
             logger.warning("Attempted to send event on inactive session")
             return
 
         event = InvokeModelWithBidirectionalStreamInputChunk(
             value=BidirectionalInputPayloadPart(bytes_=event_json.encode("utf-8"))
         )
-        await self.stream.input_stream.send(event)
+        # The Smithy input stream is shared by browser events, tool results,
+        # and queued microphone audio. Serialize writes and bound each send so
+        # a stalled transport cannot block shutdown forever.
+        async with self._input_send_lock:
+            if self.closing_input:
+                return
+            await asyncio.wait_for(
+                self.stream.input_stream.send(event),
+                timeout=INPUT_SEND_TIMEOUT_SECONDS,
+            )
+
+    async def send_terminal_events(self, event_jsons: list[str]):
+        """Atomically close Nova input without allowing another writer between events."""
+        if not self.is_active or not self.stream:
+            return
+
+        # Set the gate before waiting for the lock so writers already queued on
+        # it re-check and stand down. A write already in flight may finish, then
+        # the complete terminal sequence owns the stream until sessionEnd.
+        self.closing_input = True
+        async with self._input_send_lock:
+            for event_json in event_jsons:
+                event = InvokeModelWithBidirectionalStreamInputChunk(
+                    value=BidirectionalInputPayloadPart(
+                        bytes_=event_json.encode("utf-8")
+                    )
+                )
+                await asyncio.wait_for(
+                    self.stream.input_stream.send(event),
+                    timeout=INPUT_SEND_TIMEOUT_SECONDS,
+                )
 
     async def send_audio_chunk(self, event_json: str):
         """
@@ -121,6 +163,9 @@ class S2sSessionManager:
 
         If the queue is full, the oldest chunk is dropped to prevent blocking.
         """
+        if not self.is_active or not self.accepting_audio:
+            return
+
         try:
             self.audio_queue.put_nowait(event_json)
         except asyncio.QueueFull:
@@ -130,7 +175,12 @@ class S2sSessionManager:
             except asyncio.QueueEmpty:
                 pass
             self.audio_queue.put_nowait(event_json)
-            logger.warning("Audio queue full — dropped oldest chunk")
+            self._dropped_audio_chunks += 1
+            if self._dropped_audio_chunks == 1 or self._dropped_audio_chunks % 100 == 0:
+                logger.warning(
+                    "Audio queue full — dropped oldest chunk (total=%d)",
+                    self._dropped_audio_chunks,
+                )
 
     async def drain_audio_queue(self):
         """
@@ -143,12 +193,40 @@ class S2sSessionManager:
                 event_json = await asyncio.wait_for(
                     self.audio_queue.get(), timeout=0.1
                 )
-                await self.send_event(event_json)
             except asyncio.TimeoutError:
                 continue
+
+            try:
+                async with self._audio_send_lock:
+                    if self.accepting_audio:
+                        await self.send_event(event_json)
             except Exception as e:
                 logger.error("Error draining audio queue: %s", e)
-                break
+                self.accepting_audio = False
+                self.is_active = False
+                while True:
+                    try:
+                        self.audio_queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        break
+                raise AudioInputStreamError(
+                    "Microphone audio could not be sent to Nova"
+                ) from e
+
+    async def stop_audio_input(self):
+        """Quiesce microphone input before closing Nova's audio content block.
+
+        Setting the gate first prevents new chunks from entering the queue. The
+        lock then waits for any chunk already being written to finish before the
+        caller sends contentEnd, after which queued chunks are discarded.
+        """
+        self.accepting_audio = False
+        async with self._audio_send_lock:
+            while True:
+                try:
+                    self.audio_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
 
     async def process_responses(self):
         """
@@ -181,6 +259,7 @@ class S2sSessionManager:
 
     async def close(self):
         """Close the Nova Sonic stream gracefully."""
+        await self.stop_audio_input()
         self.is_active = False
 
         if self.stream:

@@ -9,6 +9,7 @@ Acts as an adapter between the browser (via AgentCore Runtime) and Nova Sonic.
 """
 
 import asyncio
+from contextlib import suppress
 import json
 import logging
 import math
@@ -18,10 +19,10 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 try:
     from .protocol import BrowserProtocolError, BrowserSessionProtocol
-    from .s2s_session_manager import S2sSessionManager
+    from .s2s_session_manager import AudioInputStreamError, S2sSessionManager
 except ImportError:  # Direct execution from backend/voice_agent.
     from protocol import BrowserProtocolError, BrowserSessionProtocol
-    from s2s_session_manager import S2sSessionManager
+    from s2s_session_manager import AudioInputStreamError, S2sSessionManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +31,10 @@ app = FastAPI(title="Mock Interview Voice Agent")
 
 # Maximum event size before splitting (bytes)
 MAX_EVENT_SIZE = 10 * 1024  # 10KB
+
+
+class SessionDurationExceeded(TimeoutError):
+    """Raised only when the hosted interview duration deadline expires."""
 
 
 def _max_session_duration_seconds() -> int | None:
@@ -214,15 +219,52 @@ async def websocket_endpoint(websocket: WebSocket):
         # Wait for session_start before opening the paid Nova stream.
         while True:
             try:
-                if session_deadline is None:
-                    message = await websocket.receive_text()
+                if audio_drain_task is None:
+                    if session_deadline is None:
+                        message = await websocket.receive_text()
+                    else:
+                        remaining_seconds = (
+                            session_deadline - asyncio.get_running_loop().time()
+                        )
+                        if remaining_seconds <= 0:
+                            raise SessionDurationExceeded
+                        try:
+                            message = await asyncio.wait_for(
+                                websocket.receive_text(), timeout=remaining_seconds
+                            )
+                        except asyncio.TimeoutError as exc:
+                            raise SessionDurationExceeded from exc
                 else:
-                    remaining_seconds = session_deadline - asyncio.get_running_loop().time()
-                    if remaining_seconds <= 0:
-                        raise asyncio.TimeoutError
-                    message = await asyncio.wait_for(
-                        websocket.receive_text(), timeout=remaining_seconds
+                    receive_task = asyncio.create_task(websocket.receive_text())
+                    timeout = None
+                    if session_deadline is not None:
+                        timeout = session_deadline - asyncio.get_running_loop().time()
+                        if timeout <= 0:
+                            receive_task.cancel()
+                            with suppress(asyncio.CancelledError):
+                                await receive_task
+                            raise SessionDurationExceeded
+                    done, _ = await asyncio.wait(
+                        {receive_task, audio_drain_task},
+                        timeout=timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
+                    if not done:
+                        receive_task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await receive_task
+                        raise SessionDurationExceeded
+                    if audio_drain_task in done:
+                        receive_task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await receive_task
+                        failure = audio_drain_task.exception()
+                        if failure is not None:
+                            raise failure
+                        raise AudioInputStreamError(
+                            "Microphone audio forwarding stopped unexpectedly"
+                        )
+                    message = receive_task.result()
             except WebSocketDisconnect:
                 logger.info("Client disconnected")
                 break
@@ -239,7 +281,13 @@ async def websocket_endpoint(websocket: WebSocket):
             # Nova requires sessionStart to be the first input event. Send the
             # complete initialization sequence before starting response/audio
             # background tasks, matching AWS's documented event lifecycle.
-            if protocol.started and not was_started:
+            if result.should_close:
+                # Quiesce microphone writes, then hold the common Nova input
+                # lock across contentEnd -> promptEnd -> sessionEnd. This keeps
+                # a concurrent toolResult from interleaving with shutdown.
+                await session_manager.stop_audio_input()
+                await session_manager.send_terminal_events(result.nova_events)
+            elif protocol.started and not was_started:
                 await session_manager.start_session()
                 for event_json in result.nova_events:
                     await session_manager.send_event(event_json)
@@ -261,7 +309,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 logger.info("Client ended browser session")
                 break
 
-    except asyncio.TimeoutError:
+    except SessionDurationExceeded:
         logger.info("Voice session reached the maximum duration")
         try:
             await websocket.send_json(
@@ -271,6 +319,45 @@ async def websocket_endpoint(websocket: WebSocket):
                 }
             )
             await websocket.close(code=1000, reason="Session duration limit reached")
+        except Exception:
+            pass
+    except asyncio.TimeoutError:
+        logger.error("Nova input transport timed out")
+        try:
+            await websocket.send_json(
+                {
+                    "type": "session_invalid",
+                    "payload": {
+                        "reason": (
+                            "The voice connection could not continue. Please go back "
+                            "and try again."
+                        )
+                    },
+                }
+            )
+            await websocket.close(code=1011, reason="Voice input transport timed out")
+        except Exception:
+            pass
+    except AudioInputStreamError as e:
+        logger.error("Voice audio input failed: %s", e)
+        if response_task is not None and not response_task.done():
+            response_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await response_task
+            response_task = None
+        try:
+            await websocket.send_json(
+                {
+                    "type": "session_invalid",
+                    "payload": {
+                        "reason": (
+                            "The voice connection could not continue. Please go back "
+                            "and try again."
+                        )
+                    },
+                }
+            )
+            await websocket.close(code=1011, reason="Voice audio input failed")
         except Exception:
             pass
     except Exception as e:
@@ -283,7 +370,14 @@ async def websocket_endpoint(websocket: WebSocket):
         # Stop readers before closing the underlying stream so the AWS CRT does
         # not try to resolve a response future that was cancelled mid-close.
         for task in [response_task, audio_drain_task]:
-            if task is not None and not task.done():
+            if task is None:
+                continue
+            if task.done():
+                if not task.cancelled():
+                    with suppress(Exception):
+                        task.exception()
+                continue
+            if not task.done():
                 task.cancel()
                 try:
                     await task

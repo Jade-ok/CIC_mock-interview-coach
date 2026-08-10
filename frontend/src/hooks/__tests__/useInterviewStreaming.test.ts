@@ -486,7 +486,13 @@ describe('useInterviewStreaming', () => {
       });
 
       expect(mockAm.waitForPlaybackEnd).toHaveBeenCalled();
+      expect(mockAm.pauseCapture).toHaveBeenCalledOnce();
       expect(mockWs.send).not.toHaveBeenCalled();
+
+      act(() => {
+        mockAm.onAudioChunk(new Uint8Array([1, 2, 3]).buffer);
+      });
+      expect(mockWs.sendAudioChunk).not.toHaveBeenCalled();
 
       await act(async () => releasePlayback());
 
