@@ -438,8 +438,7 @@ In a separate terminal window from the project root, move into the frontend fold
 
 ```bash
 cd frontend
-npm ci
-npm run dev
+npm ci && npm run dev
 ```
 
 Once both servers are running, open the local URL displayed by Vite and allow microphone access when prompted.
