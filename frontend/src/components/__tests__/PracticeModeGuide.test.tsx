@@ -60,10 +60,10 @@ describe('PracticeBubbles (Chat Log View)', () => {
   });
 
   it('shows live partial indicator when present', () => {
-    const transcript = [makeTranscriptEntry('interviewer', 'Hello')];
+    // With no transcript entries, freshTurnRef stays true → own bubble
     render(
       <PracticeBubbles
-        transcript={transcript}
+        transcript={[]}
         livePartial={{ role: 'interviewer', text: 'Tell me about...' }}
         turnState="ai_speaking"
       />
