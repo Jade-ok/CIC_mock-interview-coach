@@ -146,24 +146,7 @@ async def forward_responses(
         # session. If Nova closes it first (including a model safety rejection),
         # stop accepting microphone audio and give the browser a recoverable
         # error instead of leaving the interview silently connected.
-        if not protocol.closed and not protocol.end_interview_signaled:
-            await websocket.send_json(
-                {
-                    "type": "session_invalid",
-                    "payload": {
-                        "reason": (
-                            "The voice interview could not start with this interview "
-                            "context. Please go back and try again."
-                        )
-                    },
-                }
-            )
-            await websocket.close(code=1011, reason="Voice response stream ended")
-    except WebSocketDisconnect:
-        logger.info("Client disconnected during response forwarding")
-    except Exception as e:
-        logger.error("Error forwarding responses: %s", e)
-        try:
+        if not protocol.closed and not protocol.end_interview_completed:
             await websocket.send_json(
                 {
                     "type": "session_invalid",
@@ -175,9 +158,27 @@ async def forward_responses(
                     },
                 }
             )
-            await websocket.close(code=1011, reason="Voice response failure")
-        except Exception:
-            pass
+            await websocket.close(code=1011, reason="Voice response stream ended")
+    except WebSocketDisconnect:
+        logger.info("Client disconnected during response forwarding")
+    except Exception as e:
+        logger.error("Error forwarding responses: %s", e)
+        if not protocol.end_interview_completed:
+            try:
+                await websocket.send_json(
+                    {
+                        "type": "session_invalid",
+                        "payload": {
+                            "reason": (
+                                "The voice interview ended unexpectedly. Please go back "
+                                "and try again."
+                            )
+                        },
+                    }
+                )
+                await websocket.close(code=1011, reason="Voice response failure")
+            except Exception:
+                pass
     finally:
         session_manager.is_active = False
 

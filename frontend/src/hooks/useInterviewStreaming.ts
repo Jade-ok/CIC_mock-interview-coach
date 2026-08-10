@@ -191,6 +191,10 @@ export function useInterviewStreaming({
 
       // session_invalid → error + route to upload
       case 'session_invalid': {
+        // Once Nova has completed the interview, the evaluator handoff owns the
+        // lifecycle. A late relay error must not replace feedback with a voice
+        // session error.
+        if (endingRef.current) break;
         wsClientRef.current?.disconnect();
         dispatchRef.current({
           type: 'WS_SESSION_INVALID',

@@ -56,7 +56,7 @@ class BrowserSessionProtocol:
         self.audio_content_name = str(uuid.uuid4())
         self.started = False
         self.closed = False
-        self.end_interview_signaled = False
+        self.end_interview_completed = False
         self.output_content: dict[str, dict[str, str]] = {}
         self.pending_end_tool: dict[str, Any] | None = None
 
@@ -263,7 +263,6 @@ class BrowserSessionProtocol:
                 },
             }
             if output.get("toolName") == "end_interview":
-                self.end_interview_signaled = True
                 self.pending_end_tool = browser_event
                 return None
             return browser_event
@@ -316,6 +315,8 @@ class BrowserSessionProtocol:
         """Release end_interview only after Nova finishes the completion."""
         event = self.pending_end_tool
         self.pending_end_tool = None
+        if event is not None:
+            self.end_interview_completed = True
         return event
 
     def _require_active_session(self) -> None:

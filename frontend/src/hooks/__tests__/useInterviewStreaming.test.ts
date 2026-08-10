@@ -400,6 +400,34 @@ describe('useInterviewStreaming', () => {
       });
       expect(mockWs.disconnect).toHaveBeenCalled();
     });
+
+    it('ignores a late session_invalid after end_interview begins', async () => {
+      renderHook(() =>
+        useInterviewStreaming({
+          phase: 'interview',
+          wsClient: mockWs,
+          dispatch,
+          audioManagerFactory: () => mockAm,
+        })
+      );
+
+      await vi.waitFor(() => expect(mockAm.startCapture).toHaveBeenCalled());
+
+      act(() => {
+        mockWs.onMessage({
+          type: 'tool_use',
+          payload: { toolName: 'end_interview', toolUseId: 'tool-1', content: '{}' },
+        });
+        mockWs.onMessage({
+          type: 'session_invalid',
+          payload: { reason: 'Late relay closure' },
+        });
+      });
+
+      expect(dispatch).not.toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'WS_SESSION_INVALID' })
+      );
+    });
   });
 
   describe('interview WebSocket lifecycle ownership', () => {

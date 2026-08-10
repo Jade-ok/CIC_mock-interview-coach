@@ -233,7 +233,7 @@ def test_end_interview_tool_is_acknowledged_then_released_after_completion():
     }
 
     assert protocol.translate_nova_event(tool_use) is None
-    assert protocol.end_interview_signaled is True
+    assert protocol.end_interview_completed is False
     result = json.loads(protocol.build_tool_result(tool_use))
     assert result["event"]["toolResult"]["promptName"] == protocol.prompt_name
     assert result["event"]["toolResult"]["contentName"] == "tool-content-1"
@@ -247,6 +247,7 @@ def test_end_interview_tool_is_acknowledged_then_released_after_completion():
             "content": "{}",
         },
     }
+    assert protocol.end_interview_completed is True
     assert protocol.take_pending_end_tool() is None
 
 
@@ -334,8 +335,8 @@ def test_response_forwarder_reports_unexpected_nova_stream_end():
             "type": "session_invalid",
             "payload": {
                 "reason": (
-                    "The voice interview could not start with this interview "
-                    "context. Please go back and try again."
+                    "The voice interview ended unexpectedly. Please go back "
+                    "and try again."
                 )
             },
         }
@@ -345,6 +346,63 @@ def test_response_forwarder_reports_unexpected_nova_stream_end():
         "reason": "Voice response stream ended",
     }
     assert manager.is_active is False
+
+
+def test_response_forwarder_reports_stream_end_before_completion_releases_tool():
+    protocol = BrowserSessionProtocol()
+    start_protocol(protocol)
+
+    class FakeSessionManager:
+        def __init__(self):
+            self.is_active = True
+            self.sent = []
+
+        async def process_responses(self):
+            yield {"event": {"toolUse": {
+                "contentId": "tool-content-1",
+                "toolUseId": "tool-use-1",
+                "toolName": "end_interview",
+                "content": "{}",
+            }}}
+
+        async def send_event(self, event_json):
+            self.sent.append(json.loads(event_json))
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.sent = []
+            self.close_args = None
+
+        async def send_text(self, event_json):
+            self.sent.append(json.loads(event_json))
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
+
+    manager = FakeSessionManager()
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.forward_responses(manager, websocket, protocol))
+
+    assert "toolResult" in manager.sent[0]["event"]
+    assert protocol.end_interview_completed is False
+    assert websocket.sent == [
+        {
+            "type": "session_invalid",
+            "payload": {
+                "reason": (
+                    "The voice interview ended unexpectedly. Please go back "
+                    "and try again."
+                )
+            },
+        }
+    ]
+    assert websocket.close_args == {
+        "code": 1011,
+        "reason": "Voice response stream ended",
+    }
 
 
 def test_boto3_resolver_bridges_refreshable_credentials():
