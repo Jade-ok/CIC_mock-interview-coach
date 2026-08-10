@@ -178,7 +178,7 @@ def start_interview_session(event: dict[str, Any]) -> dict[str, Any]:
     now = int(time.time())
     day = datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%d")
     global_limit = _positive_int_env("HOSTED_DAILY_INTERVIEW_LIMIT", 100)
-    viewer_limit = _positive_int_env("HOSTED_DAILY_VIEWER_LIMIT", 5)
+    viewer_limit = _positive_int_env("HOSTED_DAILY_VIEWER_LIMIT", 100)
     table_name = _table_name()
     global_key = f"daily#{day}"
     viewer_key = f"viewer#{day}#{viewer_hash}"

@@ -36,7 +36,7 @@
   - Carry the connected WebSocket into Interview Screen.
 
 - [x] 6.1 Add hosted demo admission controls.
-  - Default to 100 admitted interviews globally and 5 per trusted viewer IP per UTC day.
+  - Default to 100 admitted interviews globally and 100 per trusted viewer IP per UTC day.
   - Keep the opaque two-hour token only in frontend memory and include it in every hosted stage request.
   - Enforce atomic per-stage attempts while bypassing these controls in pure local mode.
 

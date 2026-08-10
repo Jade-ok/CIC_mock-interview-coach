@@ -67,7 +67,7 @@ The browser never connects directly to Nova or receives long-lived Bedrock crede
 
 ### Security and Cost Controls
 
-Hosted admission defaults to 100 interviews globally and 5 per trusted viewer IP per UTC day. Its opaque session token authorizes bounded attempts for each downstream stage. Pure local execution bypasses this hosted admission layer.
+Hosted admission defaults to 100 interviews globally and 100 per trusted viewer IP per UTC day. Its opaque session token authorizes bounded attempts for each downstream stage. Pure local execution bypasses this hosted admission layer.
 
 ### Internal Lambda Architecture
 

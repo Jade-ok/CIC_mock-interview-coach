@@ -54,7 +54,7 @@ The hosted Amplify, Lambda/S3, and AgentCore boundaries are deployed. Reconnecti
 
 - The application intentionally has no end-user login. The browser uses one CloudFront API distribution; Origin Access Control signs requests to six private `AWS_IAM` Function URL origins, so direct anonymous Function URL calls are rejected.
 - CORS allows the configured Amplify origin and exactly `http://localhost:5173` for hosted-mode local testing. An edge path/method allowlist rejects unsupported requests before origin invocation.
-- Hosted admission defaults to a hard global maximum of 100 interviews per UTC day and 5 per trusted viewer IP. A two-hour IP-bound opaque token authorizes bounded attempts for each pipeline stage.
+- Hosted admission defaults to a hard global maximum of 100 interviews per UTC day and 100 per trusted viewer IP. A two-hour IP-bound opaque token authorizes bounded attempts for each pipeline stage.
 - Hosted workload controls include one 55-second model attempt, model input/output bounds, an eight-minute voice limit, invocation/error/throttle alarms, an email-backed AWS cost budget, and an emergency switch that sets function concurrency to zero. Optional normal concurrency caps default off until the account quota supports them.
 - Atomic admission prevents additional sessions beyond the configured global limit. CORS remains browser policy rather than authentication or rate limiting. Additional identity, challenge, or managed request filtering can be considered if usage requirements change.
 

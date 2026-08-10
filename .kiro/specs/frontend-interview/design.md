@@ -33,7 +33,7 @@ Hosted integration requirements:
 
 - Hosted functions have invocation/error/throttle alarms, an AWS cost budget, and a zero-concurrency emergency switch. Optional normal concurrency caps default off until the target AWS account quota supports them.
 - Hosted model calls use bounded text and 4,096-token output limits; hosted voice sessions have an eight-minute application limit.
-- Hosted processing begins with an atomic admission request. Defaults are 100 interviews globally and 5 per trusted viewer IP per UTC day. The two-hour opaque token is stored only as a SHA-256 digest, bound to the viewer-IP digest, and used with bounded per-stage attempts.
+- Hosted processing begins with an atomic admission request. Defaults are 100 interviews globally and 100 per trusted viewer IP per UTC day. The two-hour opaque token is stored only as a SHA-256 digest, bound to the viewer-IP digest, and used with bounded per-stage attempts.
 - A CloudFront viewer-request function rejects unknown API paths and methods other than `POST` or `OPTIONS` before they reach a Lambda origin.
 - Pure local mode keeps the pre-existing 8,192-token output budget and has no application-imposed eight-minute voice limit.
 

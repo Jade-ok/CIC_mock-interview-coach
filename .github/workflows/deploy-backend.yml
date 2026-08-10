@@ -106,7 +106,7 @@ jobs:
         shell: bash
         env:
           HOSTED_DAILY_INTERVIEW_LIMIT: ${{ vars.HOSTED_DAILY_INTERVIEW_LIMIT || '100' }}
-          HOSTED_DAILY_VIEWER_LIMIT: ${{ vars.HOSTED_DAILY_VIEWER_LIMIT || '5' }}
+          HOSTED_DAILY_VIEWER_LIMIT: ${{ vars.HOSTED_DAILY_VIEWER_LIMIT || '100' }}
         run: |
           set -euo pipefail
           [[ "$HOSTED_DAILY_INTERVIEW_LIMIT" =~ ^[1-9][0-9]*$ ]] || {
@@ -121,8 +121,8 @@ jobs:
             echo 'HOSTED_DAILY_VIEWER_LIMIT must be a positive integer.'
             exit 1
           }
-          (( HOSTED_DAILY_VIEWER_LIMIT <= 5 )) || {
-            echo 'HOSTED_DAILY_VIEWER_LIMIT cannot exceed the source-enforced maximum of 5.'
+          (( HOSTED_DAILY_VIEWER_LIMIT <= 100 )) || {
+            echo 'HOSTED_DAILY_VIEWER_LIMIT cannot exceed the source-enforced maximum of 100.'
             exit 1
           }
           npx cdk deploy MockInterviewStack \

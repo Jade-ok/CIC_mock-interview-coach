@@ -66,7 +66,7 @@ Current implementation: `server.py` forwards browser audio through `send_audio_c
 5. The application intentionally has no end-user login; hosted operation must use invocation/error/throttle alarms, an AWS cost budget, an emergency shutdown switch, and targeted browser verification. Optional normal concurrency caps depend on the target account quota.
 6. Hosted Nova sessions must have an eight-minute application limit. Pure local voice sessions must not enable that hosted limit.
 7. Hosted voice-session requests must require the current opaque interview token, verify its trusted viewer-IP binding and expiry, and allow no more than three signed-URL attempts per admitted interview.
-8. Hosted admission must default to 100 interviews globally and 5 per trusted viewer IP per UTC day. Pure local voice operation must bypass this hosted admission layer.
+8. Hosted admission must default to 100 interviews globally and 100 per trusted viewer IP per UTC day. Pure local voice operation must bypass this hosted admission layer.
 
 ## Evaluator Handoff
 

@@ -261,7 +261,7 @@ The hosted application intentionally does not require an end-user login. Its sec
 
 - All six Lambda Function URLs require AWS IAM authentication. CloudFront Origin Access Control signs hosted origin requests, while anonymous requests sent directly to the Function URLs are rejected.
 - Amazon DynamoDB stores only expiring hashed demo-session metadata, admission records, and attempt counters.
-- The deployed demo admits at most 100 interview sessions per UTC day and at most 5 per trusted viewer IP per UTC day. Source-level parameter bounds prevent either value from being raised above those ceilings; the global limit can later be lowered to 5 without an application rewrite.
+- The deployed demo admits at most 100 interview sessions per UTC day and at most 100 per trusted viewer IP per UTC day. Source-level parameter bounds prevent either value from being raised above those ceilings; both limits can later be lowered to 5 without an application rewrite.
 - Every hosted pipeline stage requires the IP-bound, two-hour opaque session token. Each token permits at most 2 PDF Parser, 2 Analyst, 2 Interviewer, 2 Evaluator, and 3 Voice Session attempts, preventing one admitted session from repeatedly invoking paid work.
 - A CloudFront viewer-request guard rejects unknown API paths and methods other than `POST` and `OPTIONS` before they reach Lambda.
 - Browser CORS is limited to the deployed Amplify origin and the configured localhost development origin.

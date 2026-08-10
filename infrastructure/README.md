@@ -26,7 +26,7 @@ The Lambda Function URLs use `AWS_IAM` authentication and accept origin calls fr
 
 ## Security and Cost Controls
 
-The application intentionally has no end-user login. The Demo Session Lambda atomically admits at most 100 hosted sessions globally and 5 per trusted viewer IP per UTC day by default. Its two-hour opaque tokens are stored only as SHA-256 digests, bound to the viewer-IP digest, and constrained by per-stage attempt counts. The values are deployment parameters, and pure local mode bypasses these hosted admission controls. Alarms, the default $25 account-wide budget, hosted model/session caps, and the emergency switch provide additional cost controls. Optional nonzero concurrency caps default off because the target AWS account must retain enough unreserved Lambda concurrency for them to deploy.
+The application intentionally has no end-user login. The Demo Session Lambda atomically admits at most 100 hosted sessions globally and 100 per trusted viewer IP per UTC day by default. Its two-hour opaque tokens are stored only as SHA-256 digests, bound to the viewer-IP digest, and constrained by per-stage attempt counts. The values are deployment parameters, and pure local mode bypasses these hosted admission controls. Alarms, the default $25 account-wide budget, hosted model/session caps, and the emergency switch provide additional cost controls. Optional nonzero concurrency caps default off because the target AWS account must retain enough unreserved Lambda concurrency for them to deploy.
 
 The stack does not provision AWS WAF, avoiding its fixed monthly web-ACL baseline. Monitoring, bounded model calls, input limits, and the emergency switch remain necessary.
 

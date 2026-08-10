@@ -11,7 +11,7 @@ def hosted_env(monkeypatch):
     monkeypatch.setenv("HOSTED_GUARDRAILS_ENABLED", "true")
     monkeypatch.setenv("HOSTED_SESSION_TABLE", "sessions")
     monkeypatch.setenv("HOSTED_DAILY_INTERVIEW_LIMIT", "100")
-    monkeypatch.setenv("HOSTED_DAILY_VIEWER_LIMIT", "5")
+    monkeypatch.setenv("HOSTED_DAILY_VIEWER_LIMIT", "100")
 
 
 def hosted_event(payload=None, address="198.51.100.10:46532"):
@@ -95,7 +95,7 @@ def test_viewer_limit_returns_429(monkeypatch):
 
         def get_item(self, **kwargs):
             key = kwargs["Key"]["pk"]["S"]
-            count = "5" if key.startswith("viewer#") else "0"
+            count = "100" if key.startswith("viewer#") else "0"
             return {"Item": {"count": {"N": count}}}
 
     monkeypatch.setattr(session_guard, "_dynamodb_client", FakeClient())

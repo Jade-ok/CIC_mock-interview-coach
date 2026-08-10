@@ -87,7 +87,7 @@ This specification covers the React frontend and its use of existing HTTP and We
 1. Hosted Lambdas must have invocation/error/throttle alarms and an AWS monthly cost budget with email notifications. A zero-concurrency emergency switch must be available. Optional normal concurrency caps must remain disabled unless the target AWS account quota supports them.
 2. Hosted Analyst/Evaluator calls must use bounded text inputs and a 4,096-token output ceiling; hosted Nova sessions must end after eight minutes.
 3. Pure local execution must leave the additional hosted text, output-token, and voice-duration guardrails disabled. Existing AWS quotas, the shared 4 MiB PDF limit, and the product-wide 5,000-character job-description limit still apply.
-4. Hosted admission must atomically enforce configurable UTC-day limits, defaulting to 100 interviews globally and 5 per trusted viewer IP. The issued token must expire after two hours, remain bound to that viewer IP, and have bounded attempts for each downstream stage.
+4. Hosted admission must atomically enforce configurable UTC-day limits, defaulting to 100 interviews globally and 100 per trusted viewer IP. The issued token must expire after two hours, remain bound to that viewer IP, and have bounded attempts for each downstream stage.
 5. Pure local execution must bypass hosted daily admission and use the local sentinel token without DynamoDB.
 
 ## 9. Accessibility and Presentation

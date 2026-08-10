@@ -56,9 +56,9 @@ export class InfraStack extends cdk.Stack {
       'HostedDailyViewerLimit',
       {
         type: 'Number',
-        default: 5,
+        default: 100,
         minValue: 1,
-        maxValue: 5,
+        maxValue: 100,
         description: 'Maximum hosted interview sessions admitted per viewer IP per UTC day',
       }
     );
