@@ -1,16 +1,26 @@
 /**
  * useSubtitleSync — throttles subtitle display to match audio playback pace.
  *
- * Problem: Nova Sonic generates text much faster than audio. PARTIAL events
- * accumulate the full response before the first sentence finishes playing.
- * Showing all text immediately reveals future sentences, and any later
- * correction (clearing, splitting) causes text to disappear or rearrange.
+ * Problem: Nova Sonic generates text much faster than audio, AND frequently
+ * splits a single AI turn into several FINAL-bounded chunks. This hook only
+ * needs to throttle the reveal of the CURRENTLY OPEN (not-yet-committed)
+ * chunk — it must NOT re-display text that has already been committed.
  *
- * Solution: Buffer the full accumulated text internally, but only reveal
- * characters at a rate synchronized with audio playback progress.
+ * Why: `APPEND_TRANSCRIPT` (fired on every chunk FINAL) updates the
+ * transcript array AND clears `livePartial` in the same reducer call, i.e.
+ * the same React render. The permanent chat bubble for that chunk appears
+ * in the exact same frame `livePartial` goes null — so there is no visible
+ * gap to patch by accumulating old chunk text here. An earlier version of
+ * this hook accumulated committed-chunk text into the live caption to avoid
+ * a (different, single-tile-caption) blanking bug, but in this multi-bubble
+ * chat-log context that just duplicates text: once in the permanent bubble,
+ * once in the live/dashed bubble.
  *
- * Key invariant: visible text ONLY GROWS. Characters never disappear,
- * merge, or reorder once shown.
+ * So: on every `livePartial -> null` transition, just clear the caption.
+ * Only the in-flight chunk's own text is throttled/revealed here.
+ *
+ * Key invariant: within a single chunk's reveal, visible text only grows —
+ * it never disappears, merges, or reorders mid-reveal.
  */
 
 import { useRef, useEffect, useState } from 'react';
@@ -26,7 +36,7 @@ export interface UseSubtitleSyncOptions {
 }
 
 export interface SubtitleSyncResult {
-  /** Throttled text safe to display — only grows, never shrinks */
+  /** Throttled text safe to display — only grows, never shrinks within a turn */
   syncedPartial: { role: 'interviewer' | 'user'; text: string } | null;
 }
 
@@ -41,33 +51,36 @@ export function useSubtitleSync({
   audioManagerRef,
   turnState,
 }: UseSubtitleSyncOptions): SubtitleSyncResult {
-  // The revealed character count — monotonically increases within a turn
+  // Reveal progress within the CURRENT (still-open, not-yet-committed) chunk.
   const revealedCountRef = useRef(0);
-  const revealRoleRef = useRef<string | null>(null);
   const revealStartTimeRef = useRef(0);
 
-  // State that drives re-renders
   const [syncedPartial, setSyncedPartial] = useState<SubtitleSyncResult['syncedPartial']>(null);
 
   const rafRef = useRef<number>(0);
-
-  // Track the previous livePartial to detect transitions
   const prevLivePartialRef = useRef(livePartial);
 
+  // --- livePartial transitions: chunk start / chunk commit / role change ---
+  // IMPORTANT: livePartial is a NEW OBJECT on every incremental PARTIAL
+  // update (reducer creates `{ role, text: prev + incoming }` each time),
+  // so this effect must NOT depend on the object itself — only on the
+  // signals that actually mean "a new chunk started": role changing, or
+  // going from null -> non-null. Depending on `livePartial` directly would
+  // reset revealedCountRef/revealStartTimeRef on every single character
+  // update, which visibly shrinks the caption and restarts the typing
+  // animation from scratch mid-sentence.
   useEffect(() => {
     const prev = prevLivePartialRef.current;
     prevLivePartialRef.current = livePartial;
 
     if (!livePartial && prev) {
-      // FINAL was committed — the full text is now in transcript.
-      // Before resetting, ensure no text is lost: if there was unrevealed
-      // buffered text, it doesn't matter because FINAL contains the
-      // authoritative text and it's already in the transcript array.
-      // Just cleanly reset for the next segment.
-      revealedCountRef.current = 0;
-      revealRoleRef.current = null;
-      revealStartTimeRef.current = 0;
+      // Chunk committed (FINAL). The permanent chat bubble for this text
+      // appeared in the SAME render (see reducer's APPEND_TRANSCRIPT), so
+      // simply clearing here does not create a visible gap — it hands off
+      // to the bubble that's already on screen.
       setSyncedPartial(null);
+      revealedCountRef.current = 0;
+      revealStartTimeRef.current = 0;
       return;
     }
 
@@ -75,17 +88,18 @@ export function useSubtitleSync({
       return;
     }
 
-    if (livePartial.role !== revealRoleRef.current) {
-      // New role — reset
+    if (!prev || prev.role !== livePartial.role) {
+      // Genuinely new chunk (first PARTIAL after a commit) or a role
+      // change — reveal begins from empty for this chunk's own text.
       revealedCountRef.current = 0;
-      revealRoleRef.current = livePartial.role;
       revealStartTimeRef.current = performance.now();
     }
+    // Otherwise: same ongoing chunk, just more text accumulated — leave
+    // revealedCountRef/revealStartTimeRef alone so the reveal continues
+    // smoothly instead of restarting.
   }, [livePartial?.role, !livePartial]);
 
-  // Animation loop: reveal characters at audio pace.
-  // Runs whenever there's text to reveal. When AI is no longer speaking,
-  // immediately reveals all remaining text (flush) to prevent truncation.
+  // --- Reveal loop: types out the CURRENT chunk's own text, paced to audio ---
   useEffect(() => {
     if (!livePartial) {
       if (rafRef.current) {
@@ -95,12 +109,16 @@ export function useSubtitleSync({
       return;
     }
 
-    // If AI is no longer speaking but we still have unrevealed text, flush it all
     if (turnState !== 'ai_speaking') {
+      // Not actively speaking — flush the rest of this chunk immediately so
+      // nothing is truncated, then stop animating.
       const buffer = livePartial.text;
       if (buffer.length > revealedCountRef.current) {
         revealedCountRef.current = buffer.length;
-        setSyncedPartial({ role: livePartial.role, text: buffer });
+        setSyncedPartial({
+          role: livePartial.role,
+          text: buffer,
+        });
       }
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -135,7 +153,6 @@ export function useSubtitleSync({
           const ratio = Math.min(1, (played + 0.5) / total);
           targetCount = Math.ceil(ratio * totalChars);
         } else {
-          // Audio scheduled but not playing yet, or no audio — time-based
           const elapsed = (performance.now() - revealStartTimeRef.current) / 1000;
           targetCount = Math.ceil(elapsed * FALLBACK_CHARS_PER_SECOND);
         }
@@ -144,7 +161,7 @@ export function useSubtitleSync({
         targetCount = Math.ceil(elapsed * FALLBACK_CHARS_PER_SECOND);
       }
 
-      // Never go backwards — only grow
+      // Never go backwards within this chunk — only grow
       const newCount = Math.max(revealedCountRef.current, Math.min(targetCount, totalChars));
 
       if (newCount > revealedCountRef.current) {
