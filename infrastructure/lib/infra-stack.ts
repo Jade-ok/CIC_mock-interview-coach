@@ -326,6 +326,8 @@ export class InfraStack extends cdk.Stack {
     sessionTable.grant(
       demoSessionFn,
       'dynamodb:TransactWriteItems',
+      'dynamodb:UpdateItem',
+      'dynamodb:PutItem',
       'dynamodb:GetItem'
     );
     for (const fn of [
