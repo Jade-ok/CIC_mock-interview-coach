@@ -205,7 +205,7 @@ Relay output events:
 
 Automatic end:
 
-1. Nova emits `end_interview`; the relay immediately returns Nova's required `toolResult`.
+1. Nova emits `end_interview`; after Nova closes that TOOL output block, the relay returns the result inside a fresh `contentStart(TOOL)` → `toolResult` → `contentEnd` input block.
 2. The relay holds the browser-facing `tool_use` until Nova emits `completionEnd`, preventing early audio shutdown.
 3. The browser receives `tool_use`, waits for final audio playback, sends `session_end`, disconnects, and enters Feedback.
 4. Invoke the Evaluator.

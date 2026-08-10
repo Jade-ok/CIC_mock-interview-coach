@@ -13,6 +13,7 @@ try:
         content_end_event,
         content_start_audio_event,
         content_start_text_event,
+        content_start_tool_result_event,
         prompt_end_event,
         prompt_start_event,
         session_end_event,
@@ -26,6 +27,7 @@ except ImportError:  # Direct execution from backend/voice_agent.
         content_end_event,
         content_start_audio_event,
         content_start_text_event,
+        content_start_tool_result_event,
         prompt_end_event,
         prompt_start_event,
         session_end_event,
@@ -59,6 +61,7 @@ class BrowserSessionProtocol:
         self.end_interview_completed = False
         self.output_content: dict[str, dict[str, str]] = {}
         self.pending_end_tool: dict[str, Any] | None = None
+        self.pending_end_tool_use_id: str | None = None
 
     def handle_client_message(self, message: str) -> ClientMessageResult:
         try:
@@ -264,6 +267,12 @@ class BrowserSessionProtocol:
             }
             if output.get("toolName") == "end_interview":
                 self.pending_end_tool = browser_event
+                tool_use_id = output.get("toolUseId")
+                self.pending_end_tool_use_id = (
+                    tool_use_id
+                    if isinstance(tool_use_id, str) and tool_use_id
+                    else None
+                )
                 return None
             return browser_event
 
@@ -295,21 +304,36 @@ class BrowserSessionProtocol:
 
         return None
 
-    def build_tool_result(self, response: dict[str, Any]) -> str | None:
-        """Build the mandatory result event for a Nova tool invocation."""
-        output = response.get("event", {}).get("toolUse")
-        if not isinstance(output, dict):
-            return None
-        if output.get("toolName") != "end_interview":
-            return None
-        content_name = output.get("contentId")
-        if not isinstance(content_name, str) or not content_name:
-            return None
+    def build_tool_result_events(self, response: dict[str, Any]) -> list[str]:
+        """Build Nova's required TOOL input block after tool output closes.
+
+        A model-produced ``contentId`` names an output block and cannot be
+        reused for input. Nova requires a fresh input ``contentName`` wrapped
+        by contentStart/contentEnd, and the result must wait for the model's
+        TOOL contentEnd event.
+        """
+        output = response.get("event", {}).get("contentEnd")
+        if not isinstance(output, dict) or output.get("type") != "TOOL":
+            return []
+        tool_use_id = self.pending_end_tool_use_id
+        if not tool_use_id:
+            return []
+
+        self.pending_end_tool_use_id = None
+        content_name = str(uuid.uuid4())
         content = json.dumps({
             "success": True,
             "message": "The interview session is ending.",
         })
-        return tool_result_event(self.prompt_name, content_name, content)
+        return [
+            content_start_tool_result_event(
+                self.prompt_name,
+                content_name,
+                tool_use_id,
+            ),
+            tool_result_event(self.prompt_name, content_name, content),
+            content_end_event(self.prompt_name, content_name),
+        ]
 
     def take_pending_end_tool(self) -> dict[str, Any] | None:
         """Release end_interview only after Nova finishes the completion."""

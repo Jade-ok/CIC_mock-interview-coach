@@ -131,9 +131,8 @@ async def forward_responses(
     """
     try:
         async for response in session_manager.process_responses():
-            tool_result = protocol.build_tool_result(response)
-            if tool_result is not None:
-                await session_manager.send_event(tool_result)
+            for tool_result_event in protocol.build_tool_result_events(response):
+                await session_manager.send_event(tool_result_event)
 
             browser_event = protocol.translate_nova_event(response)
             browser_events = [] if browser_event is None else [browser_event]
@@ -244,8 +243,11 @@ async def websocket_endpoint(websocket: WebSocket):
                             with suppress(asyncio.CancelledError):
                                 await receive_task
                             raise SessionDurationExceeded
+                    active_tasks = {receive_task, audio_drain_task}
+                    if response_task is not None:
+                        active_tasks.add(response_task)
                     done, _ = await asyncio.wait(
-                        {receive_task, audio_drain_task},
+                        active_tasks,
                         timeout=timeout,
                         return_when=asyncio.FIRST_COMPLETED,
                     )
@@ -255,12 +257,25 @@ async def websocket_endpoint(websocket: WebSocket):
                             await receive_task
                         raise SessionDurationExceeded
                     if audio_drain_task in done:
+                        failure = audio_drain_task.exception()
+                        if failure is not None:
+                            receive_task.cancel()
+                            with suppress(asyncio.CancelledError):
+                                await receive_task
+                            raise failure
+                    if response_task is not None and response_task in done:
                         receive_task.cancel()
                         with suppress(asyncio.CancelledError):
                             await receive_task
-                        failure = audio_drain_task.exception()
+                        failure = response_task.exception()
                         if failure is not None:
                             raise failure
+                        logger.info("Nova response forwarding ended")
+                        break
+                    if audio_drain_task in done:
+                        receive_task.cancel()
+                        with suppress(asyncio.CancelledError):
+                            await receive_task
                         raise AudioInputStreamError(
                             "Microphone audio forwarding stopped unexpectedly"
                         )

@@ -181,6 +181,32 @@ def tool_result_event(
     })
 
 
+def content_start_tool_result_event(
+    prompt_name: str,
+    content_name: str,
+    tool_use_id: str,
+) -> str:
+    """Open a TOOL input block before returning a tool result to Nova."""
+    return json.dumps({
+        "event": {
+            "contentStart": {
+                "promptName": prompt_name,
+                "contentName": content_name,
+                "interactive": False,
+                "type": "TOOL",
+                "role": "TOOL",
+                "toolResultInputConfiguration": {
+                    "toolUseId": tool_use_id,
+                    "type": "TEXT",
+                    "textInputConfiguration": {
+                        "mediaType": "text/plain",
+                    },
+                },
+            }
+        }
+    })
+
+
 def content_end_event(
     prompt_name: str,
     content_name: str,

@@ -20,7 +20,7 @@ AgentCore Runtime is a serverless managed container runtime. This project suppli
 - Input audio: 16 kHz, 16-bit, mono LPCM
 - Output audio: 24 kHz, 16-bit, mono LPCM
 
-The browser and relay share the application-level `{type, payload}` contract defined by `frontend/src/services/webSocketClient.ts`. The relay owns Nova prompt/content identifiers, expands `session_start` into the required Nova event sequence, acknowledges setup with `session_start_ack`, routes audio through its bounded queue, and converts Nova audio/text/tool/interruption output back to browser events. For `end_interview`, the relay sends Nova's required `toolResult` immediately, waits for `completionEnd`, and only then releases the browser-facing `tool_use`; this preserves closing audio before shutdown. Focused unit tests cover the adapter, and the signed hosted path is deployed.
+The browser and relay share the application-level `{type, payload}` contract defined by `frontend/src/services/webSocketClient.ts`. The relay owns Nova prompt/content identifiers, expands `session_start` into the required Nova event sequence, acknowledges setup with `session_start_ack`, routes audio through its bounded queue, and converts Nova audio/text/tool/interruption output back to browser events. For `end_interview`, the relay waits for Nova's TOOL output block to close, returns the result inside a fresh TOOL input block, waits for `completionEnd`, and only then releases the browser-facing `tool_use`; this preserves the required Nova lifecycle and closing audio before shutdown. Focused unit tests cover the adapter, and the signed hosted path is deployed.
 
 The hosted path is:
 

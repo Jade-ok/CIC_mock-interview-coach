@@ -239,10 +239,30 @@ def test_end_interview_tool_is_acknowledged_then_released_after_completion():
 
     assert protocol.translate_nova_event(tool_use) is None
     assert protocol.end_interview_completed is False
-    result = json.loads(protocol.build_tool_result(tool_use))
-    assert result["event"]["toolResult"]["promptName"] == protocol.prompt_name
-    assert result["event"]["toolResult"]["contentName"] == "tool-content-1"
-    assert json.loads(result["event"]["toolResult"]["content"])["success"] is True
+    assert protocol.build_tool_result_events(tool_use) == []
+
+    tool_end = {
+        "event": {"contentEnd": {
+            "contentId": "tool-content-1",
+            "type": "TOOL",
+            "stopReason": "TOOL_USE",
+        }}
+    }
+    results = [json.loads(item) for item in protocol.build_tool_result_events(tool_end)]
+    assert [next(iter(item["event"])) for item in results] == [
+        "contentStart",
+        "toolResult",
+        "contentEnd",
+    ]
+    content_name = results[0]["event"]["contentStart"]["contentName"]
+    assert content_name != "tool-content-1"
+    assert results[0]["event"]["contentStart"]["toolResultInputConfiguration"][
+        "toolUseId"
+    ] == "tool-use-1"
+    assert results[1]["event"]["toolResult"]["contentName"] == content_name
+    assert json.loads(results[1]["event"]["toolResult"]["content"])["success"] is True
+    assert results[2]["event"]["contentEnd"]["contentName"] == content_name
+    assert protocol.build_tool_result_events(tool_end) == []
 
     assert protocol.take_pending_end_tool() == {
         "type": "tool_use",
@@ -272,6 +292,11 @@ def test_response_forwarder_acknowledges_tool_before_browser_auto_end():
                 "toolName": "end_interview",
                 "content": "{}",
             }}}
+            yield {"event": {"contentEnd": {
+                "contentId": "tool-content-1",
+                "type": "TOOL",
+                "stopReason": "TOOL_USE",
+            }}}
             yield {"event": {"completionEnd": {
                 "completionId": "completion-1",
                 "stopReason": "END_TURN",
@@ -299,8 +324,13 @@ def test_response_forwarder_acknowledges_tool_before_browser_auto_end():
     websocket = FakeWebSocket()
     asyncio.run(voice_server.forward_responses(manager, websocket, protocol))
 
-    assert "toolResult" in manager.sent[0]["event"]
+    assert [next(iter(item["event"])) for item in manager.sent] == [
+        "contentStart",
+        "toolResult",
+        "contentEnd",
+    ]
     assert [item["type"] for item in websocket.sent] == [
+        "content_end",
         "completion_end",
         "tool_use",
     ]
@@ -391,7 +421,7 @@ def test_response_forwarder_reports_stream_end_before_completion_releases_tool()
     websocket = FakeWebSocket()
     asyncio.run(voice_server.forward_responses(manager, websocket, protocol))
 
-    assert "toolResult" in manager.sent[0]["event"]
+    assert manager.sent == []
     assert protocol.end_interview_completed is False
     assert websocket.sent == [
         {
@@ -748,6 +778,74 @@ def test_websocket_endpoint_surfaces_audio_drain_failure(monkeypatch):
         "code": 1011,
         "reason": "Voice audio input failed",
     }
+    assert fake_manager.closed is True
+
+
+def test_websocket_endpoint_observes_response_forwarder_close_once(monkeypatch):
+    class FakeSessionManager:
+        def __init__(self):
+            self.is_active = False
+            self.closed = False
+
+        async def start_session(self):
+            self.is_active = True
+
+        async def send_event(self, _event_json):
+            return None
+
+        async def send_audio_chunk(self, _event_json):
+            return None
+
+        async def stop_audio_input(self):
+            return None
+
+        async def process_responses(self):
+            if False:
+                yield {}
+
+        async def drain_audio_queue(self):
+            while self.is_active:
+                await asyncio.sleep(0.01)
+
+        async def close(self):
+            self.is_active = False
+            self.closed = True
+
+    fake_manager = FakeSessionManager()
+    monkeypatch.setattr(voice_server, "S2sSessionManager", lambda: fake_manager)
+
+    class FakeWebSocket:
+        def __init__(self):
+            self.receive_count = 0
+            self.sent = []
+            self.close_calls = []
+
+        async def accept(self):
+            return None
+
+        async def receive_text(self):
+            self.receive_count += 1
+            if self.receive_count == 1:
+                return json.dumps({
+                    "type": "session_start",
+                    "payload": {"novaSonicContext": "Context", "inferenceConfig": {}},
+                })
+            await asyncio.Event().wait()
+
+        async def send_json(self, event):
+            self.sent.append(event)
+
+        async def close(self, **kwargs):
+            self.close_calls.append(kwargs)
+
+    websocket = FakeWebSocket()
+    asyncio.run(voice_server.websocket_endpoint(websocket))
+
+    assert websocket.sent[-1]["type"] == "session_invalid"
+    assert websocket.close_calls == [{
+        "code": 1011,
+        "reason": "Voice response stream ended",
+    }]
     assert fake_manager.closed is True
 
 
