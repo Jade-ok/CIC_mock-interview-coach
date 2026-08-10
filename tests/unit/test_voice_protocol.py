@@ -233,6 +233,7 @@ def test_end_interview_tool_is_acknowledged_then_released_after_completion():
     }
 
     assert protocol.translate_nova_event(tool_use) is None
+    assert protocol.end_interview_signaled is True
     result = json.loads(protocol.build_tool_result(tool_use))
     assert result["event"]["toolResult"]["promptName"] == protocol.prompt_name
     assert result["event"]["toolResult"]["contentName"] == "tool-content-1"
@@ -276,9 +277,17 @@ def test_response_forwarder_acknowledges_tool_before_browser_auto_end():
     class FakeWebSocket:
         def __init__(self):
             self.sent = []
+            self.json_events = []
+            self.close_args = None
 
         async def send_text(self, event_json):
             self.sent.append(json.loads(event_json))
+
+        async def send_json(self, event):
+            self.json_events.append(event)
+
+        async def close(self, **kwargs):
+            self.close_args = kwargs
 
     manager = FakeSessionManager()
     websocket = FakeWebSocket()
@@ -289,6 +298,8 @@ def test_response_forwarder_acknowledges_tool_before_browser_auto_end():
         "completion_end",
         "tool_use",
     ]
+    assert websocket.json_events == []
+    assert websocket.close_args is None
 
 
 def test_response_forwarder_reports_unexpected_nova_stream_end():

@@ -146,7 +146,7 @@ async def forward_responses(
         # session. If Nova closes it first (including a model safety rejection),
         # stop accepting microphone audio and give the browser a recoverable
         # error instead of leaving the interview silently connected.
-        if not protocol.closed:
+        if not protocol.closed and not protocol.end_interview_signaled:
             await websocket.send_json(
                 {
                     "type": "session_invalid",

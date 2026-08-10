@@ -56,6 +56,7 @@ class BrowserSessionProtocol:
         self.audio_content_name = str(uuid.uuid4())
         self.started = False
         self.closed = False
+        self.end_interview_signaled = False
         self.output_content: dict[str, dict[str, str]] = {}
         self.pending_end_tool: dict[str, Any] | None = None
 
@@ -262,6 +263,7 @@ class BrowserSessionProtocol:
                 },
             }
             if output.get("toolName") == "end_interview":
+                self.end_interview_signaled = True
                 self.pending_end_tool = browser_event
                 return None
             return browser_event
