@@ -7,6 +7,10 @@
 </h4>
 
 <p align="center">
+  🏆 1st Place Winner
+</p>
+
+<p align="center">
   <img src="docs/images/mock-interview-coach-logo.png" alt="AI Mock Interview Coach logo" width="450"/>
 </p>
 
