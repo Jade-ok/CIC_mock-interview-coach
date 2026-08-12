@@ -146,6 +146,14 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 </table>
 
 <br>
+<p align="center">
+  <img src="docs/screenshots/demo-feedback-each-question.gif"
+       alt="Expandable question feedback showing the original response and scoring breakdown"
+       width="90%">
+  <br>
+  <em>Expandable per-question feedback with original answers and STAR-based scoring details.</em>
+</p>
+<br>
 
 ## Tech Stack
 
