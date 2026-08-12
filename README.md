@@ -328,6 +328,7 @@ Atomic admission enforces the configured global daily ceiling. CORS controls bro
 - Introduce panel interviews with distinct interviewer roles, such as a hiring manager, technical interviewer, and challenger
 - Add application-side interview-stage tracking so the intended main-question and follow-up sequence is enforced consistently
 - Restore interview history when reconnecting to a new voice session so Nova can continue from the same conversational context
+- Add a multi-agent validation layer where independent evaluators review interview performance and a Judge Agent reconciles their feedback into a more consistent final report.
 - Add a standalone full-transcript view to the feedback experience
 
 <br>
