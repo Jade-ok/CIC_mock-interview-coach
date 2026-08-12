@@ -120,7 +120,7 @@ Live Mode keeps the same continuous, hands-free conversational experience while 
 
 ### Personalized Feedback Report
 
-After the interview, the Evaluator Agent turns the completed conversation into a structured report. Students receive an overall score, scores for concrete examples, STAR structure, connection to the job, and quantifiable outcomes, plus a focused priority to improve. The report also provides question-specific strengths and improvements, overall strengths, keyword coverage, contextual guidance, and practical next steps. Students can practise again with the same resume and analysis or begin a new interview with different application materials.
+After the interview, the Evaluator Agent turns the completed conversation into a structured report. Students receive an overall score, scores for concrete examples, STAR structure, connection to the job, and quantifiable outcomes, plus a focused priority to improve. The report also provides question-specific strengths and improvements, with each original response available to review by expanding the section, as well as overall strengths, keyword coverage, contextual guidance, and practical next steps. Students can practise again with the same resume and analysis or begin a new interview with different application materials.
 
 <table align="center">
   <tr>
@@ -159,6 +159,7 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 | Interviewer Agent | AWS Lambda, Amazon Nova 2 Sonic through Amazon Bedrock, WebSocket-based bidirectional voice relay on Amazon Bedrock AgentCore |
 | Evaluator Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
 | Interview Configuration | Amazon S3 |
+| Development Workflow | Kiro, spec-driven development
 | Backend Cloud Infrastructure | AWS CDK |
 | Containerization | Docker |
 | Deployment | Amazon CloudFront, AWS Amplify Hosting |
@@ -312,6 +313,7 @@ Atomic admission enforces the configured global daily ceiling. CORS controls bro
 
 ## What We Learned
 
+- Learned to use Kiro’s spec-driven workflow to turn requirements into structured designs and implementation tasks, and to keep specifications updated as interfaces evolved.
 - Learned how to design a multi-agent workflow with explicit responsibilities and structured contracts between each stage
 - Developed experience with real-time bidirectional audio streaming, browser microphone processing, synthesized playback, and interruption handling
 - Learned how to use forced model functions and deterministic post-processing to make generative AI output safer for downstream application code
