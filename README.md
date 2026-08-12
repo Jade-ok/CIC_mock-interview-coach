@@ -151,7 +151,7 @@ After the interview, the Evaluator Agent turns the completed conversation into a
 
 | Layer | Technologies |
 |---|---|
-| Frontend | React, TypeScript, HTML, CSS, Vite |
+| Frontend | React, TypeScript, CSS, Vite |
 | Backend | FastAPI, Python |
 | PDF Parser | AWS Lambda, pypdf |
 | Analyst Agent | AWS Lambda, OpenAI GPT OSS 120B through Amazon Bedrock |
